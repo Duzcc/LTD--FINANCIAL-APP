@@ -65,9 +65,12 @@ void main() {
     await t.pump();
   }
 
+  // Android: chuyển bề mặt sang ảnh để chụp (convertFlutterSurfaceToImage) làm pumpAndSettle không
+  // bao giờ dừng trên máy ảo → chỉ chụp ảnh trên iOS, Android vẫn chạy đủ các bước kiểm tra.
+  final canShoot = defaultTargetPlatform != TargetPlatform.android;
   Future<void> shot(WidgetTester t, String name) async {
     await settle(t, 300);
-    await binding.takeScreenshot(name);
+    if (canShoot) await binding.takeScreenshot(name);
   }
 
   Future<void> tapText(WidgetTester t, String text, {bool last = false}) async {
@@ -88,9 +91,6 @@ void main() {
 
   testWidgets('Chạy thử ứng dụng với backend', (t) async {
     (await SharedPreferences.getInstance()).clear();
-    if (defaultTargetPlatform == TargetPlatform.android) {
-      await binding.convertFlutterSurfaceToImage();
-    }
     app.main();
     await settle(t, 1500);
 

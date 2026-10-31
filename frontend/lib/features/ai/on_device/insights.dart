@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:finance_app/data/models/finance_models.dart';
 import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/features/ai/data/ai_models.dart';
 import 'package:finance_app/features/ai/on_device/category_model.dart';
 
 enum InsightLevel { good, info, warning, danger }
@@ -29,9 +30,12 @@ class SpendForecast {
 /// Phân tích tài chính trên thiết bị: dự báo, phát hiện bất thường,
 /// nhịp chi ngân sách, khoản chi lặp lại, tỷ lệ tiết kiệm.
 class FinanceInsights {
-  FinanceInsights(this.p, {DateTime? now}) : now = now ?? DateTime.now();
+  FinanceInsights(this.p, {DateTime? now, this.server}) : now = now ?? DateTime.now();
   final FinanceProvider p;
   final DateTime now;
+
+  /// Dự báo của AI service (nếu có) — ưu tiên dùng để mọi màn hình hiển thị cùng một con số.
+  final ForecastResult? server;
 
   String _m(double v) {
     final s = v.round().toString().replaceAllMapped(
@@ -44,6 +48,15 @@ class FinanceInsights {
 
   /// Dự báo = đã chi + (trung bình/ngày kết hợp tháng này và 3 tháng trước) × số ngày còn lại.
   SpendForecast forecast() {
+    final srv = server;
+    if (srv != null) {
+      return SpendForecast(
+          spent: srv.spent,
+          projected: srv.projected,
+          dailyAverage: srv.daysLeft > 0 ? ((srv.projected - srv.spent) / srv.daysLeft).roundToDouble() : 0,
+          daysLeft: srv.daysLeft,
+          target: p.overallBudget(now, income: false)?.amount);
+    }
     final spent = p.total(now, income: false);
     final elapsed = now.day;
     final daysLeft = _daysInMonth - elapsed;
@@ -70,10 +83,17 @@ class FinanceInsights {
         target: target);
   }
 
+  /// Có dữ liệu chi tiêu ở ít nhất một trong 3 tháng trước không.
+  bool get _hasHistory => [1, 2, 3].any((i) => p.total(DateTime(now.year, now.month - i), income: false) > 0);
+
   List<Insight> all() {
     final out = <Insight>[];
     final f = forecast();
-    if (f.spent > 0) {
+    if (f.spent > 0 && server == null && !_hasHistory && now.day < 3) {
+      // Mới vài ngày dữ liệu và chưa có tháng trước: nhân thẳng ra cả tháng dễ sai lệch lớn.
+      out.add(Insight(InsightLevel.info, 'Đang học thói quen chi tiêu của bạn',
+          'Cần thêm vài ngày ghi chép để dự báo cuối tháng chính xác. Đến nay bạn đã chi ${_m(f.spent)}.'));
+    } else if (f.spent > 0) {
       if (f.overBudget) {
         out.add(Insight(
             InsightLevel.danger,

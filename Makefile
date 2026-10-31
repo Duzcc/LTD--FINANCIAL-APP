@@ -1,4 +1,5 @@
 # Lệnh tắt cho cả 3 phần. Chạy `make help` để xem danh sách.
+PHONY_EXTRA = build-app
 .PHONY: help setup dev-backend dev-ai dev-app test test-app test-backend test-ai train up down
 
 help:
@@ -23,6 +24,9 @@ test-backend:
 	cd backend && npm test
 test-ai:
 	cd ai-service && make lint test
+
+build-app: ## Build bản phát hành Android (APK theo kiến trúc) và Web
+	cd frontend && flutter build apk --release --split-per-abi && flutter build web --release --no-web-resources-cdn
 
 train: ## Huấn luyện lại mô hình AI
 	cd ai-service && make data train eval

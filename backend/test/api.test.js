@@ -184,3 +184,22 @@ test('Dữ liệu tách biệt giữa người dùng', async () => {
   assert.equal(w.body.items.length, 1);
   assert.equal(w.body.items[0].balance, 0);
 });
+
+test('Đăng xuất chỉ thu hồi phiên của thiết bị đó; { all: true } đăng xuất mọi thiết bị', async () => {
+  await api().post('/api/auth/register').send({ name: 'Đa', email: 'da@test.vn', password: '123456' });
+  const login = async () => (await api().post('/api/auth/login').send({ email: 'da@test.vn', password: '123456' })).body;
+  const a = await login();
+  const b = await login();
+  const me = (t) => api().get('/api/auth/me').set('Authorization', `Bearer ${t}`);
+  assert.equal((await me(a.token)).status, 200);
+  assert.equal((await api().post('/api/auth/logout').set('Authorization', `Bearer ${a.token}`)).status, 204);
+  assert.equal((await me(a.token)).status, 401, 'thiết bị A đã đăng xuất');
+  assert.equal((await api().post('/api/auth/refresh').send({ refreshToken: a.refreshToken })).status, 401);
+  assert.equal((await me(b.token)).status, 200, 'thiết bị B vẫn đăng nhập');
+  // Làm mới token giữ nguyên phiên của thiết bị B
+  const b2 = (await api().post('/api/auth/refresh').send({ refreshToken: b.refreshToken })).body;
+  assert.equal((await me(b2.token)).status, 200);
+  const c = await login();
+  assert.equal((await api().post('/api/auth/logout').set('Authorization', `Bearer ${c.token}`).send({ all: true })).status, 204);
+  assert.equal((await me(b2.token)).status, 401, 'đăng xuất mọi thiết bị');
+});

@@ -49,7 +49,7 @@ paths:
     put: { tags: [auth], summary: Cập nhật tên, tiền tệ, tỷ giá, responses: { '200': { description: OK } } }
     delete: { tags: [auth], summary: Xóa tài khoản và toàn bộ dữ liệu, responses: { '200': { description: OK } } }
   /api/auth/change-password: { put: { tags: [auth], summary: Đổi mật khẩu, responses: { '200': { description: OK } } } }
-  /api/auth/logout: { post: { tags: [auth], summary: Đăng xuất (thu hồi refresh token), responses: { '200': { description: OK } } } }
+  /api/auth/logout: { post: { tags: [auth], summary: 'Đăng xuất thiết bị hiện tại; body { all: true } để đăng xuất mọi thiết bị', responses: { '204': { description: Đã đăng xuất } } } }
   /api/{resource}:
     parameters:
       - { name: resource, in: path, required: true, schema: { type: string, enum: [wallets, categories, people, transactions, budgets, recurring] } }
