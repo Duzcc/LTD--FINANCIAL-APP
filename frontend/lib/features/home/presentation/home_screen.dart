@@ -15,6 +15,7 @@ import 'package:finance_app/features/ledger/presentation/ledger_screen.dart';
 import 'package:finance_app/features/goals/presentation/goals_screen.dart';
 import 'package:finance_app/features/transactions/presentation/add_transaction_screen.dart';
 import 'package:finance_app/features/ai/presentation/ai_screens.dart';
+import 'package:finance_app/features/ai/data/ai_repository.dart';
 import 'package:finance_app/features/ai/on_device/insights.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -149,8 +150,10 @@ class OverviewTab extends StatelessWidget {
           action: 'Xem báo cáo',
           onTap: () => openPage(context, const StatisticsScreen())),
       const ReportCarousel(),
-      Builder(builder: (context) {
-        final tips = FinanceInsights(p).all().take(2).toList();
+      ValueListenableBuilder<int>(valueListenable: AiRepository.insightsVersion, builder: (context, _, __) {
+        final repo = AiRepository(p);
+        repo.refreshInsightsIfStale();
+        final tips = FinanceInsights(p, server: repo.cachedInsights?.forecast).all().take(2).toList();
         if (tips.isEmpty) return const SizedBox.shrink();
         return Column(children: [
           SectionTitle('Phân tích thông minh',

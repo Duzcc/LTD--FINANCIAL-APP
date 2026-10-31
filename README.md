@@ -278,6 +278,8 @@ flutter run                                             # chọn thiết bị
 flutter run --dart-define=API_URL=http://192.168.1.10:3000   # điện thoại thật: IP LAN của máy chạy backend
 ```
 
+Tạo máy ảo Android từ dòng lệnh (macOS Apple Silicon): `tool/tao_may_ao_android.sh` (Android 15, Pixel 7).
+
 | Thiết bị | Địa chỉ backend mặc định |
 |---|---|
 | Máy ảo Android | `http://10.0.2.2:3000` |
@@ -311,9 +313,14 @@ Sau đó chạy ứng dụng Flutter như bước ③ và trỏ tới `http://<m
 
 ```bash
 cd frontend
-flutter build apk --release --dart-define=API_URL=https://api.ten-mien.vn
+flutter build apk --release --split-per-abi --dart-define=API_URL=https://api.ten-mien.vn   # ~30 MB mỗi kiến trúc
+flutter build appbundle --release --dart-define=API_URL=https://api.ten-mien.vn            # nộp Google Play
 flutter build ios --release --dart-define=API_URL=https://api.ten-mien.vn
+flutter build web --release --no-web-resources-cdn --dart-define=API_URL=https://api.ten-mien.vn
 ```
+
+`--no-web-resources-cdn` đóng gói CanvasKit vào bản Web (không tải từ CDN của Google); font Roboto có dấu tiếng Việt
+đã được đóng gói trong `frontend/assets/fonts/`, nên bản Web chạy được cả trong mạng nội bộ.
 
 ---
 
@@ -366,7 +373,7 @@ AI service có tài liệu tương tác tại `http://localhost:8000/docs`.
 
 | Nhóm | Endpoint chính |
 |---|---|
-| Tài khoản | `POST /api/auth/register` · `login` · `refresh` · `logout` · `forgot-password` · `reset-password` · `verify-email` · `GET/PUT/DELETE /api/auth/me` · `PUT /api/auth/change-password` |
+| Tài khoản | `POST /api/auth/register` · `login` · `refresh` · `logout` (`{ all: true }` = mọi thiết bị) · `forgot-password` · `reset-password` · `verify-email` · `GET/PUT/DELETE /api/auth/me` · `PUT /api/auth/change-password` |
 | Dữ liệu | `GET/POST /api/{wallets,categories,people,transactions,budgets,recurring}` · `GET/PUT/DELETE /api/{resource}/:id` |
 | Báo cáo | `GET /api/reports/dashboard` · `summary` · `debts` |
 | Đồng bộ | `GET /api/sync` (ảnh chụp toàn bộ) · `POST /api/sync/batch` (áp dụng hàng đợi thay đổi) |
@@ -414,7 +421,10 @@ cd frontend && flutter analyze && flutter test
 
 # Demo đầu-cuối trên máy ảo (cần backend + AI service đang chạy)
 cd frontend && flutter drive --driver=test_driver/integration_test.dart \
-  --target=integration_test/demo_test.dart -d <id thiết bị>     # ảnh chụp lưu ở build/demo/
+  --target=integration_test/demo_test.dart -d <id thiết bị>     # ảnh chụp lưu ở build/demo/ (iOS)
+cd frontend && flutter drive --driver=test_driver/integration_test.dart \
+  --target=integration_test/full_features_test.dart -d <id thiết bị>   # đủ 9 nhóm chức năng + mọi màn hình
+# macOS: tool/chay_kiem_thu_thiet_bi.sh <id thiết bị> <tệp kiểm thử>
 ```
 
 ### 12.2. Phạm vi kiểm thử
@@ -422,9 +432,10 @@ cd frontend && flutter drive --driver=test_driver/integration_test.dart \
 | Bộ kiểm thử | Số lượng | Nội dung |
 |---|---|---|
 | AI service (`pytest`) | 64 | trích xuất thực thể, nhập nhanh, phân loại, dự báo, bất thường, ngân sách, hóa đơn & OCR, tìm kiếm, API, vòng lặp gọi công cụ với LLM giả lập (Anthropic & OpenAI-compatible) |
-| Backend (`node:test`) | 17 + 1 E2E | đăng ký/đăng nhập, phân quyền, CRUD, ràng buộc nghiệp vụ, đồng bộ, refresh token, xác thực email, định kỳ, cổng AI (AI service giả lập + thật) |
-| Frontend (`flutter test`) | 41 | sổ cái & quy tắc, đồng bộ với backend giả lập, AI máy chủ ↔ dự phòng thiết bị, bộ phân tích hóa đơn, giao diện ở 320/390/430 px |
-| Demo đầu-cuối (`integration_test`) | 16 bước | đăng ký → nhập nhanh → ngân sách → đồng bộ → trợ lý (đề xuất + xác nhận) → phân tích → tìm kiếm → **OCR thật trên thiết bị** |
+| Backend (`node:test`) | 18 + 1 E2E | đăng ký/đăng nhập, phân quyền, CRUD, ràng buộc nghiệp vụ, đồng bộ, refresh token, xác thực email, định kỳ, cổng AI (AI service giả lập + thật) |
+| Frontend (`flutter test`) | 42 | sổ cái & quy tắc, đồng bộ với backend giả lập, AI máy chủ ↔ dự phòng thiết bị, bộ phân tích hóa đơn, giao diện ở 320/390/430 px |
+| Demo đầu-cuối (`demo_test.dart`) | 16 bước | đăng ký → nhập nhanh → ngân sách → đồng bộ → trợ lý (đề xuất + xác nhận) → phân tích → tìm kiếm → **OCR thật trên thiết bị** (Apple Vision / ML Kit) |
+| Toàn bộ chức năng (`full_features_test.dart`) | 2 kịch bản | **Chức năng**: đủ 9 nhóm (tài khoản: đăng ký, xác thực email, đổi/đặt lại mật khẩu; ví; đủ 9 loại giao dịch và các ràng buộc; danh mục; đối tượng; ngân sách + sao chép; dashboard; thống kê; tìm kiếm), định kỳ, tỷ giá, xuất CSV/Excel, khóa PIN, đồng bộ **hai thiết bị**, AI qua backend, xóa tài khoản. **Giao diện**: mở lần lượt 26 màn hình + các tab, phát hiện mọi lỗi dựng giao diện |
 | Kiểm tra hệ thống ([`tool/kiem_tra_he_thong.mjs`](tool/kiem_tra_he_thong.mjs)) | 32 | gọi HTTP như ứng dụng thật qua cả 3 phần, kể cả quét ảnh hóa đơn trên máy chủ |
 
 ### 12.3. Kết quả gần nhất
@@ -432,10 +443,12 @@ cd frontend && flutter drive --driver=test_driver/integration_test.dart \
 | Hạng mục | Kết quả |
 |---|---|
 | AI service: ruff + pytest | ✅ sạch, 64/64 |
-| Backend: npm test + E2E | ✅ 17/17 + E2E đạt |
-| Frontend: analyze + test | ✅ không lỗi, 41/41 |
-| Build Android APK + iOS | ✅ |
-| Demo trên iPhone 15 Pro Max (iOS 17.5) | ✅ 16/16 bước |
+| Backend: npm test + E2E | ✅ 18/18 + E2E đạt |
+| Frontend: analyze + test | ✅ không lỗi, 42/42 |
+| Build bản phát hành | ✅ APK Android (release) · iOS (release) · Web |
+| Demo 16 bước + toàn bộ chức năng trên **iPhone 15 Pro Max (iOS 17.5)** | ✅ |
+| Demo 16 bước + toàn bộ chức năng trên **Android 15 (máy ảo Pixel 7)** | ✅ |
+| Bản Web chạy trong Chromium (đăng ký ngoại tuyến, lưu giao dịch, tải lại trang) | ✅ |
 | Kiểm tra hệ thống qua HTTP | ✅ 32/32 |
 
 ### 12.4. CI
@@ -447,7 +460,8 @@ backend (MongoDB 7 dạng service, `npm test`), frontend (`flutter analyze`, `fl
 
 ## 13. Bảo mật và quyền riêng tư
 
-- Mật khẩu băm **bcrypt**; access token JWT 1 giờ, **refresh token xoay vòng** chỉ lưu bản băm SHA-256; đăng xuất thu hồi token.
+- Mật khẩu băm **bcrypt**; access token JWT 1 giờ, **refresh token xoay vòng** chỉ lưu bản băm SHA-256.
+- **Phiên theo thiết bị**: mỗi lần đăng nhập có mã phiên riêng; *Đăng xuất* chỉ thu hồi phiên của thiết bị đó, *Đăng xuất khỏi mọi thiết bị* thu hồi tất cả; đổi/đặt lại mật khẩu thu hồi mọi phiên cũ.
 - Mọi dữ liệu gắn với người dùng; API kiểm tra quyền sở hữu; giới hạn tần suất đăng nhập và AI; `helmet`, CORS theo cấu hình.
 - AI service chỉ nhận yêu cầu có `X-API-Key` từ backend, không lưu dữ liệu; snapshot không chứa email/mật khẩu.
 - OCR hóa đơn mặc định chạy **trên điện thoại** (ảnh không gửi đi); có thể chạy LLM **cục bộ** bằng Ollama.

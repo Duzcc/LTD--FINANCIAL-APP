@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart';
 
 import 'package:finance_app/core/network/api_client.dart';
 import 'package:finance_app/core/ocr/text_recognizer.dart';
@@ -71,10 +72,39 @@ class AiRepository {
   Future<ServerInsights?> insights() async {
     if (!remoteAvailable) return null;
     try {
-      return ServerInsights.fromJson(await p.aiRequest('GET', '/insights'));
+      final r = ServerInsights.fromJson(await p.aiRequest('GET', '/insights'));
+      _cache = r;
+      _cacheKey = _dataKey;
+      insightsVersion.value++;
+      return r;
     } on ApiException {
       return null;
     }
+  }
+
+  // Bộ nhớ tạm kết quả phân tích máy chủ để Tổng quan và màn Phân tích hiển thị cùng một con số.
+  static ServerInsights? _cache;
+  static String? _cacheKey;
+  static Future<ServerInsights?>? _inflight;
+
+  /// Tăng mỗi khi có kết quả phân tích mới từ máy chủ (để giao diện dựng lại).
+  static final insightsVersion = ValueNotifier<int>(0);
+
+  /// Khóa thay đổi khi dữ liệu (giao dịch, ngân sách), tài khoản hoặc ngày thay đổi.
+  String get _dataKey {
+    final now = DateTime.now();
+    final sum = p.entries.fold<double>(0, (s, e) => s + e.amount);
+    return '${p.session?.userId}|${p.entries.length}|$sum|${p.budgets.length}|${now.year}-${now.month}-${now.day}';
+  }
+
+  /// Kết quả máy chủ còn khớp dữ liệu hiện tại, hoặc null.
+  ServerInsights? get cachedInsights => remoteAvailable && _cacheKey == _dataKey ? _cache : null;
+
+  /// Lấy lại phân tích nền nếu kết quả cũ đã lỗi thời (không chặn giao diện, không gọi trùng).
+  void refreshInsightsIfStale() {
+    if (!remoteAvailable || cachedInsights != null || _inflight != null) return;
+    // Chạy ở lượt sự kiện sau: hàm này được gọi trong lúc dựng giao diện.
+    _inflight = Future(insights).whenComplete(() => _inflight = null);
   }
 
   /// Đọc hóa đơn từ ảnh:

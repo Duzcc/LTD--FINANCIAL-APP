@@ -170,6 +170,17 @@ void main() {
     });
   });
 
+  test('Đầu tháng chưa có lịch sử: không đưa dự báo nhân thẳng dễ sai', () {
+    final p = FinanceProvider();
+    p.saveEntry(MoneyEntry(
+        id: 'x', kind: EntryKind.expense, amount: 50000, walletId: 'cash', categoryId: 'food',
+        date: DateTime(2026, 11, 1, 9)));
+    final tips = FinanceInsights(p, now: DateTime(2026, 11, 1, 12)).all();
+    expect(tips.first.title, 'Đang học thói quen chi tiêu của bạn');
+    expect(FinanceInsights(p, now: DateTime(2026, 11, 5, 12)).all().first.title, startsWith('Dự báo chi tiêu'));
+    p.dispose();
+  });
+
   test('Tỷ giá quy đổi tổng tài sản nhiều tiền tệ', () {
     final p = FinanceProvider();
     p.saveWallet(const MoneyWallet(id: 'usd', name: 'USD', currency: 'USD', opening: 100));

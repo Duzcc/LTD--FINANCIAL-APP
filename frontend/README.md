@@ -7,6 +7,7 @@ backend khi đăng nhập.
 flutter pub get
 flutter run --dart-define=API_URL=http://<máy chủ backend>:3000   # mặc định: localhost / 10.0.2.2 (Android emulator)
 flutter analyze && flutter test
+flutter build web --release --no-web-resources-cdn   # bản Web không phụ thuộc CDN
 ```
 
 ## Cấu trúc (feature-first)
@@ -46,4 +47,5 @@ Quy ước: mọi import dùng `package:finance_app/...` (lint `always_use_packa
 | `test/receipt_parser_test.dart` | đọc hóa đơn: sửa lỗi OCR, bỏ phiếu tổng tiền, dựng dòng ảnh nghiêng |
 | `test/features_test.dart` | mô hình trên thiết bị, định kỳ, khóa, xuất Excel |
 | `test/widget_test.dart`, `phone_preview_test.dart` | giao diện nhiều cỡ màn hình |
-| `integration_test/demo_test.dart` | kịch bản demo đầy đủ trên máy ảo |
+| `integration_test/demo_test.dart` | kịch bản demo 16 bước trên máy ảo (iOS + Android), OCR thật |
+| `integration_test/full_features_test.dart` | đủ 9 nhóm chức năng với backend thật, đồng bộ hai thiết bị, mở mọi màn hình |

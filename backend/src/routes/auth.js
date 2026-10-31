@@ -34,15 +34,17 @@ function password(v, field = 'Mật khẩu') {
 const sha = (v) => crypto.createHash('sha256').update(v).digest('hex');
 
 // Cấp cặp token: access token (JWT, ngắn hạn) + refresh token (ngẫu nhiên, dài hạn, xoay vòng).
-async function session(user) {
+// Mỗi thiết bị có một mã phiên (sid) giữ nguyên qua các lần làm mới token.
+async function session(user, sid = crypto.randomUUID()) {
   const refreshToken = crypto.randomBytes(48).toString('base64url');
   await RefreshToken.create({
     user: user._id,
     tokenHash: sha(refreshToken),
     version: user.tokenVersion,
+    sid,
     expiresAt: new Date(Date.now() + config.refreshDays * 86400000),
   });
-  return { token: signToken(user), refreshToken, user: user.toJSON() };
+  return { token: signToken(user, sid), refreshToken, user: user.toJSON() };
 }
 
 async function revokeAll(user) {
@@ -96,7 +98,7 @@ router.post('/refresh', limiter, wrap(async (req, res) => {
   const user = await User.findById(doc.user);
   await RefreshToken.deleteOne({ _id: doc._id });
   if (!user || user.tokenVersion !== doc.version) throw unauthorized('Phiên đăng nhập đã bị thu hồi.');
-  res.json(await session(user));
+  res.json(await session(user, doc.sid || undefined));
 }));
 
 // Xác thực email bằng mã 6 số
@@ -204,10 +206,15 @@ router.put('/change-password', requireAuth, limiter, wrap(async (req, res) => {
   res.json(await session(u));
 }));
 
-// Đăng xuất: thu hồi mọi token đã cấp của tài khoản
+// Đăng xuất thiết bị hiện tại (chỉ thu hồi phiên của thiết bị này).
+// { all: true } → đăng xuất khỏi mọi thiết bị.
 router.post('/logout', requireAuth, wrap(async (req, res) => {
-  await revokeAll(req.user);
-  await req.user.save();
+  if (req.body?.all === true || !req.sessionId) {
+    await revokeAll(req.user);
+    await req.user.save();
+  } else {
+    await RefreshToken.deleteMany({ user: req.user._id, sid: req.sessionId });
+  }
   res.status(204).end();
 }));
 

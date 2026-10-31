@@ -35,3 +35,16 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # Đóng gói font Roboto (có đủ dấu tiếng Việt) để iOS và Web hiển thị giống thiết kế,
+  # Web không phụ thuộc CDN font của Google.
+  fonts:
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Roboto-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Roboto-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Roboto-Bold.ttf
+          weight: 700

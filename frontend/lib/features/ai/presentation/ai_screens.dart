@@ -245,9 +245,13 @@ class _InsightsScreenState extends State<InsightsScreen> {
     _load();
   }
 
-  void _load() {
+  void _load({bool force = false}) {
     final repo = AiRepository(Provider.of<FinanceProvider>(context, listen: false));
-    _server = repo.remoteAvailable ? repo.insights() : Future.value(null);
+    _server = !repo.remoteAvailable
+        ? Future.value(null)
+        : !force && repo.cachedInsights != null
+            ? Future.value(repo.cachedInsights)
+            : repo.insights();
   }
 
   void _applyBudget(FinanceProvider p, BudgetSuggestion s) {
@@ -277,9 +281,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
   @override
   Widget build(BuildContext context) {
     final p = context.watch<FinanceProvider>();
-    final engine = FinanceInsights(p);
-    final local = engine.forecast();
-    final items = engine.all();
+    final local = FinanceInsights(p).forecast();
     return FinancePage(
         title: 'Phân tích thông minh',
         actions: [
@@ -297,9 +299,11 @@ class _InsightsScreenState extends State<InsightsScreen> {
             builder: (context, snap) {
               final server = snap.data;
               final f = server?.forecast;
+              // Các điểm đáng chú ý dùng cùng dự báo với thẻ phía trên
+              final items = FinanceInsights(p, server: f).all();
               return RefreshIndicator(
                   onRefresh: () async {
-                    setState(_load);
+                    setState(() => _load(force: true));
                     await _server;
                   },
                   child: ListView(padding: const EdgeInsets.all(16), children: [

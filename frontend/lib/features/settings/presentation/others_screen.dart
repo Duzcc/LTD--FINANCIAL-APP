@@ -114,6 +114,9 @@ class OthersScreen extends StatelessWidget {
                           style: TextStyle(color: AppColors.accentRed)),
                       onTap: () => signOutFlow(context)),
                   const Divider(indent: 60),
+                  _row(context, Icons.devices_other_outlined, 'Đăng xuất khỏi mọi thiết bị',
+                      () => signOutFlow(context, everywhere: true)),
+                  const Divider(indent: 60),
                   _row(context, Icons.person_remove_outlined, 'Xóa tài khoản',
                       () => deleteAccountFlow(context)),
                 ] else
@@ -306,20 +309,21 @@ class AccountCard extends StatelessWidget {
   }
 }
 
-Future<void> signOutFlow(BuildContext context) async {
+Future<void> signOutFlow(BuildContext context, {bool everywhere = false}) async {
   final p = context.read<FinanceProvider>();
   if (p.pendingChanges > 0) await p.syncNow(pull: false);
   if (!context.mounted) return;
   final pending = p.pendingChanges;
   final ok = await confirmAction(context,
-      title: 'Đăng xuất?',
-      content: pending > 0
-          ? 'Còn $pending thay đổi chưa đồng bộ được và sẽ bị mất khi đăng xuất. Dữ liệu trên thiết bị sẽ được xóa.'
-          : 'Dữ liệu đã được lưu trên tài khoản. Dữ liệu trên thiết bị này sẽ được xóa.',
+      title: everywhere ? 'Đăng xuất khỏi mọi thiết bị?' : 'Đăng xuất?',
+      content: (pending > 0
+              ? 'Còn $pending thay đổi chưa đồng bộ được và sẽ bị mất khi đăng xuất. Dữ liệu trên thiết bị sẽ được xóa.'
+              : 'Dữ liệu đã được lưu trên tài khoản. Dữ liệu trên thiết bị này sẽ được xóa.') +
+          (everywhere ? ' Mọi thiết bị khác đang đăng nhập tài khoản này cũng sẽ bị đăng xuất.' : ''),
       confirm: 'Đăng xuất',
       danger: pending > 0);
   if (!ok || !context.mounted) return;
-  await p.signOut();
+  await p.signOut(everywhere: everywhere);
   if (!context.mounted) return;
   Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const AuthScreen()), (_) => false);

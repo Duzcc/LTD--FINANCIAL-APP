@@ -1252,11 +1252,12 @@ class FinanceProvider extends ChangeNotifier {
   }
 
   /// Đăng xuất: thu hồi token trên máy chủ và xóa dữ liệu khỏi thiết bị.
-  Future<void> signOut({bool revoke = true}) async {
+  /// Đăng xuất thiết bị này; [everywhere] = true thì thu hồi phiên trên mọi thiết bị.
+  Future<void> signOut({bool revoke = true, bool everywhere = false}) async {
     _syncTimer?.cancel();
     if (revoke && session != null) {
       try {
-        await _call('POST', '/auth/logout');
+        await _call('POST', '/auth/logout', body: everywhere ? {'all': true} : null);
       } catch (_) {
         // Máy chủ không truy cập được: vẫn xóa phiên trên thiết bị.
       }
