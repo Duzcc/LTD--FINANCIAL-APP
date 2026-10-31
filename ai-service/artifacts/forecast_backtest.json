@@ -1,0 +1,21 @@
+{
+  "metric": "MAPE (%) tổng chi cả tháng",
+  "users": 40,
+  "months": 6,
+  "run_rate": {
+    "day_5": 125.1,
+    "day_10": 54.3,
+    "day_15": 30.0,
+    "day_20": 19.0,
+    "day_25": 10.0,
+    "overall": 47.7
+  },
+  "forecaster": {
+    "day_5": 30.0,
+    "day_10": 23.0,
+    "day_15": 19.3,
+    "day_20": 14.9,
+    "day_25": 8.7,
+    "overall": 19.2
+  }
+}

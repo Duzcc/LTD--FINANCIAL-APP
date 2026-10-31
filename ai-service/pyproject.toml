@@ -1,0 +1,20 @@
+[project]
+name = "finance-ai-service"
+version = "1.0.0"
+description = "Dịch vụ AI/ML cho ứng dụng quản lý chi tiêu cá nhân (FastAPI + scikit-learn)"
+requires-python = ">=3.11"
+readme = "README.md"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 140
+target-version = "py311"
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]
+ignore = ["E731", "SIM108", "B008"]

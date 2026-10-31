@@ -1,0 +1,15 @@
+# Chạy dịch vụ
+fastapi>=0.115,<1
+uvicorn>=0.30
+pydantic>=2.7,<3
+pydantic-settings>=2.3
+python-multipart>=0.0.9
+httpx>=0.27
+numpy>=2.0
+scikit-learn>=1.5
+joblib>=1.4
+tzdata>=2024.1
+# Đọc hóa đơn (OCR)
+pillow>=10.0
+pytesseract>=0.3.10
+pyobjc-framework-Vision>=10.0; sys_platform == "darwin"   # Apple Vision trên macOS (tiếng Việt)

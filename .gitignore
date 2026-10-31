@@ -1,0 +1,42 @@
+# Chung
+.DS_Store
+.env
+*.log
+_to_delete/
+backup_*.tgz
+
+# Frontend (Flutter)
+frontend/.dart_tool/
+frontend/build/
+frontend/.flutter-plugins-dependencies
+frontend/.idea/
+frontend/*.iml
+frontend/ios/Pods/
+frontend/android/.gradle/
+
+# Backend
+backend/node_modules/
+backend/.data/
+
+# AI service
+ai-service/.venv/
+ai-service/**/__pycache__/
+ai-service/.pytest_cache/
+ai-service/.ruff_cache/
+
+# Công cụ cục bộ
+.tooling/
+tool/*.txt
+tool/.*
+!tool/*.command
+!tool/*.sh
+
+# Tệp cá nhân không thuộc dự án
+.RData
+.Rhistory
+frontend/android/local.properties
+frontend/ios/Flutter/ephemeral/
+frontend/ios/.symlinks/
+**/.pytest_cache/
+frontend/android/build/
+tool/.lenh*

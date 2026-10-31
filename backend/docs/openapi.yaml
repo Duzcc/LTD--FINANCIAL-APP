@@ -1,0 +1,176 @@
+openapi: 3.0.3
+info:
+  title: Finance App API
+  version: 1.1.0
+  description: |
+    RESTful API của ứng dụng Quản lý chi tiêu cá nhân (Nhóm 03 – Lập trình di động).
+    Xác thực bằng JWT (access token 1 giờ) + refresh token xoay vòng. Lỗi luôn có dạng
+    `{ "error": { "code": "...", "message": "..." } }`.
+servers:
+  - url: http://localhost:3000
+security:
+  - bearer: []
+tags:
+  - { name: auth, description: Tài khoản }
+  - { name: resources, description: Ví, danh mục, đối tượng, giao dịch, ngân sách, giao dịch định kỳ }
+  - { name: reports, description: Báo cáo }
+  - { name: sync, description: Đồng bộ offline-first }
+  - { name: ai, description: Tính năng AI (chuyển tiếp tới AI service) }
+paths:
+  /api/health:
+    get: { tags: [reports], security: [], summary: Trạng thái máy chủ, responses: { '200': { description: OK } } }
+  /api/auth/register:
+    post:
+      tags: [auth]
+      security: []
+      summary: Đăng ký
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/Register' } } } }
+      responses: { '201': { $ref: '#/components/responses/Session' }, '409': { $ref: '#/components/responses/Error' } }
+  /api/auth/login:
+    post:
+      tags: [auth]
+      security: []
+      summary: Đăng nhập
+      requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/Login' } } } }
+      responses: { '200': { $ref: '#/components/responses/Session' }, '401': { $ref: '#/components/responses/Error' } }
+  /api/auth/refresh:
+    post:
+      tags: [auth]
+      security: []
+      summary: Đổi refresh token lấy phiên mới (xoay vòng)
+      requestBody: { content: { application/json: { schema: { type: object, properties: { refreshToken: { type: string } } } } } }
+      responses: { '200': { $ref: '#/components/responses/Session' } }
+  /api/auth/verify-email: { post: { tags: [auth], summary: Xác minh email bằng mã 6 số, responses: { '200': { description: OK } } } }
+  /api/auth/resend-verification: { post: { tags: [auth], summary: Gửi lại mã xác minh, responses: { '200': { description: OK } } } }
+  /api/auth/forgot-password: { post: { tags: [auth], security: [], summary: Gửi mã đặt lại mật khẩu, responses: { '200': { description: OK } } } }
+  /api/auth/reset-password: { post: { tags: [auth], security: [], summary: Đặt lại mật khẩu bằng mã, responses: { '200': { description: OK } } } }
+  /api/auth/me:
+    get: { tags: [auth], summary: Thông tin tài khoản, responses: { '200': { description: OK } } }
+    put: { tags: [auth], summary: Cập nhật tên, tiền tệ, tỷ giá, responses: { '200': { description: OK } } }
+    delete: { tags: [auth], summary: Xóa tài khoản và toàn bộ dữ liệu, responses: { '200': { description: OK } } }
+  /api/auth/change-password: { put: { tags: [auth], summary: Đổi mật khẩu, responses: { '200': { description: OK } } } }
+  /api/auth/logout: { post: { tags: [auth], summary: Đăng xuất (thu hồi refresh token), responses: { '200': { description: OK } } } }
+  /api/{resource}:
+    parameters:
+      - { name: resource, in: path, required: true, schema: { type: string, enum: [wallets, categories, people, transactions, budgets, recurring] } }
+    get:
+      tags: [resources]
+      summary: Danh sách (giao dịch hỗ trợ lọc from, to, kind, walletId, categoryId, personId, q)
+      responses: { '200': { description: OK } }
+    post: { tags: [resources], summary: Tạo mới, responses: { '201': { description: Created }, '400': { $ref: '#/components/responses/Error' } } }
+  /api/{resource}/{id}:
+    parameters:
+      - { name: resource, in: path, required: true, schema: { type: string } }
+      - { name: id, in: path, required: true, schema: { type: string, pattern: '^[A-Za-z0-9_-]{1,64}$' } }
+    get: { tags: [resources], summary: Chi tiết, responses: { '200': { description: OK }, '404': { $ref: '#/components/responses/Error' } } }
+    put: { tags: [resources], summary: Cập nhật, responses: { '200': { description: OK } } }
+    delete: { tags: [resources], summary: Xóa (cascade=true để xóa dữ liệu liên quan), responses: { '200': { description: OK } } }
+  /api/reports/dashboard: { get: { tags: [reports], summary: Tổng quan trang chủ, responses: { '200': { description: OK } } } }
+  /api/reports/summary: { get: { tags: [reports], summary: Thống kê theo khoảng thời gian / danh mục, responses: { '200': { description: OK } } } }
+  /api/reports/debts: { get: { tags: [reports], summary: Dư nợ theo đối tượng, responses: { '200': { description: OK } } } }
+  /api/sync:
+    get: { tags: [sync], summary: Ảnh chụp toàn bộ dữ liệu, responses: { '200': { description: OK } } }
+  /api/sync/batch:
+    post:
+      tags: [sync]
+      summary: Áp dụng tuần tự hàng đợi thay đổi
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ops:
+                  type: array
+                  maxItems: 2000
+                  items:
+                    type: object
+                    properties:
+                      entity: { type: string, enum: [wallets, categories, people, entries, budgets, recurring] }
+                      action: { type: string, enum: [upsert, delete] }
+                      id: { type: string }
+                      data: { type: object }
+      responses: { '200': { description: '{ applied }' } }
+  /api/ai/status:
+    get: { tags: [ai], summary: Trạng thái AI service và các tính năng khả dụng, responses: { '200': { description: OK } } }
+  /api/ai/chat:
+    post:
+      tags: [ai]
+      summary: Trợ lý hội thoại (LLM gọi công cụ; tự lùi về luật)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                messages:
+                  type: array
+                  items: { type: object, properties: { role: { type: string, enum: [user, assistant] }, content: { type: string } } }
+      responses:
+        '200':
+          description: '{ reply, source: ai-service|llm|rules, actions: [{ type: create_transaction|set_budget, data }] }'
+  /api/ai/categorize:
+    post:
+      tags: [ai]
+      summary: Gợi ý danh mục cá nhân hóa
+      requestBody: { content: { application/json: { schema: { type: object, properties: { text: { type: string }, income: { type: boolean } } } } } }
+      responses: { '200': { description: '{ predictions: [{ categoryId, probability }], personalWeight }' }, '503': { $ref: '#/components/responses/AiUnavailable' } }
+  /api/ai/parse:
+    post:
+      tags: [ai]
+      summary: Nhập nhanh bằng câu tự nhiên
+      requestBody: { content: { application/json: { schema: { type: object, properties: { text: { type: string, example: 'cho Minh mượn 500k hôm qua' } } } } } }
+      responses: { '200': { description: '{ kind, amount, date, note, categoryId, personId, newPersonName, walletId, toWalletId, confidence }' }, '503': { $ref: '#/components/responses/AiUnavailable' } }
+  /api/ai/forecast: { get: { tags: [ai], summary: Dự báo chi cuối tháng và tháng sau, responses: { '200': { description: OK }, '503': { $ref: '#/components/responses/AiUnavailable' } } } }
+  /api/ai/anomalies: { get: { tags: [ai], summary: Giao dịch bất thường, responses: { '200': { description: OK }, '503': { $ref: '#/components/responses/AiUnavailable' } } } }
+  /api/ai/budgets/recommend:
+    get:
+      tags: [ai]
+      summary: Gợi ý ngân sách
+      parameters:
+        - { name: savingsRate, in: query, schema: { type: number, minimum: 0, maximum: 0.6, default: 0.2 } }
+        - { name: monthlyIncome, in: query, schema: { type: number } }
+      responses: { '200': { description: OK }, '503': { $ref: '#/components/responses/AiUnavailable' } }
+  /api/ai/insights: { get: { tags: [ai], summary: Dự báo + bất thường + gợi ý ngân sách cho trang chủ, responses: { '200': { description: OK } } } }
+  /api/ai/search:
+    post:
+      tags: [ai]
+      summary: Tìm giao dịch bằng câu tự nhiên
+      requestBody: { content: { application/json: { schema: { type: object, properties: { query: { type: string, example: 'cafe tháng trước trên 50k' } } } } } }
+      responses: { '200': { description: '{ filters, hits: [{ transactionId, score }] }' } }
+  /api/ai/receipts/text:
+    post:
+      tags: [ai]
+      summary: Trích xuất hóa đơn từ văn bản OCR trên điện thoại
+      requestBody: { content: { application/json: { schema: { type: object, properties: { text: { type: string } } } } } }
+      responses: { '200': { description: '{ merchant, total, date, items, note, categoryId }' } }
+  /api/ai/receipts/scan:
+    post:
+      tags: [ai]
+      summary: Đọc ảnh hóa đơn (mô hình thị giác / Tesseract trên máy chủ)
+      requestBody: { content: { application/json: { schema: { type: object, properties: { image: { type: string, format: byte }, mediaType: { type: string, enum: [image/jpeg, image/png, image/webp] } } } } } }
+      responses: { '200': { description: OK }, '501': { description: Máy chủ không hỗ trợ đọc ảnh — dùng OCR trên điện thoại } }
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    Register:
+      type: object
+      required: [name, email, password]
+      properties: { name: { type: string }, email: { type: string, format: email }, password: { type: string, minLength: 6 } }
+    Login:
+      type: object
+      required: [email, password]
+      properties: { email: { type: string }, password: { type: string } }
+    Error:
+      type: object
+      properties: { error: { type: object, properties: { code: { type: string }, message: { type: string } } } }
+  responses:
+    Session:
+      description: '{ token, refreshToken, user }'
+    Error:
+      description: Lỗi
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    AiUnavailable:
+      description: AI service không khả dụng (AI_UNAVAILABLE) — ứng dụng dùng mô hình trên thiết bị
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }

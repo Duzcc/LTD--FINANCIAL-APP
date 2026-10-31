@@ -1,0 +1,53 @@
+# Chạy toàn bộ phía máy chủ: MongoDB + Backend (Node.js) + AI service (Python).
+#   cp .env.example .env && docker compose up -d --build
+#   docker compose --profile llm up -d      # thêm Ollama để trợ lý dùng mô hình mở chạy cục bộ
+# Ứng dụng Flutter (frontend/) chạy trên điện thoại/máy ảo và trỏ tới http://<máy chủ>:3000
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes: [mongo-data:/data/db]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      retries: 5
+
+  ai-service:
+    build: ./ai-service
+    restart: unless-stopped
+    environment:
+      SERVICE_API_KEY: ${AI_SERVICE_KEY:?Đặt AI_SERVICE_KEY trong .env}
+      ENVIRONMENT: production
+      LLM_PROVIDER: ${LLM_PROVIDER:-}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-}
+      VISION_MODEL: ${VISION_MODEL:-}
+    expose: ["8000"]           # chỉ backend gọi được, không mở ra ngoài
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      mongo: { condition: service_healthy }
+      ai-service: { condition: service_started }
+    ports: ["3000:3000"]
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/finance_app
+      JWT_SECRET: ${JWT_SECRET:?Đặt JWT_SECRET trong .env}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      AI_SERVICE_URL: http://ai-service:8000
+      AI_SERVICE_KEY: ${AI_SERVICE_KEY}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["llm"]
+    volumes: [ollama:/root/.ollama]
+    expose: ["11434"]
+
+volumes:
+  mongo-data:
+  ollama:
