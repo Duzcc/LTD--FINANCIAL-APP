@@ -1,0 +1,250 @@
+{
+  "trained_at": "2026-10-29T05:02:52+00:00",
+  "sklearn": "1.9.1",
+  "numpy": "2.5.4",
+  "python": "3.14.3",
+  "categorizer": {
+    "model": "categorizer",
+    "algorithm": "TF-IDF (từ 1–2 + ký tự 2–5) + Logistic Regression (class_weight=balanced)",
+    "best_params": {
+      "clf__C": 32.0
+    },
+    "train_size": 7700,
+    "labels": [
+      "bonus",
+      "business",
+      "child",
+      "food",
+      "health",
+      "house",
+      "life",
+      "other_income",
+      "salary",
+      "self",
+      "transport"
+    ],
+    "synthetic_test": {
+      "accuracy": 0.989,
+      "f1_macro": 0.989
+    },
+    "handwritten_eval": {
+      "size": 118,
+      "accuracy": 0.9831,
+      "f1_macro": 0.9851
+    },
+    "handwritten_report": {
+      "bonus": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 6.0
+      },
+      "business": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 5.0
+      },
+      "child": {
+        "precision": 0.8,
+        "recall": 1.0,
+        "f1-score": 0.8888888888888888,
+        "support": 8.0
+      },
+      "food": {
+        "precision": 1.0,
+        "recall": 0.9,
+        "f1-score": 0.9473684210526315,
+        "support": 20.0
+      },
+      "health": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 10.0
+      },
+      "house": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 10.0
+      },
+      "life": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 15.0
+      },
+      "other_income": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 8.0
+      },
+      "salary": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 6.0
+      },
+      "self": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 15.0
+      },
+      "transport": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 15.0
+      },
+      "accuracy": 0.9830508474576272,
+      "macro avg": {
+        "precision": 0.9818181818181819,
+        "recall": 0.990909090909091,
+        "f1-score": 0.9851143009037745,
+        "support": 118.0
+      },
+      "weighted avg": {
+        "precision": 0.9864406779661018,
+        "recall": 0.9830508474576272,
+        "f1-score": 0.983546436713252,
+        "support": 118.0
+      }
+    },
+    "handwritten_errors": [
+      {
+        "text": "Sữa chua, sữa tươi cho tuần",
+        "label": "food",
+        "pred": "child"
+      },
+      {
+        "text": "tiệc cưới bạn đại học",
+        "label": "food",
+        "pred": "child"
+      }
+    ],
+    "extra_eval": {
+      "eval_categories_v2": {
+        "size": 62,
+        "accuracy": 1.0,
+        "f1_macro": 1.0,
+        "errors": []
+      },
+      "eval_categories_v3": {
+        "size": 48,
+        "accuracy": 0.9792,
+        "f1_macro": 0.9748,
+        "errors": [
+          {
+            "text": "tiền thuê nhà khách trả",
+            "label": "other_income",
+            "pred": "house"
+          }
+        ]
+      }
+    },
+    "train_seconds": 9.0
+  },
+  "intent": {
+    "model": "intent",
+    "algorithm": "TF-IDF (từ 1–2 + ký tự 2–5) + Logistic Regression (class_weight=balanced)",
+    "best_params": {
+      "clf__C": 32.0
+    },
+    "train_size": 4500,
+    "labels": [
+      "borrow",
+      "collect",
+      "expense",
+      "income",
+      "interestExpense",
+      "interestIncome",
+      "lend",
+      "repay",
+      "transfer"
+    ],
+    "synthetic_test": {
+      "accuracy": 0.9778,
+      "f1_macro": 0.9778
+    },
+    "handwritten_eval": {
+      "size": 44,
+      "accuracy": 1.0,
+      "f1_macro": 1.0
+    },
+    "handwritten_report": {
+      "borrow": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 5.0
+      },
+      "collect": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 4.0
+      },
+      "expense": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 8.0
+      },
+      "income": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 7.0
+      },
+      "interestExpense": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 3.0
+      },
+      "interestIncome": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 3.0
+      },
+      "lend": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 5.0
+      },
+      "repay": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 4.0
+      },
+      "transfer": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 5.0
+      },
+      "accuracy": 1.0,
+      "macro avg": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 44.0
+      },
+      "weighted avg": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 44.0
+      }
+    },
+    "handwritten_errors": [],
+    "extra_eval": {},
+    "train_seconds": 3.5
+  }
+}

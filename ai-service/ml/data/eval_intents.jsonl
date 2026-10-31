@@ -1,0 +1,44 @@
+{"text": "ăn phở 45k", "label": "expense"}
+{"text": "đổ xăng 70 nghìn", "label": "expense"}
+{"text": "mua áo 350k trên shopee", "label": "expense"}
+{"text": "tiền điện 520k", "label": "expense"}
+{"text": "cf highland 59k", "label": "expense"}
+{"text": "đóng học phí 2tr", "label": "expense"}
+{"text": "trả tiền nhà 3tr5", "label": "expense"}
+{"text": "grab về nhà 32k", "label": "expense"}
+{"text": "lương tháng 15tr", "label": "income"}
+{"text": "nhận lương 12 triệu", "label": "income"}
+{"text": "được thưởng tết 5tr", "label": "income"}
+{"text": "khách chuyển tiền hàng 800k", "label": "income"}
+{"text": "bán điện thoại cũ được 2tr", "label": "income"}
+{"text": "bố mẹ gửi 3 triệu", "label": "income"}
+{"text": "nhận tiền dạy kèm 600k", "label": "income"}
+{"text": "chuyển 2tr sang ví tiết kiệm", "label": "transfer"}
+{"text": "nạp 500k vào momo", "label": "transfer"}
+{"text": "rút 1 triệu tiền mặt", "label": "transfer"}
+{"text": "để dành 300k vào heo đất", "label": "transfer"}
+{"text": "chuyển tiền từ vietcombank sang momo 200k", "label": "transfer"}
+{"text": "cho Minh mượn 500k", "label": "lend"}
+{"text": "cho an vay 2 triệu", "label": "lend"}
+{"text": "ứng cho Lan 300k", "label": "lend"}
+{"text": "Tuấn mượn 1tr", "label": "lend"}
+{"text": "cho bạn cùng phòng mượn 200k", "label": "lend"}
+{"text": "vay mẹ 5 triệu", "label": "borrow"}
+{"text": "mượn Hùng 300k", "label": "borrow"}
+{"text": "vay của chị Hà 1tr", "label": "borrow"}
+{"text": "Linh cho mình mượn 200k", "label": "borrow"}
+{"text": "vay ngân hàng 50 triệu", "label": "borrow"}
+{"text": "trả nợ Hùng 300k", "label": "repay"}
+{"text": "trả lại chị Hà 500k", "label": "repay"}
+{"text": "trả tiền vay mẹ 1tr", "label": "repay"}
+{"text": "trả Bình tiền mượn hôm trước 200k", "label": "repay"}
+{"text": "Minh trả nợ 500k", "label": "collect"}
+{"text": "an trả tiền 1 triệu", "label": "collect"}
+{"text": "thu nợ Lan 300k", "label": "collect"}
+{"text": "Tuấn trả lại 500k", "label": "collect"}
+{"text": "lãi tiết kiệm tháng 10 120k", "label": "interestIncome"}
+{"text": "nhận lãi 80k", "label": "interestIncome"}
+{"text": "tiền lãi ngân hàng 150k", "label": "interestIncome"}
+{"text": "trả lãi thẻ tín dụng 200k", "label": "interestExpense"}
+{"text": "trả lãi vay 1tr", "label": "interestExpense"}
+{"text": "đóng lãi ngân hàng 450k", "label": "interestExpense"}
