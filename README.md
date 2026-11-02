@@ -65,7 +65,7 @@ có thể triển khai trên **ba máy chủ khác nhau**:
 
 | Nhóm | Đã hiện thực |
 |---|---|
-| a) Tài khoản | Đăng ký bằng email, đăng nhập, đăng xuất (thu hồi token), quên mật khẩu bằng mã 6 số gửi email, đổi mật khẩu (xác thực mật khẩu cũ), xóa tài khoản, cấu hình máy chủ, chế độ ngoại tuyến. Mật khẩu băm bcrypt, xác thực JWT, phân quyền dữ liệu theo người dùng |
+| a) Tài khoản | Đăng ký và đăng nhập bằng email **bắt buộc xác thực mã OTP 6 số gửi về email** (hiệu lực 5 phút, gửi lại sau 60 giây, sai 5 lần phải đăng nhập lại); ràng buộc họ tên 2–50 chữ cái, email hợp lệ, mật khẩu 8–72 ký tự gồm chữ và số; tạm khóa 15 phút sau 5 lần sai mật khẩu; đăng xuất (thu hồi token), quên mật khẩu bằng mã 6 số gửi email, đổi mật khẩu (xác thực mật khẩu cũ), xóa tài khoản, cấu hình máy chủ, chế độ ngoại tuyến. Mật khẩu băm bcrypt, xác thực JWT, phân quyền dữ liệu theo người dùng |
 | b) Ví | Ví cơ bản và ví tiết kiệm (mục tiêu, ngày bắt đầu, ngày kết thúc, tiến độ, gợi ý số tiền cần để dành mỗi tháng); thêm, sửa, xóa (cảnh báo và xóa kèm dữ liệu liên quan), chi tiết ví với giao dịch theo tháng; chặn trùng tên; “Không tính vào tổng”; “Chỉ tính tài sản có thể dùng ngay”; 6 đơn vị tiền tệ |
 | c) Giao dịch | Chi tiêu, thu nhập, chuyển tiền giữa ví, vay/nợ đủ 6 loại (cho vay, thu nợ, thu lãi, đi vay, trả nợ, trả lãi) với ngày đến hạn; nhập số tiền có phân tách hàng nghìn và nút cộng nhanh; gợi ý ghi chú; cảnh báo chi vượt số dư; chặn thu/trả nợ vượt số còn lại; hỏi lại khi thoát form đang nhập; sửa, xóa |
 | d) Danh mục | Thêm, sửa (chọn trong 24 biểu tượng), xóa (chặn khi đang dùng), tìm kiếm, phân loại thu/chi |
@@ -88,7 +88,8 @@ có thể triển khai trên **ba máy chủ khác nhau**:
 | Xuất Excel và chia sẻ | Tệp `.xlsx` 3 trang (Giao dịch, Ví, Ngân sách) và `.csv`, gửi qua bảng chia sẻ hệ điều hành | `features/settings/data/`, `share_plus` |
 | Tỷ giá quy đổi | Bảng tỷ giá do người dùng cập nhật, đồng bộ theo tài khoản; hiện tổng tài sản quy đổi khi có nhiều tiền tệ | `features/settings/` |
 | Refresh token | Access token JWT 1 giờ + refresh token 30 ngày xoay vòng (chỉ lưu bản băm); app tự làm mới khi gặp lỗi 401 | `backend/src/routes/auth.js`, `FinanceProvider._call` |
-| Xác thực email | Mã 6 số gửi khi đăng ký, xác thực trong mục Tài khoản | `POST /api/auth/verify-email` |
+| Xác thực OTP qua email | Đăng ký/đăng nhập chỉ cấp phiên sau khi nhập đúng mã OTP gửi về email | `POST /api/auth/verify-otp`, `POST /api/auth/resend-otp` |
+| Kết nối ngân hàng (VietQR + SePay) | Liên kết tài khoản ngân hàng với ví VND; tạo mã VietQR (chuẩn NAPAS, tạo trên máy, không cần mạng) để nhận tiền hoặc đòi nợ; mã đối soát `LTD…` trong nội dung chuyển khoản, khi SePay báo tiền về thì backend tự ghi giao dịch thu nhập/thu nợ (chống trùng, khớp số tài khoản) | `core/banking/vietqr.dart`, `features/banking/`, `backend/src/routes/bank.js` |
 
 ### 2.3. Tính năng AI
 
@@ -373,7 +374,8 @@ AI service có tài liệu tương tác tại `http://localhost:8000/docs`.
 
 | Nhóm | Endpoint chính |
 |---|---|
-| Tài khoản | `POST /api/auth/register` · `login` · `refresh` · `logout` (`{ all: true }` = mọi thiết bị) · `forgot-password` · `reset-password` · `verify-email` · `GET/PUT/DELETE /api/auth/me` · `PUT /api/auth/change-password` |
+| Tài khoản | `POST /api/auth/register` · `login` → `verify-otp` · `resend-otp` · `refresh` · `logout` (`{ all: true }` = mọi thiết bị) · `forgot-password` · `reset-password` · `verify-email` · `GET/PUT/DELETE /api/auth/me` · `PUT /api/auth/change-password` |
+| Ngân hàng | `GET /api/bank/banks` · `POST/GET/DELETE /api/bank/requests` · `GET /api/bank/sepay` · `POST/DELETE /api/bank/sepay/key` · `POST /api/bank/sepay/webhook` (SePay gọi, xác thực `Apikey`) |
 | Dữ liệu | `GET/POST /api/{wallets,categories,people,transactions,budgets,recurring}` · `GET/PUT/DELETE /api/{resource}/:id` |
 | Báo cáo | `GET /api/reports/dashboard` · `summary` · `debts` |
 | Đồng bộ | `GET /api/sync` (ảnh chụp toàn bộ) · `POST /api/sync/batch` (áp dụng hàng đợi thay đổi) |

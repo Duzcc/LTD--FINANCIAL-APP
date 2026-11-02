@@ -10,14 +10,16 @@ const request = require('supertest');
 const { connectTestDb, disconnectTestDb } = require('./helpers/db');
 const app = require('../src/app');
 const config = require('../src/config');
+const { signup } = require('./helpers/auth');
+const { User } = require('../src/models');
 
-let token; let refresh; let verifyCode;
+let token; let refresh;
 const auth = (r) => r.set('Authorization', `Bearer ${token}`);
 
 before(async () => {
   await connectTestDb('finance_app_test_extra');
-  const r = await request(app).post('/api/auth/register').send({ name: 'Chi', email: 'chi@test.vn', password: '123456' });
-  token = r.body.token; refresh = r.body.refreshToken; verifyCode = r.body.devVerificationCode;
+  const r = await signup(app, 'Chi', 'chi@test.vn', 'Matkhau1');
+  token = r.token; refresh = r.refreshToken;
 });
 after(async () => {
   await disconnectTestDb();
@@ -38,9 +40,10 @@ test('Refresh token xoay vòng và bị thu hồi khi đăng xuất', async () =
 
 test('Xác thực email bằng mã', async () => {
   let r = await auth(request(app).get('/api/auth/me'));
-  assert.equal(r.body.user.emailVerified, false);
-  assert.match(verifyCode, /^\d{6}$/);
-  r = await auth(request(app).post('/api/auth/verify-email')).send({ code: verifyCode === '000000' ? '111111' : '000000' });
+  assert.equal(r.body.user.emailVerified, true, 'đã xác thực qua OTP khi đăng ký');
+  // Tài khoản cũ chưa xác thực vẫn dùng được mã xác thực trong mục Tài khoản
+  await User.updateOne({ email: 'chi@test.vn' }, { emailVerified: false });
+  r = await auth(request(app).post('/api/auth/verify-email')).send({ code: '000000' });
   assert.equal(r.status, 400);
   r = await auth(request(app).post('/api/auth/resend-verification'));
   const code = r.body.devCode;
@@ -118,5 +121,28 @@ test('Trợ lý AI: chế độ luật khi chưa cấu hình và gọi mô hình
   } finally {
     global.fetch = realFetch;
     Object.assign(config.ai, saved);
+  }
+});
+
+test('Gửi lại OTP: mã cũ hết hiệu lực, giới hạn số lần gửi', async () => {
+  const wait = config.otp.resendSeconds;
+  config.otp.resendSeconds = 0;
+  try {
+    const step = (await request(app).post('/api/auth/login').send({ email: 'chi@test.vn', password: 'Matkhau1' })).body;
+    const again = await request(app).post('/api/auth/resend-otp').send({ otpToken: step.otpToken });
+    assert.equal(again.status, 200);
+    assert.match(again.body.devCode, /^\d{6}$/);
+    if (again.body.devCode !== step.devCode) {
+      const old = await request(app).post('/api/auth/verify-otp').send({ otpToken: step.otpToken, code: step.devCode });
+      assert.equal(old.status, 400, 'mã cũ không dùng được nữa');
+    }
+    for (let i = 2; i < config.otp.maxSends; i += 1) {
+      assert.equal((await request(app).post('/api/auth/resend-otp').send({ otpToken: step.otpToken })).status, 200);
+    }
+    const r = await request(app).post('/api/auth/resend-otp').send({ otpToken: step.otpToken });
+    assert.equal(r.status, 429);
+    assert.equal(r.body.error.code, 'OTP_EXPIRED');
+  } finally {
+    config.otp.resendSeconds = wait;
   }
 });

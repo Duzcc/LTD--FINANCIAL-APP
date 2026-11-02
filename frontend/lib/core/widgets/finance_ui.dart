@@ -269,7 +269,10 @@ Future<bool> confirmDelete(BuildContext context, String title) async =>
     false;
 
 Future<String?> editText(BuildContext context, String title,
-    {String initial = '', bool numeric = false, bool obscure = false}) async {
+    {String initial = '',
+    bool numeric = false,
+    bool obscure = false,
+    String? Function(String?)? validator}) async {
   final controller = TextEditingController(text: initial);
   final key = GlobalKey<FormState>();
   final value = await showDialog<String>(
@@ -287,9 +290,10 @@ Future<String?> editText(BuildContext context, String title,
                       keyboardType: numeric
                           ? const TextInputType.numberWithOptions(decimal: true)
                           : TextInputType.text,
-                      validator: (v) => v == null || v.trim().isEmpty
-                          ? 'Vui lòng nhập thông tin'
-                          : null)),
+                      validator: validator ??
+                          (v) => v == null || v.trim().isEmpty
+                              ? 'Vui lòng nhập thông tin'
+                              : null)),
               actions: [
                 TextButton(
                     onPressed: () => Navigator.pop(ctx),

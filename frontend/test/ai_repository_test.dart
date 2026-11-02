@@ -9,7 +9,7 @@ void main() {
   Future<(FinanceProvider, FakeBackend)> signedIn() async {
     final server = FakeBackend();
     final p = FinanceProvider(api: ApiClient(client: server.client));
-    await p.signIn(email: 'an@test.vn', password: '123456');
+    await signInWithOtp(p);
     return (p, server);
   }
 

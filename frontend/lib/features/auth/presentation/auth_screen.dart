@@ -4,13 +4,11 @@ import 'package:finance_app/data/finance_provider.dart';
 import 'package:finance_app/core/network/api_client.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/app/main_screen.dart';
+import 'package:finance_app/core/validation/validators.dart';
 import 'package:finance_app/features/auth/presentation/forgot_password_screen.dart';
+import 'package:finance_app/features/auth/presentation/otp_screen.dart';
 
-final _emailPattern = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$');
-String? validateEmail(String? v) =>
-    _emailPattern.hasMatch((v ?? '').trim()) ? null : 'Email không hợp lệ';
-String? validatePassword(String? v) =>
-    (v ?? '').length < 6 ? 'Mật khẩu tối thiểu 6 ký tự' : null;
+export 'package:finance_app/core/validation/validators.dart';
 
 /// Sau khi đăng nhập thành công: hỏi cách xử lý dữ liệu nếu cần rồi vào ứng dụng.
 Future<void> finishSignIn(BuildContext context, bool needsDecision,
@@ -145,12 +143,16 @@ class _AuthScreenState extends State<AuthScreen> {
       error = null;
     });
     try {
-      final needs = registering
+      // Bước 1: máy chủ kiểm tra thông tin và gửi OTP; bước 2: nhập mã ở OtpScreen.
+      final challenge = registering
           ? await p.register(
               name: name.text, email: email.text, password: password.text)
           : await p.signIn(email: email.text, password: password.text);
       if (!mounted) return;
-      await finishSignIn(context, needs, fromSettings: widget.fromSettings);
+      password.clear();
+      confirm.clear();
+      await openPage(context,
+          OtpScreen(challenge: challenge, fromSettings: widget.fromSettings));
     } catch (e) {
       if (mounted) setState(() => error = e.toString());
     } finally {
@@ -208,6 +210,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                   onSelectionChanged: (v) => setState(() {
                                         registering = v.first;
                                         error = null;
+                                        form.currentState?.reset();
                                       })),
                               const SizedBox(height: 20),
                               if (registering) ...[
@@ -215,13 +218,12 @@ class _AuthScreenState extends State<AuthScreen> {
                                     controller: name,
                                     textCapitalization:
                                         TextCapitalization.words,
+                                    maxLength: 50,
                                     decoration: const InputDecoration(
                                         labelText: 'Họ và tên',
+                                        counterText: '',
                                         prefixIcon: Icon(Icons.person_outline)),
-                                    validator: (v) =>
-                                        (v ?? '').trim().isEmpty
-                                            ? 'Vui lòng nhập họ tên'
-                                            : null),
+                                    validator: validateName),
                                 const SizedBox(height: 12),
                               ],
                               TextFormField(
@@ -229,7 +231,10 @@ class _AuthScreenState extends State<AuthScreen> {
                                   controller: email,
                                   keyboardType: TextInputType.emailAddress,
                                   autocorrect: false,
+                                  maxLength: 254,
+                                  autofillHints: const [AutofillHints.email],
                                   decoration: const InputDecoration(
+                                      counterText: '',
                                       labelText: 'Email',
                                       prefixIcon: Icon(Icons.mail_outline)),
                                   validator: validateEmail),
@@ -238,8 +243,12 @@ class _AuthScreenState extends State<AuthScreen> {
                                   key: const ValueKey('auth-password'),
                                   controller: password,
                                   obscureText: !showPassword,
+                                  maxLength: 72,
                                   decoration: InputDecoration(
                                       labelText: 'Mật khẩu',
+                                      counterText: '',
+                                      helperText:
+                                          registering ? passwordRules : null,
                                       prefixIcon: const Icon(Icons.lock_outline),
                                       suffixIcon: IconButton(
                                           tooltip: showPassword
@@ -250,7 +259,9 @@ class _AuthScreenState extends State<AuthScreen> {
                                           icon: Icon(showPassword
                                               ? Icons.visibility_off_outlined
                                               : Icons.visibility_outlined))),
-                                  validator: validatePassword,
+                                  validator: (v) => registering
+                                      ? validatePassword(v, email: email.text)
+                                      : validateLoginPassword(v),
                                   onFieldSubmitted: (_) =>
                                       registering ? null : submit()),
                               if (registering) ...[
@@ -261,9 +272,11 @@ class _AuthScreenState extends State<AuthScreen> {
                                     decoration: const InputDecoration(
                                         labelText: 'Nhập lại mật khẩu',
                                         prefixIcon: Icon(Icons.lock_outline)),
-                                    validator: (v) => v != password.text
-                                        ? 'Mật khẩu nhập lại không khớp'
-                                        : null),
+                                    validator: (v) => (v ?? '').isEmpty
+                                        ? 'Vui lòng nhập lại mật khẩu'
+                                        : v != password.text
+                                            ? 'Mật khẩu nhập lại không khớp'
+                                            : null),
                               ],
                               if (error != null) ...[
                                 const SizedBox(height: 12),
@@ -330,6 +343,14 @@ class _AuthScreenState extends State<AuthScreen> {
                                 const SizedBox(height: 12),
                                 OutlinedButton(
                                     onPressed: () {
+                                      final invalid =
+                                          offlineName.text.trim().isEmpty
+                                              ? null
+                                              : validateName(offlineName.text);
+                                      if (invalid != null) {
+                                        message(context, invalid);
+                                        return;
+                                      }
                                       p.preferences(
                                           name: offlineName.text.isEmpty
                                               ? 'Bạn'

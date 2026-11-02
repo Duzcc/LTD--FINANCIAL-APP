@@ -15,6 +15,7 @@ import 'package:finance_app/features/recurring/presentation/recurring_screen.dar
 import 'package:finance_app/features/settings/presentation/settings_screens.dart';
 import 'package:finance_app/core/security/app_lock.dart';
 import 'package:finance_app/features/settings/data/excel_export.dart';
+import 'package:finance_app/features/banking/presentation/sepay_screen.dart';
 
 class OthersScreen extends StatelessWidget {
   const OthersScreen({super.key});
@@ -47,6 +48,12 @@ class OthersScreen extends StatelessWidget {
                     Icons.account_balance_wallet_outlined,
                     'Cài đặt ví',
                     () => openPage(context, const WalletsScreen())),
+                const Divider(indent: 60),
+                _row(
+                    context,
+                    Icons.account_balance_outlined,
+                    'Kết nối ngân hàng • VietQR',
+                    () => openPage(context, const SepayScreen())),
                 const Divider(indent: 60),
                 _row(
                     context,
@@ -242,7 +249,7 @@ class AccountCard extends StatelessWidget {
                 tooltip: 'Đổi tên hiển thị',
                 onPressed: () async {
                   final name = await editText(context, 'Tên hiển thị',
-                      initial: p.displayName);
+                      initial: p.displayName, validator: validateName);
                   if (name != null) p.preferences(name: name);
                 },
                 icon: const Icon(Icons.edit_outlined)),

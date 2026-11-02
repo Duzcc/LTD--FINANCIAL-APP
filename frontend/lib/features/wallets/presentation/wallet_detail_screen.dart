@@ -9,6 +9,7 @@ import 'package:finance_app/features/transactions/presentation/add_transaction_s
 import 'package:finance_app/features/wallets/presentation/create_wallet_screen.dart';
 import 'package:finance_app/features/wallets/presentation/wallets_screen.dart';
 import 'package:finance_app/features/recurring/presentation/recurring_screen.dart';
+import 'package:finance_app/features/banking/presentation/receive_qr_screen.dart';
 
 /// Thông tin và các giao dịch của một ví; sửa hoặc xóa ví.
 class WalletDetailScreen extends StatefulWidget {
@@ -132,6 +133,17 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
                     icon: const Icon(Icons.swap_horiz),
                     label: const Text('Chuyển tiền'))),
           ]),
+          if (w.hasBank) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                    key: const ValueKey('receive-qr'),
+                    onPressed: () =>
+                        openPage(context, ReceiveQrScreen(walletId: w.id)),
+                    icon: const Icon(Icons.qr_code_2),
+                    label: const Text('Nhận tiền bằng VietQR'))),
+          ],
           if (w.savings) ...[
             const SizedBox(height: 8),
             SizedBox(

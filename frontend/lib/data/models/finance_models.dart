@@ -29,11 +29,18 @@ class MoneyWallet {
       this.excluded = false,
       this.target = 0,
       this.startDate,
-      this.deadline});
+      this.deadline,
+      this.bankBin,
+      this.bankAccount,
+      this.bankHolder});
   final String id, name, currency;
   final double opening, target;
   final bool savings, excluded;
   final DateTime? startDate, deadline;
+
+  /// Tài khoản ngân hàng liên kết (mã BIN, số tài khoản, tên chủ tài khoản) để nhận tiền bằng VietQR.
+  final String? bankBin, bankAccount, bankHolder;
+  bool get hasBank => bankBin != null && bankAccount != null;
   IconData get icon =>
       savings ? Icons.savings_outlined : Icons.account_balance_wallet_outlined;
   Map<String, dynamic> toJson() => {
@@ -45,7 +52,10 @@ class MoneyWallet {
         'excluded': excluded,
         'target': target,
         'startDate': _iso(startDate),
-        'deadline': _iso(deadline)
+        'deadline': _iso(deadline),
+        'bankBin': bankBin,
+        'bankAccount': bankAccount,
+        'bankHolder': bankHolder
       };
   factory MoneyWallet.fromJson(Map<String, dynamic> j) => MoneyWallet(
       id: j['id'],
@@ -56,7 +66,10 @@ class MoneyWallet {
       excluded: j['excluded'] == true,
       target: _number(j['target']),
       startDate: _date(j['startDate']),
-      deadline: _date(j['deadline']));
+      deadline: _date(j['deadline']),
+      bankBin: j['bankBin'] as String?,
+      bankAccount: j['bankAccount'] as String?,
+      bankHolder: j['bankHolder'] as String?);
 }
 
 class MoneyEntry {

@@ -34,6 +34,7 @@ for (const r of ['wallets', 'categories', 'people', 'transactions', 'budgets', '
 app.use('/api/reports', requireAuth, require('./routes/reports'));
 app.use('/api/sync', requireAuth, require('./routes/sync'));
 app.use('/api/ai', requireAuth, require('./routes/ai'));
+app.use('/api/bank', require('./routes/bank')); // webhook SePay không dùng JWT nên tự xác thực trong router
 
 app.use(notFoundRoute);
 app.use(errorHandler);

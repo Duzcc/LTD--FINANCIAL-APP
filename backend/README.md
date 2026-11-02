@@ -53,7 +53,10 @@ Mặc định: máy ảo Android dùng `http://10.0.2.2:3000`; iOS Simulator, ma
 | `AI_SERVICE_URL`, `AI_SERVICE_KEY`, `AI_SERVICE_TIMEOUT_MS` | Địa chỉ và khóa dùng chung của AI service (`ai-service/`). Để trống = các API AI trả 503, app dùng mô hình trên thiết bị |
 | `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL`, `AI_BASE_URL`, `AI_MAX_TOKENS` | LLM trực tiếp — chỉ dùng làm dự phòng cho `/api/ai/chat` khi AI service không chạy |
 | `CORS_ORIGINS` | Danh sách origin của frontend được phép gọi API, phân tách bằng dấu phẩy (`*` = tất cả) |
-| `SMTP_*`, `MAIL_FROM` | Gửi email mã quên mật khẩu. Nếu bỏ trống ở chế độ dev, API trả mã trong trường `devCode` để demo |
+| `MONGODB_URI`, `MONGODB_DB` | Chuỗi kết nối MongoDB (máy riêng hoặc Atlas `mongodb+srv://…`) và tên db (mặc định `finance_app`). Chuyển dữ liệu từ MongoDB nhúng (`dev:mem`) sang: chạy `npm run dev:mem` ở một terminal, rồi `npm run db:migrate` |
+| `PUBLIC_URL` | Địa chỉ công khai của backend (tên miền hoặc ngrok) để hiện URL webhook SePay đúng |
+| `OTP_MINUTES`, `OTP_RESEND_SECONDS`, `MAX_FAILED_LOGINS`, `LOGIN_LOCK_MINUTES` | Hiệu lực OTP (5 phút), chờ gửi lại (60 giây), số lần sai mật khẩu trước khi khóa (5), thời gian khóa (15 phút) |
+| `SMTP_*`, `MAIL_FROM` | Gửi email mã OTP đăng nhập/đăng ký và mã quên mật khẩu. Nếu bỏ trống ở chế độ dev, API trả mã trong trường `devCode` để demo |
 | `TZ` | Múi giờ tổng hợp báo cáo (mặc định `Asia/Ho_Chi_Minh`) |
 
 ## Danh sách API
@@ -62,13 +65,15 @@ Mặc định: máy ảo Android dùng `http://10.0.2.2:3000`; iOS Simulator, ma
 Backend dựng *snapshot* dữ liệu (không có email/mật khẩu, đã quy đổi tiền tệ) rồi gửi sang AI service — xem `src/services/aiSnapshot.js`, `src/clients/aiServiceClient.js`.
 
 
-Mọi API, trừ nhóm `/api/auth/register|login|forgot-password|reset-password` và `/api/health`, đều cần header `Authorization: Bearer <token>`. Lỗi trả về dạng `{ "error": { "code", "message" } }` với mã HTTP 400, 401, 404, 409 hoặc 500.
+Mọi API, trừ nhóm `/api/auth/register|login|verify-otp|resend-otp|refresh|forgot-password|reset-password` và `/api/health`, đều cần header `Authorization: Bearer <token>`. Lỗi trả về dạng `{ "error": { "code", "message" } }` với mã HTTP 400, 401, 404, 409, 429 hoặc 500.
 
 | Nhóm | Phương thức & đường dẫn | Mô tả |
 |---|---|---|
 | Hệ thống | `GET /api/health` | Kiểm tra API và kết nối CSDL |
-| Tài khoản | `POST /api/auth/register` | Đăng ký `{name, email, password}`; tạo sẵn ví Tiền mặt, danh mục mặc định, đối tượng “Bản thân” |
-| | `POST /api/auth/login` | Đăng nhập `{email, password}` → `{token, user}` |
+| Tài khoản | `POST /api/auth/register` | Đăng ký `{name, email, password}` (họ tên 2–50 chữ cái; mật khẩu 8–72 ký tự gồm chữ và số, không khoảng trắng, khác email); tạo sẵn ví Tiền mặt, danh mục mặc định, đối tượng “Bản thân”; gửi OTP → `{otpRequired, otpToken, expiresIn, resendAfter}` (chưa cấp token). Email chưa xác thực được đăng ký lại |
+| | `POST /api/auth/login` | Bước 1: `{email, password}` đúng → gửi OTP tới email, trả `{otpRequired, otpToken, …}`. Sai 5 lần liên tiếp → khóa 15 phút (429 `ACCOUNT_LOCKED`) |
+| | `POST /api/auth/verify-otp` | Bước 2: `{otpToken, code}` → `{token, refreshToken, user}`. Mã hiệu lực 5 phút, dùng một lần, sai 5 lần phải đăng nhập lại (`OTP_EXPIRED`) |
+| | `POST /api/auth/resend-otp` | `{otpToken}`; chờ 60 giây giữa hai lần (429 `OTP_RESEND_WAIT`), tối đa 5 lần |
 | | `POST /api/auth/forgot-password` | Gửi mã khôi phục 6 số (hiệu lực 15 phút) qua email |
 | | `POST /api/auth/reset-password` | `{email, code, newPassword}`; sai quá 5 lần phải yêu cầu mã mới |
 | | `PUT /api/auth/change-password` | `{oldPassword, newPassword}`; trả token mới và thu hồi token cũ |
@@ -86,6 +91,11 @@ Mọi API, trừ nhóm `/api/auth/register|login|forgot-password|reset-password`
 | Định kỳ | `/api/recurring` | CRUD giao dịch định kỳ `{kind, amount, walletId, frequency, interval, startDate, endDate, nextDate, active}` |
 | Tài khoản | `POST /api/auth/refresh` | Đổi refresh token lấy cặp token mới (xoay vòng) |
 | | `POST /api/auth/verify-email`, `POST /api/auth/resend-verification` | Xác thực email bằng mã 6 số |
+| Ngân hàng | `GET /api/bank/banks` | Danh sách ngân hàng hỗ trợ VietQR (mã BIN NAPAS) |
+| | `POST /api/bank/requests` | Tạo yêu cầu nhận tiền `{walletId, amount?, kind: income\|collect, personId?, note}` → mã đối soát `LTDxxxxxx` đặt trong nội dung chuyển khoản của VietQR. Ví phải liên kết ngân hàng (`bankBin`, `bankAccount`, `bankHolder`) |
+| | `GET /api/bank/requests[/:id]`, `DELETE /api/bank/requests/:id` | Xem trạng thái (`pending`, `paid`, `cancelled`, `expired`) / hủy yêu cầu |
+| | `GET /api/bank/sepay`, `POST/DELETE /api/bank/sepay/key` | Trạng thái kết nối, tạo/thu hồi API key webhook (chỉ trả khóa một lần, lưu bản băm) |
+| | `POST /api/bank/sepay/webhook` | SePay gọi khi có tiền vào (header `Authorization: Apikey <khóa>`). Chống trùng theo `id` của SePay; khớp mã đối soát + số tài khoản → tự ghi giao dịch thu nhập/thu nợ; trả `{success: true}` |
 | AI | `GET /api/ai/status` | AI service có sẵn sàng không, danh sách tính năng |
 | | `POST /api/ai/chat` | `{messages}` → `{reply, source: ai-service\|llm\|rules, actions}`; LLM gọi công cụ, `actions` là đề xuất cần người dùng xác nhận |
 | | `POST /api/ai/categorize` | `{text, income?}` → gợi ý danh mục cá nhân hóa theo lịch sử |

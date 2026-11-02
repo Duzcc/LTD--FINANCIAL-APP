@@ -37,4 +37,19 @@ async function sendVerifyCode(email, name, code) {
   });
   return true;
 }
-module.exports = { sendResetCode, sendVerifyCode, mailEnabled };
+// Mã OTP đăng nhập / xác thực đăng ký
+async function sendOtpCode(email, name, code, purpose) {
+  const action = purpose === 'register' ? 'hoàn tất đăng ký' : 'đăng nhập';
+  if (!transport) {
+    if (config.env === 'development') console.log(`[mail-dev] Mã OTP ${action} cho ${email}: ${code}`);
+    return false;
+  }
+  await transport.sendMail({
+    from: config.smtp.from,
+    to: email,
+    subject: `Mã OTP ${action} – Quản lý chi tiêu`,
+    text: `Xin chào ${name},\n\nMã OTP để ${action} của bạn là: ${code}\nMã có hiệu lực trong ${config.otp.minutes} phút. Tuyệt đối không chia sẻ mã này cho người khác.\n\nNếu không phải bạn, hãy đổi mật khẩu ngay.`,
+  });
+  return true;
+}
+module.exports = { sendResetCode, sendVerifyCode, sendOtpCode, mailEnabled };
