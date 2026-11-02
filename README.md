@@ -134,7 +134,9 @@ flowchart LR
   FP -- "JWT · /api/sync/batch" --> R
   AR -- "JWT · /api/ai/*" --> AIR
   AC -- "X-API-Key · snapshot JSON" --> E
-  S --> DB[(MongoDB)]
+  S --> DB[(MongoDB<br/>Atlas hoặc tự cài)]
+  SP[SePay<br/>biến động số dư] -- "webhook · Apikey" --> R
+  R -. "OTP · SMTP" .-> MAIL[Hộp thư người dùng]
   LLM -. tùy chọn .-> CL[Claude API / Ollama]
 ```
 
@@ -148,6 +150,8 @@ flowchart LR
 | Phòng thủ nhiều lớp | App không gọi thẳng AI service; backend xác thực JWT, giới hạn tần suất, gửi khóa dịch vụ `X-API-Key` |
 | Suy giảm mềm | AI service lỗi → backend trả `503 AI_UNAVAILABLE` / trợ lý luật; app tự dùng mô hình trên thiết bị |
 | Con người quyết định | LLM chỉ đề xuất; người dùng luôn bấm xác nhận trước khi dữ liệu được ghi |
+| Xác thực hai bước | Đúng mật khẩu chưa đủ: chỉ cấp token sau khi nhập mã OTP gửi về email |
+| Đối soát ngân hàng một lần | Webhook SePay được xác thực bằng khóa riêng của từng người dùng, chống trùng theo mã giao dịch SePay, chỉ ghi khi khớp mã đối soát và số tài khoản |
 
 Sơ đồ chi tiết (luồng nhập nhanh, luồng quét hóa đơn): [`docs/architecture.md`](docs/architecture.md).
 
@@ -157,9 +161,10 @@ Sơ đồ chi tiết (luồng nhập nhanh, luồng quét hóa đơn): [`docs/ar
 
 | Lớp | Công nghệ |
 |---|---|
-| Ứng dụng | Flutter 3, Dart 3, Provider, fl_chart, shared_preferences, http, image_picker, flutter_local_notifications, speech_to_text, share_plus, archive (xuất .xlsx) |
+| Ứng dụng | Flutter 3, Dart 3, Provider, fl_chart, shared_preferences, http, image_picker, flutter_local_notifications, speech_to_text, share_plus, archive (xuất .xlsx), qr_flutter (mã VietQR) |
 | OCR trên thiết bị | Apple Vision (Swift, kênh `finance/ocr`), Google ML Kit Text Recognition (Kotlin) |
-| Backend | Node.js 22, Express 4, Mongoose 8, MongoDB 7, JWT + refresh token xoay vòng, bcrypt, helmet, express-rate-limit, nodemailer |
+| Backend | Node.js 22, Express 4, Mongoose 8, MongoDB 7 (MongoDB Atlas hoặc tự cài), JWT + refresh token xoay vòng, OTP email, bcrypt, helmet, express-rate-limit, nodemailer (SMTP/Gmail) |
+| Ngân hàng | VietQR theo chuẩn EMVCo/NAPAS (tạo trên thiết bị), SePay (webhook biến động số dư để đối soát tiền về) |
 | AI service | Python ≥ 3.11, FastAPI, Pydantic v2, scikit-learn, NumPy, Pillow, pytesseract, pyobjc-Vision (macOS), httpx |
 | LLM (tùy chọn) | Anthropic Claude (Messages API) hoặc máy chủ tương thích OpenAI: Ollama, LM Studio, vLLM (Qwen 2.5, Llama 3.1…) |
 | Kiểm thử | flutter_test, integration_test, `node:test` + supertest, mongodb-memory-server, pytest, ruff |
@@ -175,10 +180,11 @@ LTD--FINANCIAL-APP/
 │   ├── lib/
 │   │   ├── main.dart               # khởi động: bộ nhớ, thông báo, định kỳ, đồng bộ
 │   │   ├── app/                    # FinanceApp (Provider, theme, khóa), MainScreen, thanh điều hướng
-│   │   ├── core/                   # dùng chung: network, ocr, security, notifications, theme, widgets
+│   │   ├── core/                   # dùng chung: network, ocr, security, notifications, theme, widgets,
+│   │   │                           # banking (VietQR), validation (ràng buộc dữ liệu tài khoản)
 │   │   ├── data/                   # models + FinanceProvider (sổ cái, quy tắc, lưu trữ, đồng bộ)
-│   │   └── features/               # ai, auth, home, ledger, transactions, wallets, goals,
-│   │                               # statistics, recurring, security, settings
+│   │   └── features/               # ai, auth (đăng nhập + OTP), banking (VietQR, SePay), home, ledger,
+│   │                               # transactions, wallets, goals, statistics, recurring, security, settings
 │   ├── test/                       # kiểm thử đơn vị & giao diện
 │   ├── integration_test/           # kịch bản demo đầu-cuối trên máy ảo
 │   ├── android/  ios/  web/
@@ -186,12 +192,14 @@ LTD--FINANCIAL-APP/
 ├── backend/                        # REST API
 │   ├── src/
 │   │   ├── app.js · server.js · config.js · dev-memory.js
-│   │   ├── models/                 # User, Wallet, Category, Person, Transaction, Budget, Recurring, RefreshToken
-│   │   ├── routes/                 # auth, resources (CRUD), reports, sync, ai
-│   │   ├── services/               # ledger (nghiệp vụ), store, aiSnapshot, mailer, ai (LLM dự phòng)
+│   │   ├── models/                 # User, Wallet, Category, Person, Transaction, Budget, Recurring, RefreshToken,
+│   │   │                           # OtpChallenge, PaymentRequest, BankEvent
+│   │   ├── routes/                 # auth (OTP), resources (CRUD), reports, sync, ai, bank (VietQR + SePay)
+│   │   ├── services/               # ledger (nghiệp vụ), store, aiSnapshot, mailer, banks, ai (LLM dự phòng)
 │   │   ├── clients/                # aiServiceClient
 │   │   └── middleware/             # auth (JWT), error, async
-│   ├── test/                       # api, extra, ai (+ helpers/db.js)
+│   ├── scripts/migrate-db.js       # chuyển dữ liệu MongoDB nhúng → MongoDB thật (npm run db:migrate)
+│   ├── test/                       # api, extra, bank, ai (+ helpers/db.js, helpers/auth.js)
 │   ├── docs/openapi.yaml           # đặc tả OpenAPI 3
 │   └── postman_collection.json
 ├── ai-service/                     # Dịch vụ AI
@@ -221,9 +229,11 @@ LTD--FINANCIAL-APP/
 | Thành phần | Phiên bản | Ghi chú |
 |---|---|---|
 | Flutter SDK | 3.x (Dart ≥ 3.0) | `flutter doctor` không báo lỗi cho nền tảng muốn chạy |
-| Android Studio / Xcode | mới nhất | Android SDK + máy ảo; hoặc Xcode 15+ và CocoaPods cho iOS |
-| Node.js | ≥ 18 (khuyến nghị 22) | |
-| MongoDB | ≥ 6 | **Không bắt buộc** khi phát triển: `npm run dev:mem` dùng MongoDB trong bộ nhớ |
+| Android Studio / Xcode | mới nhất | Android SDK + máy ảo; hoặc Xcode 15+ và iOS Simulator (Flutter 3.44 dùng Swift Package Manager cho plugin iOS) |
+| Node.js | **22** | Node 18 chạy được máy chủ nhưng **không chạy được `npm test`** (thiếu cờ `--test-concurrency`) |
+| MongoDB | Atlas hoặc ≥ 6 | MongoDB Atlas (gói M0 miễn phí) hoặc tự cài. Khi phát triển không có MongoDB: `npm run dev:mem` dùng MongoDB nhúng |
+| Tài khoản Gmail (tùy chọn) | — | Mật khẩu ứng dụng để gửi mã OTP thật; để trống thì mã hiện trên app (chế độ dev) |
+| SePay (tùy chọn) | — | Để tiền chuyển vào qua VietQR được tự ghi thành giao dịch; backend cần địa chỉ công khai |
 | Python | ≥ 3.11 | |
 | Tesseract (tùy chọn) | 5.x + gói `vie` | Chỉ cần để AI service đọc ảnh hóa đơn trên Linux; macOS dùng Apple Vision |
 | Docker (tùy chọn) | 24+ | Để chạy toàn bộ phía máy chủ bằng một lệnh |
@@ -262,13 +272,14 @@ Kiểm tra: <http://localhost:8000/health> và tài liệu tương tác <http://
 ```bash
 cd backend
 npm install
-cp .env.example .env                    # đặt JWT_SECRET; AI_SERVICE_URL=http://127.0.0.1:8000
+cp .env.example .env                    # đặt JWT_SECRET, MONGODB_URI (mục 7.3); AI_SERVICE_URL=http://127.0.0.1:8000
                                         # AI_SERVICE_KEY phải trùng SERVICE_API_KEY của AI service
-npm run dev:mem                         # MongoDB trong bộ nhớ (dữ liệu lưu ở backend/.data)
-# hoặc khi đã có MongoDB: npm run dev
+npm run dev                             # MongoDB theo MONGODB_URI (Atlas hoặc tự cài)
+# chưa có MongoDB: npm run dev:mem      # MongoDB nhúng, dữ liệu lưu ở backend/.data
 ```
 
-Kiểm tra: <http://localhost:3000/api/health> → `{"status":"ok","db":"connected"}`.
+Kiểm tra: <http://localhost:3000/api/health> → `{"status":"ok","db":"connected"}`. Log khởi động ghi rõ đang dùng
+cơ sở dữ liệu nào: `MongoDB đã kết nối: mongodb+srv://***@… (db: finance_app)`.
 
 **③ Ứng dụng Flutter**
 
@@ -277,6 +288,16 @@ cd frontend
 flutter pub get
 flutter run                                             # chọn thiết bị
 flutter run --dart-define=API_URL=http://192.168.1.10:3000   # điện thoại thật: IP LAN của máy chạy backend
+```
+
+`flutter run` chỉ liệt kê thiết bị **đang chạy**. Nếu chỉ thấy Chrome/macOS, hãy bật máy ảo trước:
+
+```bash
+open -a Simulator                                  # iOS: mở Simulator (chọn máy trong File → Open Simulator)
+xcrun simctl list devices available                # hoặc xem danh sách và bật theo id:
+xcrun simctl boot <id>                             #   ví dụ iPhone 15 Pro Max
+flutter emulators --launch <tên máy ảo Android>    # Android
+flutter devices && flutter run -d <id thiết bị>
 ```
 
 Tạo máy ảo Android từ dòng lệnh (macOS Apple Silicon): `tool/tao_may_ao_android.sh` (Android 15, Pixel 7).
@@ -290,7 +311,51 @@ Tạo máy ảo Android từ dòng lệnh (macOS Apple Silicon): `tool/tao_may_a
 Có thể đổi địa chỉ ngay trong app: màn **Đăng nhập → Máy chủ → Kiểm tra → Lưu**.
 Không có backend vẫn dùng được: chọn **Dùng ngoại tuyến**.
 
-### 7.3. Cách B — Docker (phía máy chủ)
+### 7.3. Dùng MongoDB Atlas
+
+1. Trên [cloud.mongodb.com](https://cloud.mongodb.com): tạo cluster → **Database Access** tạo user có quyền đọc/ghi →
+   **Network Access** thêm IP máy chạy backend (hoặc `0.0.0.0/0` khi thử nghiệm) → **Connect → Drivers** sao chép chuỗi kết nối.
+2. Trong `backend/.env`:
+   ```
+   MONGODB_URI=mongodb+srv://<user>:<mật khẩu>@<cluster>.mongodb.net/?retryWrites=true&w=majority
+   MONGODB_DB=finance_app      # chuỗi Atlas thường không kèm tên db; bỏ trống cũng mặc định finance_app
+   ```
+   Ký tự đặc biệt trong mật khẩu phải mã hóa URL (`@` → `%40`, `#` → `%23`).
+3. (Tùy chọn) Chuyển dữ liệu đã có từ MongoDB nhúng: chạy `npm run dev:mem` ở một terminal, rồi `npm run db:migrate` ở terminal khác.
+   Lệnh ghi đè theo `_id` nên chạy lại nhiều lần không tạo bản trùng, và tạo đủ chỉ mục.
+4. `npm run dev` — máy chủ in gợi ý cụ thể nếu sai mật khẩu, IP chưa được phép hoặc sai tên cluster.
+
+### 7.4. Gửi mã OTP qua email (Gmail)
+
+Đăng nhập và đăng ký đều phải nhập mã OTP 6 số gửi về email. Khi chưa cấu hình SMTP (chế độ phát triển), mã hiện ngay
+trên màn hình OTP và trong log backend. Để gửi email thật bằng Gmail:
+
+1. Bật xác minh 2 bước cho tài khoản Google → [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords) tạo **mật khẩu ứng dụng** (16 ký tự).
+2. Trong `backend/.env`:
+   ```
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=465
+   SMTP_SECURE=true
+   SMTP_USER=<địa chỉ gmail>
+   SMTP_PASS=<mật khẩu ứng dụng, không có khoảng trắng>
+   MAIL_FROM=Quản lý chi tiêu <địa chỉ gmail>
+   ```
+3. Khởi động lại backend (tệp `.env` chỉ được đọc khi khởi động).
+
+### 7.5. Kết nối ngân hàng (VietQR + SePay)
+
+- **VietQR** không cần cấu hình: sửa một ví VND → bật *Liên kết tài khoản ngân hàng* → chọn ngân hàng, nhập số tài khoản
+  và tên chủ tài khoản. Chi tiết ví có nút *Nhận tiền bằng VietQR*; Sổ nợ có nút *Đòi nợ bằng QR*. Mã tạo ngay trên máy,
+  quét được bằng mọi ứng dụng ngân hàng tại Việt Nam.
+- **Tự ghi giao dịch khi tiền về** (cần đăng nhập):
+  1. Backend phải truy cập được từ Internet: tên miền thật, hoặc khi chạy trên máy dùng `ngrok http 3000` / `cloudflared`,
+     rồi đặt `PUBLIC_URL=https://…` trong `backend/.env`.
+  2. Trong app: *Tài khoản → Kết nối ngân hàng • VietQR → Tạo khóa kết nối* → sao chép **URL webhook** và **API Key** (khóa chỉ hiện một lần).
+  3. Trên [my.sepay.vn](https://my.sepay.vn): thêm đúng tài khoản ngân hàng đã liên kết với ví → *Tích hợp → Webhooks* →
+     sự kiện *Có tiền vào*, dán URL webhook, kiểu chứng thực **API Key**, dán khóa.
+  4. Người chuyển quét mã và giữ nguyên nội dung chuyển khoản (có mã `LTD…`) → giao dịch tự được ghi vào ví và màn hình QR báo *Đã nhận*.
+
+### 7.6. Cách B — Docker (phía máy chủ)
 
 ```bash
 cp .env.example .env          # đặt JWT_SECRET và AI_SERVICE_KEY
@@ -300,17 +365,17 @@ docker compose --profile llm up -d   # thêm Ollama để trợ lý dùng mô h�
 
 Sau đó chạy ứng dụng Flutter như bước ③ và trỏ tới `http://<máy chủ>:3000`.
 
-### 7.4. Lệnh tắt (Makefile)
+### 7.7. Lệnh tắt (Makefile)
 
 | Lệnh | Tác dụng |
 |---|---|
 | `make setup` | Cài phụ thuộc cho cả 3 phần và huấn luyện mô hình |
-| `make dev-ai` · `make dev-backend` · `make dev-app` | Chạy từng phần |
+| `make dev-ai` · `make dev-backend` · `make dev-app` | Chạy từng phần (`dev-backend` dùng MongoDB theo `MONGODB_URI`) |
 | `make test` | Chạy toàn bộ kiểm thử |
 | `make train` | Sinh dữ liệu, huấn luyện, đánh giá lại mô hình |
 | `make up` · `make down` | Bật/tắt phía máy chủ bằng Docker |
 
-### 7.5. Build bản phát hành
+### 7.8. Build bản phát hành
 
 ```bash
 cd frontend
@@ -332,12 +397,17 @@ flutter build web --release --no-web-resources-cdn --dart-define=API_URL=https:/
 | Biến | Ý nghĩa |
 |---|---|
 | `PORT`, `NODE_ENV` | Cổng (mặc định 3000), môi trường |
-| `MONGODB_URI` | Chuỗi kết nối MongoDB |
+| `MONGODB_URI`, `MONGODB_DB` | Chuỗi kết nối MongoDB (tự cài hoặc Atlas `mongodb+srv://…`) và tên cơ sở dữ liệu (mặc định `finance_app`) |
 | `JWT_SECRET`, `JWT_EXPIRES_IN`, `REFRESH_TOKEN_DAYS` | Khóa ký token (bắt buộc ở production), hạn access token (1h), hạn refresh token (30 ngày) |
 | `CORS_ORIGINS` | Origin được phép gọi API, phân tách bằng dấu phẩy |
 | `AI_SERVICE_URL`, `AI_SERVICE_KEY`, `AI_SERVICE_TIMEOUT_MS` | Địa chỉ và khóa dùng chung với AI service |
 | `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL`, `AI_BASE_URL` | LLM trực tiếp — dự phòng cho trợ lý khi AI service không chạy |
-| `SMTP_*`, `MAIL_FROM` | Gửi email mã xác thực/quên mật khẩu (để trống ở dev: API trả `devCode`) |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | Gửi mã OTP đăng nhập/đăng ký và mã quên mật khẩu (Gmail: mục 7.4). Để trống ở dev: API trả `devCode`, app hiện mã trên màn hình |
+| `OTP_MINUTES`, `OTP_RESEND_SECONDS` | Hiệu lực mã OTP (mặc định 5 phút) và thời gian chờ trước khi gửi lại (60 giây) |
+| `MAX_FAILED_LOGINS`, `LOGIN_LOCK_MINUTES` | Số lần sai mật khẩu liên tiếp trước khi tạm khóa đăng nhập (5) và thời gian khóa (15 phút) |
+| `RESET_CODE_MINUTES` | Hiệu lực mã quên mật khẩu (15 phút) |
+| `PUBLIC_URL` | Địa chỉ công khai của backend (tên miền hoặc ngrok) để hiển thị đúng URL webhook SePay |
+| `PAYMENT_REQUEST_DAYS`, `WEBHOOK_RATE_LIMIT` | Hạn của yêu cầu nhận tiền VietQR (7 ngày), giới hạn số lần gọi webhook mỗi phút (120) |
 
 **`ai-service/.env`** (mẫu: [`ai-service/.env.example`](ai-service/.env.example))
 
@@ -354,7 +424,8 @@ flutter build web --release --no-web-resources-cdn --dart-define=API_URL=https:/
 
 ## 9. Hướng dẫn sử dụng nhanh
 
-1. **Đăng ký / đăng nhập** (hoặc *Dùng ngoại tuyến*). Lần đầu có sẵn ví *Tiền mặt* và các danh mục mặc định.
+1. **Đăng ký / đăng nhập** bằng email → nhập **mã OTP 6 số** gửi về email (hoặc *Dùng ngoại tuyến*).
+   Lần đầu có sẵn ví *Tiền mặt* và các danh mục mặc định.
 2. **Thêm ví** ngân hàng hoặc ví tiết kiệm có mục tiêu ở tab *Tài khoản → Ví*.
 3. **Ghi giao dịch**: nút ➕ (biểu mẫu đầy đủ) hoặc biểu tượng ✨ *Nhập nhanh bằng AI*:
    gõ/nói `ăn phở 45k sáng nay`, `cho Minh mượn 500k`, `lương tháng 15tr` → kiểm tra → *Tiếp tục* → *Lưu*.
@@ -362,7 +433,9 @@ flutter build web --release --no-web-resources-cdn --dart-define=API_URL=https:/
 5. **Ngân sách**: tab *Ngân sách* → đặt mục tiêu tháng và theo danh mục; xem *Phân tích thông minh* để nhận gợi ý.
 6. **Thống kê, Sổ nợ, Tìm kiếm**: tab *Tổng quan*, *Sổ giao dịch*, biểu tượng 🔍.
 7. **Trợ lý AI**: *Tài khoản → Hỏi trợ lý tài chính* — "tháng này mình chi bao nhiêu?", "ghi giúp trà sữa 35k".
-8. **Khác**: giao dịch định kỳ, nhắc nhở, khóa PIN, tỷ giá, xuất Excel/CSV trong *Tài khoản*.
+8. **Nhận tiền / đòi nợ bằng VietQR**: liên kết ngân hàng cho ví VND → *Nhận tiền bằng VietQR* trong chi tiết ví,
+   hoặc *Đòi nợ bằng QR* trong Sổ nợ. Kết nối SePay để tiền về tự thành giao dịch (mục 7.5).
+9. **Khác**: giao dịch định kỳ, nhắc nhở, khóa PIN, tỷ giá, xuất Excel/CSV trong *Tài khoản*.
 
 ---
 
@@ -414,7 +487,7 @@ Chi tiết, số liệu và giới hạn: [`ai-service/MODEL_CARD.md`](ai-servic
 # AI service
 cd ai-service && .venv/bin/python -m ruff check app ml tests && .venv/bin/python -m pytest
 
-# Backend (tự dùng MongoDB trong bộ nhớ; hoặc đặt TEST_MONGODB_URI)
+# Backend — cần Node 22 (tự dùng MongoDB trong bộ nhớ, không đụng tới MONGODB_URI; hoặc đặt TEST_MONGODB_URI)
 cd backend && npm test
 E2E_AI_URL=http://127.0.0.1:8000 E2E_AI_KEY=<khóa> npm run test:e2e   # với AI service thật
 
@@ -434,19 +507,28 @@ cd frontend && flutter drive --driver=test_driver/integration_test.dart \
 | Bộ kiểm thử | Số lượng | Nội dung |
 |---|---|---|
 | AI service (`pytest`) | 64 | trích xuất thực thể, nhập nhanh, phân loại, dự báo, bất thường, ngân sách, hóa đơn & OCR, tìm kiếm, API, vòng lặp gọi công cụ với LLM giả lập (Anthropic & OpenAI-compatible) |
-| Backend (`node:test`) | 18 + 1 E2E | đăng ký/đăng nhập, phân quyền, CRUD, ràng buộc nghiệp vụ, đồng bộ, refresh token, xác thực email, định kỳ, cổng AI (AI service giả lập + thật) |
-| Frontend (`flutter test`) | 42 | sổ cái & quy tắc, đồng bộ với backend giả lập, AI máy chủ ↔ dự phòng thiết bị, bộ phân tích hóa đơn, giao diện ở 320/390/430 px |
+| Backend (`node:test`) | 25 + 1 E2E | ràng buộc dữ liệu đăng ký, đăng nhập bằng OTP (sai mã, hết lượt, gửi lại, dùng một lần), khóa đăng nhập, phân quyền, CRUD, ràng buộc nghiệp vụ, đồng bộ, refresh token, định kỳ, liên kết ngân hàng, yêu cầu VietQR, webhook SePay (xác thực, chống trùng, khớp mã/số tài khoản, thu nợ), cổng AI |
+| Frontend (`flutter test`) | 57 | sổ cái & quy tắc, ràng buộc dữ liệu, luồng đăng nhập + màn hình OTP, đồng bộ với backend giả lập, VietQR (cấu trúc EMVCo, CRC), màn hình nhận tiền, AI máy chủ ↔ dự phòng thiết bị, bộ phân tích hóa đơn, giao diện ở 320/390/430 px |
 | Demo đầu-cuối (`demo_test.dart`) | 16 bước | đăng ký → nhập nhanh → ngân sách → đồng bộ → trợ lý (đề xuất + xác nhận) → phân tích → tìm kiếm → **OCR thật trên thiết bị** (Apple Vision / ML Kit) |
 | Toàn bộ chức năng (`full_features_test.dart`) | 2 kịch bản | **Chức năng**: đủ 9 nhóm (tài khoản: đăng ký, xác thực email, đổi/đặt lại mật khẩu; ví; đủ 9 loại giao dịch và các ràng buộc; danh mục; đối tượng; ngân sách + sao chép; dashboard; thống kê; tìm kiếm), định kỳ, tỷ giá, xuất CSV/Excel, khóa PIN, đồng bộ **hai thiết bị**, AI qua backend, xóa tài khoản. **Giao diện**: mở lần lượt 26 màn hình + các tab, phát hiện mọi lỗi dựng giao diện |
 | Kiểm tra hệ thống ([`tool/kiem_tra_he_thong.mjs`](tool/kiem_tra_he_thong.mjs)) | 32 | gọi HTTP như ứng dụng thật qua cả 3 phần, kể cả quét ảnh hóa đơn trên máy chủ |
 
 ### 12.3. Kết quả gần nhất
 
+Chạy lại ngày 02/11/2026 sau khi thêm OTP, VietQR/SePay và hỗ trợ Atlas:
+
+| Hạng mục | Kết quả |
+|---|---|
+| Backend: npm test (Node 22) | ✅ 25/25 |
+| Frontend: analyze + test | ✅ không lỗi, 57/57 |
+| Ứng dụng trên **iPhone 15 Pro Max (iOS 17.5)** với backend dùng MongoDB Atlas | ✅ build và chạy |
+
+Kết quả của phiên bản trước (chưa chạy lại cho bản này; `full_features_test.dart` đã được cập nhật cho luồng OTP):
+
 | Hạng mục | Kết quả |
 |---|---|
 | AI service: ruff + pytest | ✅ sạch, 64/64 |
-| Backend: npm test + E2E | ✅ 18/18 + E2E đạt |
-| Frontend: analyze + test | ✅ không lỗi, 42/42 |
+| Backend: E2E với AI service thật | ✅ đạt |
 | Build bản phát hành | ✅ APK Android (release) · iOS (release) · Web |
 | Demo 16 bước + toàn bộ chức năng trên **iPhone 15 Pro Max (iOS 17.5)** | ✅ |
 | Demo 16 bước + toàn bộ chức năng trên **Android 15 (máy ảo Pixel 7)** | ✅ |
@@ -463,6 +545,13 @@ backend (MongoDB 7 dạng service, `npm test`), frontend (`flutter analyze`, `fl
 ## 13. Bảo mật và quyền riêng tư
 
 - Mật khẩu băm **bcrypt**; access token JWT 1 giờ, **refresh token xoay vòng** chỉ lưu bản băm SHA-256.
+- **Đăng nhập hai bước bằng OTP email**: chỉ cấp token sau khi nhập đúng mã; mã băm bcrypt, hiệu lực 5 phút, dùng một lần,
+  sai 5 lần phải đăng nhập lại, gửi lại tối đa 5 lần (cách nhau 60 giây). Nhập đúng OTP cũng là bằng chứng xác thực email.
+- **Tạm khóa đăng nhập** 15 phút sau 5 lần sai mật khẩu liên tiếp; thông báo lỗi không tiết lộ email có tồn tại hay không.
+- **Ràng buộc dữ liệu** kiểm tra ở cả app và backend: họ tên 2–50 chữ cái, email hợp lệ, mật khẩu 8–72 ký tự có chữ và số,
+  không khoảng trắng, không trùng email.
+- **Webhook SePay**: mỗi người dùng một API key (chỉ hiện một lần, máy chủ lưu bản băm, thu hồi được); giới hạn tần suất;
+  chống ghi trùng theo mã giao dịch SePay; chỉ ghi khi khớp mã đối soát của yêu cầu còn hiệu lực và đúng số tài khoản đã liên kết.
 - **Phiên theo thiết bị**: mỗi lần đăng nhập có mã phiên riêng; *Đăng xuất* chỉ thu hồi phiên của thiết bị đó, *Đăng xuất khỏi mọi thiết bị* thu hồi tất cả; đổi/đặt lại mật khẩu thu hồi mọi phiên cũ.
 - Mọi dữ liệu gắn với người dùng; API kiểm tra quyền sở hữu; giới hạn tần suất đăng nhập và AI; `helmet`, CORS theo cấu hình.
 - AI service chỉ nhận yêu cầu có `X-API-Key` từ backend, không lưu dữ liệu; snapshot không chứa email/mật khẩu.
@@ -475,6 +564,13 @@ backend (MongoDB 7 dạng service, `npm test`), frontend (`flutter analyze`, `fl
 
 | Hiện tượng | Cách xử lý |
 |---|---|
+| Backend báo `connect ECONNREFUSED 127.0.0.1:27017` | Chưa có MongoDB ở địa chỉ đó: đặt `MONGODB_URI` là chuỗi Atlas (mục 7.3), cài MongoDB, hoặc dùng `npm run dev:mem` |
+| Backend báo `bad auth` / `Server selection timed out` (Atlas) | Sai user/mật khẩu (Database Access, nhớ mã hóa ký tự đặc biệt) hoặc IP chưa có trong Network Access |
+| Không nhận được email OTP | Kiểm tra thư mục Spam; `SMTP_PASS` phải là mật khẩu ứng dụng Gmail; khởi động lại backend sau khi sửa `.env`. Khi chưa cấu hình SMTP, mã hiện trên màn hình OTP |
+| "Tài khoản tạm khóa do nhập sai mật khẩu nhiều lần" | Đợi hết thời gian khóa (`LOGIN_LOCK_MINUTES`) hoặc dùng *Quên mật khẩu* |
+| SePay không ghi được giao dịch | Backend phải truy cập được từ Internet và `PUBLIC_URL` đúng; khóa trong SePay phải là khóa mới nhất; người chuyển phải giữ mã `LTD…` trong nội dung; tài khoản trên SePay phải trùng số tài khoản đã liên kết với ví |
+| `flutter run` chỉ có Chrome/macOS | Chưa bật máy ảo: `open -a Simulator` (iOS) hoặc `flutter emulators --launch <tên>` (Android), rồi `flutter devices` |
+| `npm test` báo `bad option: --test-concurrency=1` | Đang dùng Node 18; chuyển sang Node 22 (ví dụ `nvm use 22`) |
 | App báo "Không kết nối được máy chủ" | Kiểm tra backend chạy (`/api/health`); máy ảo Android dùng `10.0.2.2`; điện thoại thật dùng IP LAN và cùng mạng Wi-Fi |
 | Các tính năng AI báo dùng "AI trên thiết bị" | AI service chưa chạy hoặc `AI_SERVICE_KEY` (backend) khác `SERVICE_API_KEY` (AI service) |
 | `401` khi gọi AI service trực tiếp | Đúng thiết kế — chỉ backend được gọi, kèm `X-API-Key` |

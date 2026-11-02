@@ -115,12 +115,15 @@ Tiền gốc vay/nợ và chuyển ví không tính vào thu chi; thu lãi và t
 
 | Thực thể | Collection | Trường chính |
 |---|---|---|
-| NguoiDung | `users` | `name` (HoTen), `email` (Email, unique), `passwordHash` (MatKhau đã băm) |
-| Vi | `wallets` | `name` (TenVi), `savings` (LoaiVi CoBan/TietKiem), `currency` (DonViTien), `opening`, `target` (SoTienMucTieu), `startDate` (NgayBatDau), `deadline` (NgayKetThuc), `user` (MaNguoiDung) |
+| NguoiDung | `users` | `name` (HoTen), `email` (Email, unique), `passwordHash` (MatKhau đã băm), `emailVerified`, `failedLogins`/`lockUntil` (khóa đăng nhập), `sepayKeyHash` (khóa webhook SePay đã băm) |
+| Vi | `wallets` | `name` (TenVi), `savings` (LoaiVi CoBan/TietKiem), `currency` (DonViTien), `opening`, `target` (SoTienMucTieu), `startDate` (NgayBatDau), `deadline` (NgayKetThuc), `bankBin`/`bankAccount`/`bankHolder` (tài khoản ngân hàng liên kết), `user` (MaNguoiDung) |
 | DanhMuc | `categories` | `name` (TenDanhMuc), `income`, `isDefault` (LoaiDanhMuc MacDinh/KhongMacDinh), `symbol` |
 | DoiTuong | `people` | `name` (TenDoiTuong), `group` |
 | GiaoDich | `transactions` | `kind` (LoaiGiaoDich), `amount` (SoTien), `date` (NgayGiaoDich), `dueDate` (NgayDenHan), `note` (GhiChu), `walletId` (MaVi), `categoryId` (MaDanhMuc), `personId` (MaDoiTuong), `destinationId` |
 | NganSach | `budgets` | `amount` (SoTien), `startDate`/`endDate` (NgayBatDau/NgayKetThuc), `walletId` (MaVi), `categoryId` (MaDanhMuc) |
+| — | `otpchallenges` | Phiên OTP đăng nhập/đăng ký: `tokenHash`, `codeHash`, `expiresAt`, `attempts`, `sends`; tự xóa sau 1 giờ (chỉ mục TTL) |
+| — | `paymentrequests` | Yêu cầu nhận tiền VietQR: `code` (mã đối soát, unique), `walletId`, `kind`, `amount`, `personId`, `status`, `entryId` |
+| — | `bankevents` | Biến động số dư từ SePay: `providerId` (duy nhất theo người dùng → chống trùng), `amount`, `content`, `result` |
 
 Mỗi bản ghi có `_id` kiểu ObjectId làm khóa chính và `clientId` (mã do app tạo, duy nhất theo từng người dùng) để app có thể tạo dữ liệu khi ngoại tuyến rồi đồng bộ sau. API trả `clientId` dưới tên `id`. Mọi truy vấn đều lọc theo `user` nên người dùng chỉ thấy dữ liệu của mình.
 
@@ -129,11 +132,15 @@ Mỗi bản ghi có `_id` kiểu ObjectId làm khóa chính và `clientId` (mã 
 ```
 src/
   app.js, server.js, config.js
-  models/        User, Wallet, Category, Person, Transaction, Budget, Recurring, RefreshToken
+  models/        User, Wallet, Category, Person, Transaction, Budget, Recurring, RefreshToken,
+                 OtpChallenge, PaymentRequest, BankEvent
   middleware/    auth (JWT), error, async
-  routes/        auth, resources (CRUD chung), reports, sync, ai (cổng tới AI service)
-  services/      ledger (nghiệp vụ & ràng buộc), store, mailer, aiSnapshot, ai (LLM dự phòng), defaults, constants
+  routes/        auth (OTP, ràng buộc tài khoản), resources (CRUD chung), reports, sync, ai (cổng tới AI service),
+                 bank (VietQR + webhook SePay)
+  services/      ledger (nghiệp vụ & ràng buộc), store, mailer (OTP, quên mật khẩu), banks (mã BIN NAPAS),
+                 aiSnapshot, ai (LLM dự phòng), defaults, constants
   clients/       aiServiceClient (gọi AI service: khóa dịch vụ, timeout, chuẩn hóa lỗi 503)
 docs/openapi.yaml  Đặc tả OpenAPI 3
-test/            Kiểm thử tích hợp (node:test + supertest): api, extra, ai (AI service giả lập + E2E)
+scripts/migrate-db.js  Chuyển dữ liệu từ MongoDB nhúng sang MongoDB thật (npm run db:migrate)
+test/            Kiểm thử tích hợp (node:test + supertest, cần Node 22): api, extra, bank, ai (AI service giả lập + E2E)
 ```
