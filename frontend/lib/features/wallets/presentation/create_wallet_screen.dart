@@ -4,6 +4,8 @@ import 'package:finance_app/data/models/finance_models.dart';
 import 'package:finance_app/data/finance_provider.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/wallets/presentation/currency_selection_screen.dart';
+import 'package:finance_app/core/banking/vietqr.dart';
+import 'package:finance_app/core/validation/validators.dart';
 
 class CreateWalletScreen extends StatefulWidget {
   const CreateWalletScreen(
@@ -28,6 +30,12 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
   late bool savings = widget.wallet?.savings ?? widget.savings,
       excluded = widget.wallet?.excluded ?? false;
   late DateTime? deadline = widget.wallet?.deadline;
+  late bool linkBank = widget.wallet?.hasBank ?? false;
+  late String? bankBin = widget.wallet?.bankBin;
+  late final bankAccount =
+      TextEditingController(text: widget.wallet?.bankAccount ?? '');
+  late final bankHolder =
+      TextEditingController(text: widget.wallet?.bankHolder ?? '');
   late DateTime? startDate = widget.wallet?.startDate ??
       (widget.wallet == null ? DateUtilsDate.day(DateTime.now()) : null);
   @override
@@ -35,6 +43,8 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
     name.dispose();
     opening.dispose();
     target.dispose();
+    bankAccount.dispose();
+    bankHolder.dispose();
     super.dispose();
   }
 
@@ -47,6 +57,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
   void save() {
     if (!form.currentState!.validate()) return;
     final p = context.read<FinanceProvider>();
+    final bank = linkBank && currency == 'VND';
     try {
       p.saveWallet(MoneyWallet(
           id: widget.wallet?.id ?? p.newId(),
@@ -57,7 +68,13 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
           excluded: excluded,
           target: savings ? amountOf(target) : 0,
           startDate: savings ? startDate : null,
-          deadline: savings ? deadline : null));
+          deadline: savings ? deadline : null,
+          bankBin: bank ? bankBin : null,
+          bankAccount:
+              bank ? bankAccount.text.replaceAll(RegExp(r'\s+'), '') : null,
+          bankHolder: bank
+              ? bankHolder.text.trim().replaceAll(RegExp(r'\s+'), ' ')
+              : null));
       Navigator.pop(context);
     } catch (e) {
       message(context, e);
@@ -209,6 +226,72 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                     }),
               ]))
             ],
+            const SizedBox(height: 16),
+            Panel(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                child: Column(children: [
+                  SwitchListTile(
+                      key: const ValueKey('link-bank'),
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Liên kết tài khoản ngân hàng'),
+                      subtitle: Text(currency == 'VND'
+                          ? 'Nhận tiền bằng mã VietQR, tự ghi giao dịch khi kết nối SePay.'
+                          : 'Chỉ dùng cho ví VND.'),
+                      value: linkBank && currency == 'VND',
+                      onChanged: currency == 'VND'
+                          ? (v) => setState(() => linkBank = v)
+                          : null),
+                  if (linkBank && currency == 'VND') ...[
+                    DropdownButtonFormField<String>(
+                        key: const ValueKey('bank-bin'),
+                        initialValue: bankBin,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                            labelText: 'Ngân hàng',
+                            prefixIcon: Icon(Icons.account_balance_outlined)),
+                        items: [
+                          for (final b in vietBanks)
+                            DropdownMenuItem(
+                                value: b.bin, child: Text('${b.name} (${b.code})'))
+                        ],
+                        onChanged: (v) => setState(() => bankBin = v),
+                        validator: (v) =>
+                            bankByBin(v) == null ? 'Chọn ngân hàng' : null),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                        key: const ValueKey('bank-account'),
+                        controller: bankAccount,
+                        keyboardType: TextInputType.number,
+                        maxLength: 19,
+                        decoration: const InputDecoration(
+                            labelText: 'Số tài khoản',
+                            counterText: '',
+                            prefixIcon: Icon(Icons.numbers)),
+                        validator: validateBankAccount),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                        key: const ValueKey('bank-holder'),
+                        controller: bankHolder,
+                        textCapitalization: TextCapitalization.characters,
+                        maxLength: 50,
+                        decoration: const InputDecoration(
+                            labelText: 'Tên chủ tài khoản',
+                            hintText: 'NGUYEN VAN AN',
+                            counterText: '',
+                            prefixIcon: Icon(Icons.badge_outlined)),
+                        onChanged: (v) {
+                          // Tự chuyển thành IN HOA không dấu như ngân hàng hiển thị
+                          final fixed = holderName(v);
+                          if (fixed != v) {
+                            bankHolder.value = TextEditingValue(
+                                text: fixed,
+                                selection: TextSelection.collapsed(
+                                    offset: fixed.length));
+                          }
+                        },
+                        validator: validateBankHolder),
+                  ],
+                ])),
             const SizedBox(height: 16),
             SwitchListTile(
                 title: const Text('Không tính vào tổng'),

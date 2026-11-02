@@ -38,6 +38,7 @@ function startStub() {
 let app; let api; let token;
 const request = require('supertest');
 const { connectTestDb, disconnectTestDb } = require('./helpers/db');
+const { signup } = require('./helpers/auth');
 const auth = (r) => r.set('Authorization', `Bearer ${token}`);
 
 before(async () => {
@@ -47,8 +48,7 @@ before(async () => {
   app = require('../src/app');
   api = () => request(app);
   await connectTestDb('finance_app_ai_test');
-  const r = await api().post('/api/auth/register').send({ name: 'AI', email: 'ai@test.vn', password: '123456' });
-  token = r.body.token;
+  token = (await signup(app, 'Trợ Lý', 'ai@test.vn', 'Matkhau1')).token;
   const now = new Date();
   const changes = [
     { entity: 'entries', action: 'upsert', id: 'tx1', data: { kind: 'expense', amount: 45000, date: now.toISOString(), walletId: 'cash', categoryId: 'food', note: 'Phở bò' } },

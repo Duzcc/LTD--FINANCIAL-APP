@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:finance_app/data/finance_provider.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
@@ -99,17 +100,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   decoration: const InputDecoration(
                       labelText: 'Mã khôi phục (6 số)',
                       prefixIcon: Icon(Icons.pin_outlined)),
-                  validator: (v) => RegExp(r'^\d{6}$').hasMatch(v ?? '')
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  validator: (v) => validateOtp(v) == null
                       ? null
-                      : 'Mã gồm 6 chữ số'),
+                      : 'Mã khôi phục gồm đúng 6 chữ số'),
               const SizedBox(height: 4),
               TextFormField(
                   controller: password,
                   obscureText: true,
+                  maxLength: 72,
                   decoration: const InputDecoration(
                       labelText: 'Mật khẩu mới',
+                      helperText: passwordRules,
+                      counterText: '',
                       prefixIcon: Icon(Icons.lock_outline)),
-                  validator: validatePassword),
+                  validator: (v) => validatePassword(v, email: email.text)),
               const SizedBox(height: 12),
               TextFormField(
                   controller: confirm,
@@ -206,10 +211,14 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
             TextFormField(
                 controller: next,
                 obscureText: true,
+                maxLength: 72,
                 decoration: const InputDecoration(
                     labelText: 'Mật khẩu mới',
+                    helperText: passwordRules,
+                    counterText: '',
                     prefixIcon: Icon(Icons.lock_reset)),
-                validator: (v) => validatePassword(v) ??
+                validator: (v) => validatePassword(v,
+                        email: context.read<FinanceProvider>().session?.email) ??
                     (v == current.text
                         ? 'Mật khẩu mới phải khác mật khẩu hiện tại'
                         : null)),

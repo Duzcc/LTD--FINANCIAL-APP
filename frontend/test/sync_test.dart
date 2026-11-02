@@ -17,6 +17,20 @@ void main() {
     p.dispose();
   });
 
+  test('Login requires the emailed OTP before a session is created', () async {
+    final server = FakeBackend();
+    final p = FinanceProvider(api: ApiClient(client: server.client));
+    final challenge = await p.signIn(email: ' AN@test.vn ', password: '123456');
+    expect(challenge.email, 'an@test.vn');
+    expect(p.signedIn, isFalse, reason: 'chưa nhập OTP thì chưa đăng nhập');
+    await expectLater(p.verifyOtp(challenge, '000000'),
+        throwsA(isA<ApiException>().having((e) => e.code, 'code', 'INVALID_CODE')));
+    expect(p.signedIn, isFalse);
+    await p.verifyOtp(challenge, FakeBackend.otpCode);
+    expect(p.signedIn, isTrue);
+    p.dispose();
+  });
+
   test('Login, push local changes in dependency order, then logout',
       () async {
     SharedPreferences.setMockInitialValues({});
@@ -24,7 +38,7 @@ void main() {
     final server = FakeBackend();
     final p = FinanceProvider(
         storage: storage, api: ApiClient(client: server.client));
-    expect(await p.signIn(email: 'an@test.vn', password: '123456'), isFalse);
+    expect(await signInWithOtp(p), isFalse);
     expect(p.signedIn, isTrue);
     expect(p.displayName, 'An');
 
@@ -87,7 +101,7 @@ void main() {
         walletId: 'cash',
         categoryId: 'food',
         date: DateTime(2026, 10, 2)));
-    expect(await p.signIn(email: 'an@test.vn', password: '123456'), isTrue);
+    expect(await signInWithOtp(p), isTrue);
     expect(p.needsLoginDecision, isTrue);
     await p.resolveLogin(useAccount: false);
     expect(p.entries.map((e) => e.id).toSet(), {'local', 'remote'});
@@ -99,7 +113,7 @@ void main() {
       () async {
     final server = FakeBackend();
     final p = FinanceProvider(api: ApiClient(client: server.client));
-    await p.signIn(email: 'an@test.vn', password: '123456');
+    await signInWithOtp(p);
     p.session = p.session!.withToken('expired');
     p.preferences(name: 'Bình');
     await p.syncNow();

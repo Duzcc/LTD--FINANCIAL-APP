@@ -12,6 +12,10 @@ const walletSchema = new Schema({
   startDate: { type: Date, default: null }, // NgayBatDau
   deadline: { type: Date, default: null }, // NgayKetThuc
   excluded: { type: Boolean, default: false }, // Không tính vào tổng
+  // Tài khoản ngân hàng liên kết (nhận tiền bằng VietQR, đối soát qua SePay)
+  bankBin: { type: String, default: null },
+  bankAccount: { type: String, default: null },
+  bankHolder: { type: String, default: null },
 });
 walletSchema.plugin(ownedPlugin);
 module.exports = model('Wallet', walletSchema);

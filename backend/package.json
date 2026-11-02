@@ -9,7 +9,8 @@
     "dev": "node --watch src/server.js",
     "test": "node --test --test-concurrency=1 test/*.test.js",
     "test:e2e": "E2E_AI_URL=${E2E_AI_URL:-http://127.0.0.1:8000} node --test test/ai.test.js",
-    "dev:mem": "node src/dev-memory.js"
+    "dev:mem": "node src/dev-memory.js",
+    "db:migrate": "node scripts/migrate-db.js"
   },
   "engines": {
     "node": ">=18"

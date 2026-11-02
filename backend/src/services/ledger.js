@@ -1,6 +1,7 @@
 // Nghiệp vụ sổ cái: tính số dư, kiểm tra ràng buộc dữ liệu. Logic này khớp với FinanceProvider ở app.
 const { KINDS, isDebt, isIncome, isExpense, CURRENCIES, CATEGORY_SYMBOLS } = require('./constants');
 const { badRequest, conflict } = require('./errors');
+const { bankByBin } = require('./banks');
 
 const str = (v) => (v === undefined || v === null ? '' : String(v)).trim();
 const optStr = (v) => (str(v) === '' ? null : str(v));
@@ -58,8 +59,12 @@ function validateWallet(state, input, id) {
     startDate: date(input.startDate, 'Ngày bắt đầu'),
     deadline: date(input.deadline, 'Ngày kết thúc'),
     excluded: bool(input.excluded),
+    bankBin: optStr(input.bankBin),
+    bankAccount: optStr(input.bankAccount),
+    bankHolder: optStr(input.bankHolder),
   };
   if (!w.name) throw badRequest('Vui lòng nhập tên ví.');
+  validateBankLink(w);
   if (!CURRENCIES.includes(w.currency)) throw badRequest('Đơn vị tiền tệ không được hỗ trợ.');
   if (w.opening < 0 || w.target < 0) throw badRequest('Số tiền không được âm.');
   if (!w.savings) { w.target = 0; w.startDate = null; w.deadline = null; }
@@ -73,6 +78,17 @@ function validateWallet(state, input, id) {
     throw conflict('Ví đã có giao dịch hoặc ngân sách nên không thể đổi tiền tệ.');
   }
   return w;
+}
+
+// Liên kết ngân hàng: đủ cả 3 trường hoặc bỏ trống cả 3; chỉ ví VND.
+function validateBankLink(w) {
+  if (!w.bankBin && !w.bankAccount && !w.bankHolder) return;
+  if (!bankByBin(w.bankBin)) throw badRequest('Vui lòng chọn ngân hàng hợp lệ.');
+  w.bankAccount = String(w.bankAccount || '').replace(/\s+/g, '');
+  if (!/^[A-Za-z0-9]{6,19}$/.test(w.bankAccount)) throw badRequest('Số tài khoản gồm 6–19 chữ số hoặc chữ cái.');
+  w.bankHolder = String(w.bankHolder || '').trim().replace(/\s+/g, ' ').toUpperCase();
+  if (!/^[A-Z ]{2,50}$/.test(w.bankHolder)) throw badRequest('Tên chủ tài khoản viết IN HOA không dấu, 2–50 ký tự.');
+  if (w.currency !== 'VND') throw badRequest('Chỉ liên kết ngân hàng cho ví VND.');
 }
 
 function walletRefs(state, id) {

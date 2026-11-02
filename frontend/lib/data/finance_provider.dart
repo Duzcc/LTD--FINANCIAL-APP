@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:finance_app/data/models/finance_models.dart';
 import 'package:finance_app/core/network/api_client.dart';
+import 'package:finance_app/core/validation/validators.dart';
 
 /// Phiên đăng nhập với backend (máy chủ API tách riêng khỏi ứng dụng).
 class AccountSession {
@@ -45,6 +46,40 @@ class AccountSession {
         refreshToken: j['refreshToken'] as String?,
         emailVerified: j['emailVerified'] != false);
   }
+}
+
+/// Bước xác thực OTP sau khi đăng nhập/đăng ký: máy chủ đã gửi mã 6 số tới [email].
+class OtpChallenge {
+  const OtpChallenge(
+      {required this.token,
+      required this.email,
+      this.purpose = 'login',
+      this.devCode,
+      this.expiresIn = 300,
+      this.resendAfter = 60});
+  final String token, email, purpose;
+
+  /// Mã thử nghiệm khi máy chủ chạy chế độ phát triển chưa cấu hình email.
+  final String? devCode;
+  final int expiresIn, resendAfter; // giây
+  bool get isRegister => purpose == 'register';
+
+  factory OtpChallenge.fromJson(Map<String, dynamic> j, {String email = ''}) =>
+      OtpChallenge(
+          token: '${j['otpToken']}',
+          email: '${j['email'] ?? email}',
+          purpose: '${j['purpose'] ?? 'login'}',
+          devCode: j['devCode'] as String?,
+          expiresIn: (j['expiresIn'] as num?)?.toInt() ?? 300,
+          resendAfter: (j['resendAfter'] as num?)?.toInt() ?? 60);
+
+  OtpChallenge resent(Map<String, dynamic> j) => OtpChallenge(
+      token: token,
+      email: email,
+      purpose: purpose,
+      devCode: j['devCode'] as String?,
+      expiresIn: (j['expiresIn'] as num?)?.toInt() ?? expiresIn,
+      resendAfter: (j['resendAfter'] as num?)?.toInt() ?? resendAfter);
 }
 
 /// Dư nợ: tổng gốc phát sinh và phần đã thanh toán.
@@ -492,6 +527,16 @@ class FinanceProvider extends ChangeNotifier {
             .isBefore(DateUtilsDate.day(value.startDate!))) {
       throw ArgumentError('Ngày kết thúc phải sau ngày bắt đầu.');
     }
+    final bankFields = [value.bankBin, value.bankAccount, value.bankHolder];
+    if (bankFields.any((f) => f != null)) {
+      final error = bankFields.contains(null)
+          ? 'Nhập đủ ngân hàng, số tài khoản và tên chủ tài khoản.'
+          : value.currency != 'VND'
+              ? 'Chỉ liên kết ngân hàng cho ví VND.'
+              : validateBankAccount(value.bankAccount) ??
+                  validateBankHolder(value.bankHolder);
+      if (error != null) throw ArgumentError(error);
+    }
     final index = _wallets.indexWhere((v) => v.id == value.id);
     if (index >= 0 &&
         _wallets[index].currency != value.currency &&
@@ -912,22 +957,45 @@ class FinanceProvider extends ChangeNotifier {
     }
   }
 
-  /// Đăng nhập. Trả về true nếu cả máy này và tài khoản đều có dữ liệu,
-  /// khi đó giao diện cần gọi [resolveLogin] để người dùng chọn cách xử lý.
-  Future<bool> signIn({required String email, required String password}) async {
+  /// Đăng nhập bước 1: kiểm tra mật khẩu, máy chủ gửi mã OTP tới email.
+  /// Hoàn tất bằng [verifyOtp].
+  Future<OtpChallenge> signIn(
+      {required String email, required String password}) async {
+    final mail = email.trim().toLowerCase();
     final r = await _call('POST', '/auth/login',
-        body: {'email': email.trim(), 'password': password}, auth: false);
-    return _startSession(r);
+        body: {'email': mail, 'password': password}, auth: false);
+    return OtpChallenge.fromJson(r, email: mail);
   }
 
-  Future<bool> register(
+  /// Đăng ký: tạo tài khoản và gửi OTP xác thực email. Hoàn tất bằng [verifyOtp].
+  Future<OtpChallenge> register(
       {required String name,
       required String email,
       required String password}) async {
+    final mail = email.trim().toLowerCase();
     final r = await _call('POST', '/auth/register',
-        body: {'name': name.trim(), 'email': email.trim(), 'password': password},
+        body: {
+          'name': name.trim().replaceAll(RegExp(r'\s+'), ' '),
+          'email': mail,
+          'password': password
+        },
         auth: false);
+    return OtpChallenge.fromJson(r, email: mail);
+  }
+
+  /// Nhập mã OTP để nhận phiên đăng nhập. Trả về true nếu cả máy này và tài khoản
+  /// đều có dữ liệu, khi đó giao diện cần gọi [resolveLogin] để người dùng chọn cách xử lý.
+  Future<bool> verifyOtp(OtpChallenge challenge, String code) async {
+    final r = await _call('POST', '/auth/verify-otp',
+        body: {'otpToken': challenge.token, 'code': code.trim()}, auth: false);
     return _startSession(r);
+  }
+
+  /// Gửi lại mã OTP (máy chủ giới hạn thời gian chờ và số lần gửi).
+  Future<OtpChallenge> resendOtp(OtpChallenge challenge) async {
+    final r = await _call('POST', '/auth/resend-otp',
+        body: {'otpToken': challenge.token}, auth: false);
+    return challenge.resent(r);
   }
 
   /// Gửi mã khôi phục qua email. Trả về mã thử nghiệm nếu máy chủ chạy ở
@@ -995,6 +1063,18 @@ class FinanceProvider extends ChangeNotifier {
     }
     if (pushFirst && pendingChanges > 0) await syncNow(pull: false);
     return _call(method, '/ai$path', body: body);
+  }
+
+  /// Gọi API kết nối ngân hàng (/api/bank). Đẩy thay đổi đang chờ trước để máy chủ
+  /// có thông tin liên kết ngân hàng mới nhất của ví.
+  Future<Map<String, dynamic>> bankRequest(String method, String path,
+      {Object? body}) async {
+    if (session == null) {
+      throw const ApiException(
+          0, 'OFFLINE', 'Cần đăng nhập để đối soát chuyển khoản tự động.');
+    }
+    if (pendingChanges > 0) await syncNow(pull: false);
+    return _call(method, '/bank$path', body: body);
   }
 
   Future<bool> _startSession(Map<String, dynamic> r) async {
@@ -1180,7 +1260,8 @@ class FinanceProvider extends ChangeNotifier {
       _profileDirty = false;
       try {
         await _call('PUT', '/auth/me', body: {
-          'name': displayName,
+          // Tên đặt khi dùng ngoại tuyến có thể chưa đúng ràng buộc của tài khoản
+          if (validateName(displayName) == null) 'name': displayName,
           'currency': currency,
           'hideBalance': hideBalance,
           'rates': rates

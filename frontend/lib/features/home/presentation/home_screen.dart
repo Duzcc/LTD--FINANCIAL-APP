@@ -17,6 +17,7 @@ import 'package:finance_app/features/transactions/presentation/add_transaction_s
 import 'package:finance_app/features/ai/presentation/ai_screens.dart';
 import 'package:finance_app/features/ai/data/ai_repository.dart';
 import 'package:finance_app/features/ai/on_device/insights.dart';
+import 'package:finance_app/features/banking/presentation/receive_qr_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -681,6 +682,12 @@ class _PersonDebt extends StatelessWidget {
     final payable = p.debt(borrowed: true, personId: personId);
     final own = entries.where((e) => e.personId == personId).toList();
     final wallet = own.first.walletId;
+    // Ví có liên kết ngân hàng để tạo mã VietQR đòi nợ (ưu tiên ví của khoản vay)
+    final bankWallet = p.findWallet(wallet)?.hasBank == true
+        ? p.findWallet(wallet)
+        : p.wallets.where((w) => w.hasBank).firstOrNull;
+    final receivableVnd =
+        p.debt(borrowed: false, personId: personId, unit: 'VND');
     return Panel(
         padding: EdgeInsets.zero,
         child: ExpansionTile(
@@ -704,6 +711,16 @@ class _PersonDebt extends StatelessWidget {
                               initialWalletId: wallet,
                               initialAmount: receivable)),
                       child: const Text('Thu nợ')),
+                if (receivableVnd > 0 && bankWallet != null)
+                  OutlinedButton.icon(
+                      onPressed: () => openPage(
+                          context,
+                          ReceiveQrScreen(
+                              walletId: bankWallet.id,
+                              personId: personId,
+                              amount: receivableVnd)),
+                      icon: const Icon(Icons.qr_code_2, size: 18),
+                      label: const Text('Đòi nợ bằng QR')),
                 if (payable > 0)
                   OutlinedButton(
                       onPressed: () => openPage(

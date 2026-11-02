@@ -45,6 +45,13 @@ void main() {
   final email = 'full${now.millisecondsSinceEpoch % 1000000}@nhom3.vn';
   const pass1 = 'matkhau123', pass2 = 'matkhau456', pass3 = 'matkhau789';
 
+  // Đăng nhập/đăng ký hai bước: máy chủ dev trả mã OTP trong devCode.
+  Future<bool> withOtp(FinanceProvider x, Future<OtpChallenge> step) async {
+    final challenge = await step;
+    expect(challenge.devCode, isNotNull, reason: 'máy chủ dev trả mã OTP');
+    return x.verifyOtp(challenge, challenge.devCode!);
+  }
+
   void expectRejected(void Function() action, String reason) {
     expect(action, throwsA(isA<ArgumentError>()), reason: reason);
   }
@@ -54,13 +61,13 @@ void main() {
 
     // ---------------------------------------------------------------- a) Tài khoản
     expect(await p.checkServer(), isNull, reason: 'backend phải chạy');
-    await p.register(name: 'Kiểm Thử', email: email, password: pass1);
+    final signup = await p.register(name: 'Kiểm Thử', email: email, password: pass1);
+    expect(p.signedIn, isFalse, reason: 'chưa nhập OTP thì chưa đăng nhập');
+    await expectLater(p.verifyOtp(signup, signup.devCode == '000000' ? '111111' : '000000'),
+        throwsA(isA<ApiException>()));
+    await p.verifyOtp(signup, signup.devCode!);
     expect(p.signedIn, isTrue);
-    final code = await p.resendVerification();
-    if (code != null) {
-      await p.verifyEmail(code);
-      expect(p.emailVerified, isTrue);
-    }
+    expect(p.emailVerified, isTrue, reason: 'nhập đúng OTP là đã xác thực email');
     await p.changePassword(pass1, pass2);
     final other = FinanceProvider(storage: null, api: ApiClient());
     await expectLater(other.signIn(email: email, password: pass1), throwsA(isA<ApiException>()),
@@ -74,7 +81,7 @@ void main() {
     await p.syncNow();
     expect(p.syncError, isNotNull, reason: 'phiên cũ phải bị thu hồi sau khi đặt lại mật khẩu');
     await p.signOut(revoke: false);
-    if (await p.signIn(email: email, password: pass3)) await p.resolveLogin(useAccount: true);
+    if (await withOtp(p, p.signIn(email: email, password: pass3))) await p.resolveLogin(useAccount: true);
     expect(p.signedIn, isTrue);
 
     // ---------------------------------------------------------------- b) Ví
@@ -193,7 +200,9 @@ void main() {
     expect(p.syncError, isNull);
     expect(p.pendingChanges, 0);
     final device2 = FinanceProvider(storage: null, api: ApiClient());
-    if (await device2.signIn(email: email, password: pass3)) await device2.resolveLogin(useAccount: true);
+    if (await withOtp(device2, device2.signIn(email: email, password: pass3))) {
+      await device2.resolveLogin(useAccount: true);
+    }
     expect(device2.entries.length, p.entries.length, reason: 'thiết bị 2 nhận đủ giao dịch');
     expect(device2.balance('bank'), p.balance('bank'));
     expect(device2.budgets.length, p.budgets.length);

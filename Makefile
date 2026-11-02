@@ -12,8 +12,8 @@ setup: ## Cài đặt phụ thuộc cho frontend, backend, ai-service
 
 dev-ai: ## Chạy AI service ở cổng 8000
 	cd ai-service && make dev
-dev-backend: ## Chạy backend ở cổng 3000 (MongoDB trong bộ nhớ)
-	cd backend && npm run dev:mem
+dev-backend: ## Chạy backend ở cổng 3000 (MongoDB theo MONGODB_URI trong backend/.env)
+	cd backend && npm run dev
 dev-app: ## Chạy ứng dụng Flutter
 	cd frontend && flutter run
 

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:finance_app/data/finance_provider.dart';
 
 /// Backend giả lập tối giản để kiểm tra luồng đăng nhập và đồng bộ của app.
 class FakeBackend {
@@ -22,6 +23,10 @@ class FakeBackend {
     'budgets': <dynamic>[],
   }));
   List<Map<String, dynamic>> batches = [];
+  static const otpCode = '123456';
+
+  /// Yêu cầu nhận tiền VietQR gần nhất (test đổi 'status' để giả lập SePay báo tiền về).
+  Map<String, dynamic>? bankRequest;
 
   /// Phản hồi giả cho các API AI (đường dẫn -> hàm tạo JSON). Thiếu = 503.
   final ai = <String, Map<String, dynamic> Function(Map<String, dynamic>)>{};
@@ -43,6 +48,24 @@ class FakeBackend {
                 'message': 'Email hoặc mật khẩu không đúng.'
               }
             }, 401);
+          }
+          return json({
+            'otpRequired': true,
+            'otpToken': 'otp1',
+            'email': body()['email'],
+            'devCode': otpCode,
+            'expiresIn': 300,
+            'resendAfter': 60,
+          });
+        }
+        if (path == '/api/auth/verify-otp') {
+          if (body()['otpToken'] != 'otp1' || body()['code'] != otpCode) {
+            return json({
+              'error': {
+                'code': 'INVALID_CODE',
+                'message': 'Mã OTP không đúng. Bạn còn 4 lần thử.'
+              }
+            }, 400);
           }
           return json({'token': 'tok', 'user': snapshot['user']});
         }
@@ -79,6 +102,19 @@ class FakeBackend {
           }
           return json(handler(body()));
         }
+        if (path == '/api/bank/requests' && request.method == 'POST') {
+          final b = body();
+          bankRequest = {
+            'id': 'pr1',
+            'code': 'LTDAB23CD',
+            'status': 'pending',
+            ...b,
+          };
+          return json(bankRequest!, 201);
+        }
+        if (path == '/api/bank/requests/pr1') {
+          return json(bankRequest!);
+        }
         if (path == '/api/auth/me') return json({'user': snapshot['user']});
         if (path == '/api/auth/logout') return http.Response('', 204);
         return json({
@@ -87,3 +123,10 @@ class FakeBackend {
       });
 }
 
+
+/// Đăng nhập hai bước như ứng dụng thật: mật khẩu rồi mã OTP.
+Future<bool> signInWithOtp(FinanceProvider p,
+    {String email = 'an@test.vn', String password = '123456'}) async {
+  final challenge = await p.signIn(email: email, password: password);
+  return p.verifyOtp(challenge, challenge.devCode!);
+}
