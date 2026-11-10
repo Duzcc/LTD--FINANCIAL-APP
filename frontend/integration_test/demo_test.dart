@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:finance_app/main.dart' as app;
 import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/auth/presentation/otp_screen.dart';
 import 'package:finance_app/app/main_screen.dart';
 import 'package:finance_app/features/ai/presentation/ai_screens.dart';
 import 'package:finance_app/features/ai/presentation/receipt_scan_screen.dart';
@@ -97,6 +98,11 @@ void main() {
     FocusManager.instance.primaryFocus?.unfocus();
     await shot(t, '01_dang_ky');
     await tapText(t, 'Tạo tài khoản');
+    await waitFor(t, find.byType(OtpScreen));
+    final otp = t.widget<OtpScreen>(find.byType(OtpScreen)).challenge.devCode;
+    expect(otp, isNotNull, reason: 'máy chủ thử nghiệm hiển thị mã OTP');
+    await shot(t, '01b_xac_thuc_otp');
+    await t.enterText(find.byKey(const ValueKey('otp-code')), otp!);
     await waitFor(t, find.byType(MainScreen));
     await shot(t, '02_tong_quan_moi');
 
@@ -142,12 +148,13 @@ void main() {
     expect(p.pendingChanges, 0);
     expect(p.syncError, isNull);
     await tapText(t, 'Hỏi trợ lý tài chính');
-    await tapText(t, 'Dự báo chi tiêu cuối tháng');
+    await t.enterText(find.byKey(const ValueKey('assistant-input')), 'Dự báo chi tiêu cuối tháng');
+    await t.tap(find.byTooltip('Gửi'));
     await waitFor(t, find.textContaining(RegExp('dự kiến|Dự báo cả tháng')));
     await shot(t, '12_tro_ly_ai');
 
     await t.enterText(find.byKey(const ValueKey('assistant-input')), 'ghi giúp trà sữa 35k');
-    await t.testTextInput.receiveAction(TextInputAction.send);
+    await t.tap(find.byTooltip('Gửi'));
     await waitFor(t, find.text('Xác nhận'), seconds: 30);
     await shot(t, '13_tro_ly_de_xuat');
     await tapText(t, 'Xác nhận', last: true);
