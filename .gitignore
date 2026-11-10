@@ -40,3 +40,4 @@ frontend/ios/.symlinks/
 **/.pytest_cache/
 frontend/android/build/
 tool/.lenh*
+tool/*.tgz
