@@ -161,6 +161,7 @@ class _ReceiptScanScreenState extends State<ReceiptScanScreen> with BusyState {
             ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.file(File(imagePath!), height: 220, fit: BoxFit.cover, width: double.infinity,
+                    cacheWidth: (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round(),
                     errorBuilder: (_, __, ___) => const SizedBox.shrink())),
           ],
           if (busy)

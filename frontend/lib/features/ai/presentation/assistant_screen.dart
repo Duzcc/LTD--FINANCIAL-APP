@@ -287,6 +287,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
                     child: Image.file(File(m.imagePath!),
                         width: 180,
                         height: 220,
+                        cacheWidth: (180 * MediaQuery.devicePixelRatioOf(context)).round(),
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => Container(
                             width: 180,

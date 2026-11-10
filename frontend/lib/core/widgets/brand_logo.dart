@@ -25,6 +25,7 @@ class BrandLogo extends StatelessWidget {
   Widget build(BuildContext context) => Image.asset(_asset,
       width: size,
       height: size,
+      cacheWidth: (size * MediaQuery.devicePixelRatioOf(context)).round(),
       semanticLabel: _label,
       filterQuality: FilterQuality.medium,
       errorBuilder: (_, __, ___) => Icon(Icons.auto_awesome, size: size * .8));

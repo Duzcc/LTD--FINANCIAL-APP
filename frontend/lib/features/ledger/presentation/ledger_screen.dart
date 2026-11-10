@@ -30,6 +30,13 @@ class _LedgerScreenState extends State<LedgerScreen> {
   LedgerSort sort = LedgerSort.newest;
   DateTimeRange? range;
   bool showFilters = false;
+  final search = TextEditingController();
+
+  @override
+  void dispose() {
+    search.dispose();
+    super.dispose();
+  }
 
   int get activeFilters => [
         walletId.isNotEmpty,
@@ -85,41 +92,151 @@ class _LedgerScreenState extends State<LedgerScreen> {
         .where((e) => e.kind.isExpense && !e.excluded)
         .fold(0.0, (s, e) => s + e.amount);
     final byDate = sort == LedgerSort.newest || sort == LedgerSort.oldest;
-    final rows = <Widget>[];
-    DateTime? lastDay;
+    final dayNet = <DateTime, double>{};
     for (final e in entries) {
-      final day = dateOnly(e.date);
-      if (byDate && day != lastDay) {
-        lastDay = day;
-        final dayEntries =
-            entries.where((x) => dateOnly(x.date) == day);
-        final net = dayEntries.fold(
-            0.0,
-            (s, x) =>
-                s +
-                (x.excluded
-                    ? 0
-                    : x.kind.isIncome
-                        ? x.amount
-                        : x.kind.isExpense
-                            ? -x.amount
-                            : 0));
-        rows.add(Padding(
-            padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
-            child: Row(children: [
-              Expanded(
-                  child: Text(_weekday(day),
-                      style: const TextStyle(fontWeight: FontWeight.w700))),
-              Text(money(net, p.currency),
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: net >= 0
-                          ? AppColors.primaryGreen
-                          : AppColors.accentRed)),
-            ])));
-      }
-      rows.add(EntryTile(e));
+      if (e.excluded) continue;
+      final signed = e.kind.isIncome
+          ? e.amount
+          : e.kind.isExpense
+              ? -e.amount
+              : 0.0;
+      dayNet.update(dateOnly(e.date), (v) => v + signed, ifAbsent: () => signed);
     }
+    final header = <Widget>[
+      if (range == null)
+        MonthPicker(
+            value: month, onChanged: (v) => setState(() => month = v))
+      else
+        Row(children: [
+          const Icon(Icons.date_range, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+              child: Text(
+                  '${dayLabel(range!.start)} – ${dayLabel(range!.end)}',
+                  style: const TextStyle(fontWeight: FontWeight.w600))),
+          TextButton(
+              onPressed: () => setState(() => range = null),
+              child: const Text('Theo tháng')),
+        ]),
+      TextField(
+          controller: search,
+          onChanged: (v) => setState(() => query = v),
+          decoration: InputDecoration(
+              hintText: 'Tìm ghi chú, danh mục, đối tượng, số tiền…',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: IconButton(
+                  tooltip: 'Bộ lọc',
+                  onPressed: () =>
+                      setState(() => showFilters = !showFilters),
+                  icon: Badge(
+                      isLabelVisible: activeFilters > 0,
+                      label: Text('$activeFilters'),
+                      child: const Icon(Icons.tune))))),
+      const SizedBox(height: 12),
+      SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(children: [
+            for (final v in {
+              'all': 'Tất cả',
+              'expense': 'Chi tiêu',
+              'income': 'Thu nhập',
+              'transfer': 'Chuyển tiền',
+              'debt': 'Vay / Nợ'
+            }.entries)
+              Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: ChoiceChip(
+                      label: Text(v.value),
+                      selected: type == v.key,
+                      onSelected: (_) => setState(() => type = v.key))),
+          ])),
+      if (showFilters || activeFilters > 1) ...[
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+            key: ValueKey('wallet-filter-$walletId-${p.currency}'),
+            initialValue: walletId,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Ví'),
+            items: [
+              const DropdownMenuItem(value: '', child: Text('Tất cả ví')),
+              for (final w
+                  in p.wallets.where((w) => w.currency == p.currency))
+                DropdownMenuItem(value: w.id, child: Text(w.name))
+            ],
+            onChanged: (v) => setState(() => walletId = v ?? '')),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+            key: ValueKey('category-filter-$categoryId'),
+            initialValue: categoryId,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Danh mục'),
+            items: [
+              const DropdownMenuItem(
+                  value: '', child: Text('Tất cả danh mục')),
+              for (final c in p.categories)
+                DropdownMenuItem(
+                    value: c.id,
+                    child: Text('${c.name} (${c.income ? 'thu' : 'chi'})'))
+            ],
+            onChanged: (v) => setState(() => categoryId = v ?? '')),
+        const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+            key: ValueKey('person-filter-$personId'),
+            initialValue: personId,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Đối tượng'),
+            items: [
+              const DropdownMenuItem(
+                  value: '', child: Text('Tất cả đối tượng')),
+              for (final person in p.people)
+                DropdownMenuItem(value: person.id, child: Text(person.name))
+            ],
+            onChanged: (v) => setState(() => personId = v ?? '')),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, children: [
+          TextButton.icon(
+              icon: const Icon(Icons.date_range),
+              label: const Text('Khoảng thời gian'),
+              onPressed: () async {
+                final r = await showDateRangePicker(
+                    context: context,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime(2100),
+                    initialDateRange: range);
+                if (r != null && mounted) setState(() => range = r);
+              }),
+          if (activeFilters > 0)
+            TextButton.icon(
+                icon: const Icon(Icons.filter_alt_off_outlined),
+                label: const Text('Xóa bộ lọc'),
+                onPressed: () => setState(() {
+                      walletId = categoryId = personId = '';
+                      type = 'all';
+                      range = null;
+                    })),
+        ]),
+      ],
+      const SizedBox(height: 12),
+      Panel(
+          child: Row(children: [
+        Expanded(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+              Text('${entries.length} giao dịch • ${p.currency}',
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
+              Text('Sắp xếp: ${_sortLabels[sort]}',
+                  style: const TextStyle(fontSize: 12)),
+            ])),
+        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text('+${money(income, p.currency)}',
+              style: const TextStyle(color: AppColors.primaryGreen)),
+          Text('−${money(expense, p.currency)}',
+              style: const TextStyle(color: AppColors.accentRed)),
+        ]),
+      ])),
+      const SizedBox(height: 8),
+    ];
     return FinancePage(
         title: 'Sổ giao dịch',
         actions: [
@@ -137,151 +254,37 @@ class _LedgerScreenState extends State<LedgerScreen> {
               onPressed: () => openPage(context, const AddTransactionScreen()),
               icon: const Icon(Icons.add))
         ],
-        child: ListView(padding: const EdgeInsets.all(16), children: [
-          if (range == null)
-            MonthPicker(
-                value: month, onChanged: (v) => setState(() => month = v))
-          else
-            Row(children: [
-              const Icon(Icons.date_range, size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                  child: Text(
-                      '${dayLabel(range!.start)} – ${dayLabel(range!.end)}',
-                      style: const TextStyle(fontWeight: FontWeight.w600))),
-              TextButton(
-                  onPressed: () => setState(() => range = null),
-                  child: const Text('Theo tháng')),
-            ]),
-          TextField(
-              onChanged: (v) => setState(() => query = v),
-              decoration: InputDecoration(
-                  hintText: 'Tìm ghi chú, danh mục, đối tượng, số tiền…',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: IconButton(
-                      tooltip: 'Bộ lọc',
-                      onPressed: () =>
-                          setState(() => showFilters = !showFilters),
-                      icon: Badge(
-                          isLabelVisible: activeFilters > 0,
-                          label: Text('$activeFilters'),
-                          child: const Icon(Icons.tune))))),
-          const SizedBox(height: 12),
-          SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(children: [
-                for (final v in {
-                  'all': 'Tất cả',
-                  'expense': 'Chi tiêu',
-                  'income': 'Thu nhập',
-                  'transfer': 'Chuyển tiền',
-                  'debt': 'Vay / Nợ'
-                }.entries)
-                  Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                          label: Text(v.value),
-                          selected: type == v.key,
-                          onSelected: (_) => setState(() => type = v.key))),
-              ])),
-          if (showFilters || activeFilters > 1) ...[
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-                key: ValueKey('wallet-filter-$walletId-${p.currency}'),
-                initialValue: walletId,
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Ví'),
-                items: [
-                  const DropdownMenuItem(value: '', child: Text('Tất cả ví')),
-                  for (final w
-                      in p.wallets.where((w) => w.currency == p.currency))
-                    DropdownMenuItem(value: w.id, child: Text(w.name))
-                ],
-                onChanged: (v) => setState(() => walletId = v ?? '')),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-                key: ValueKey('category-filter-$categoryId'),
-                initialValue: categoryId,
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Danh mục'),
-                items: [
-                  const DropdownMenuItem(
-                      value: '', child: Text('Tất cả danh mục')),
-                  for (final c in p.categories)
-                    DropdownMenuItem(
-                        value: c.id,
-                        child: Text('${c.name} (${c.income ? 'thu' : 'chi'})'))
-                ],
-                onChanged: (v) => setState(() => categoryId = v ?? '')),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-                key: ValueKey('person-filter-$personId'),
-                initialValue: personId,
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Đối tượng'),
-                items: [
-                  const DropdownMenuItem(
-                      value: '', child: Text('Tất cả đối tượng')),
-                  for (final person in p.people)
-                    DropdownMenuItem(value: person.id, child: Text(person.name))
-                ],
-                onChanged: (v) => setState(() => personId = v ?? '')),
-            const SizedBox(height: 8),
-            Wrap(spacing: 8, children: [
-              TextButton.icon(
-                  icon: const Icon(Icons.date_range),
-                  label: const Text('Khoảng thời gian'),
-                  onPressed: () async {
-                    final r = await showDateRangePicker(
-                        context: context,
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime(2100),
-                        initialDateRange: range);
-                    if (r != null && mounted) setState(() => range = r);
-                  }),
-              if (activeFilters > 0)
-                TextButton.icon(
-                    icon: const Icon(Icons.filter_alt_off_outlined),
-                    label: const Text('Xóa bộ lọc'),
-                    onPressed: () => setState(() {
-                          walletId = categoryId = personId = '';
-                          type = 'all';
-                          range = null;
-                        })),
-            ]),
-          ],
-          const SizedBox(height: 12),
-          Panel(
-              child: Row(children: [
-            Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                  Text('${entries.length} giao dịch • ${p.currency}',
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
-                  Text('Sắp xếp: ${_sortLabels[sort]}',
-                      style: const TextStyle(fontSize: 12)),
-                ])),
-            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-              Text('+${money(income, p.currency)}',
-                  style: const TextStyle(color: AppColors.primaryGreen)),
-              Text('−${money(expense, p.currency)}',
-                  style: const TextStyle(color: AppColors.accentRed)),
-            ]),
-          ])),
-          const SizedBox(height: 8),
-          ...rows,
-          if (entries.isEmpty)
-            EmptyView(
-                title: query.isEmpty && activeFilters == 0
-                    ? 'Chưa có giao dịch'
-                    : 'Không tìm thấy giao dịch',
-                subtitle: query.isEmpty && activeFilters == 0
-                    ? 'Thêm giao dịch đầu tiên để bắt đầu theo dõi thu chi.'
-                    : 'Thử đổi từ khóa, kỳ thời gian hoặc bộ lọc.',
-                action: 'Thêm giao dịch',
-                onTap: () => openPage(context, const AddTransactionScreen())),
-        ]));
+        child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: header.length + (entries.isEmpty ? 1 : entries.length),
+            itemBuilder: (context, i) {
+              if (i < header.length) return header[i];
+              if (entries.isEmpty) {
+                return EmptyView(
+                    title: query.isEmpty && activeFilters == 0
+                        ? 'Chưa có giao dịch'
+                        : 'Không tìm thấy giao dịch',
+                    subtitle: query.isEmpty && activeFilters == 0
+                        ? 'Thêm giao dịch đầu tiên để bắt đầu theo dõi thu chi.'
+                        : 'Thử đổi từ khóa, kỳ thời gian hoặc bộ lọc.',
+                    action: 'Thêm giao dịch',
+                    onTap: () => openPage(context, const AddTransactionScreen()));
+              }
+              final index = i - header.length;
+              final e = entries[index];
+              final day = dateOnly(e.date);
+              final startsDay = byDate &&
+                  (index == 0 || dateOnly(entries[index - 1].date) != day);
+              if (!startsDay) return EntryTile(e, key: ValueKey(e.id));
+              return Column(
+                  key: ValueKey(e.id),
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _DayHeader(
+                        day: day, net: dayNet[day] ?? 0, currency: p.currency),
+                    EntryTile(e),
+                  ]);
+            }));
   }
 }
 
@@ -291,4 +294,24 @@ String _weekday(DateTime d) {
   if (d == today) return 'Hôm nay • ${dayLabel(d)}';
   if (d == today.subtract(const Duration(days: 1))) return 'Hôm qua • ${dayLabel(d)}';
   return '${names[d.weekday - 1]} • ${dayLabel(d)}';
+}
+
+class _DayHeader extends StatelessWidget {
+  const _DayHeader({required this.day, required this.net, required this.currency});
+  final DateTime day;
+  final double net;
+  final String currency;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+      padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
+      child: Row(children: [
+        Expanded(
+            child: Text(_weekday(day),
+                style: const TextStyle(fontWeight: FontWeight.w700))),
+        Text(money(net, currency),
+            style: TextStyle(
+                fontSize: 12,
+                color: net >= 0 ? AppColors.primaryGreen : AppColors.accentRed)),
+      ]));
 }
