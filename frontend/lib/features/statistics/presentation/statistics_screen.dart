@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/core/utils/dates.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 import 'package:finance_app/core/widgets/charts.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/ledger/presentation/ledger_screen.dart';
+import 'package:finance_app/features/finance/presentation/entity_icons.dart';
 
 enum StatPeriod { month, year, range }
 
-/// Thống kê và báo cáo: thu – chi theo thời gian, theo danh mục, lọc theo kỳ.
 class StatisticsScreen extends StatefulWidget {
   const StatisticsScreen({super.key});
   @override
@@ -29,8 +30,8 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
           ),
         StatPeriod.year => (DateTime(anchor.year), DateTime(anchor.year + 1)),
         StatPeriod.range => (
-            DateUtilsDate.day(range!.start),
-            DateUtilsDate.day(range!.end).add(const Duration(days: 1))
+            dateOnly(range!.start),
+            dateOnly(range!.end).add(const Duration(days: 1))
           ),
       };
 
@@ -74,7 +75,6 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
     ].where((x) => x.$2 > 0).toList()
       ..sort((a, b) => b.$2.compareTo(a.$2));
 
-    // Chuỗi thời gian: theo ngày nếu ≤ 62 ngày, ngược lại theo tháng.
     final daily = to.difference(from).inDays <= 62;
     final labels = <String>[];
     final incomes = <double>[], expenses = <double>[];

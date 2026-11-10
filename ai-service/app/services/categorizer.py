@@ -1,12 +1,3 @@
-"""Phân loại danh mục giao dịch: mô hình toàn cục + cá nhân hóa theo lịch sử người dùng.
-
-P(c | x) = (1 - w)·P_toàn_cục(c | x) + w·P_cá_nhân(c | x)
-
-- P_toàn_cục: TF-IDF + hồi quy logistic huấn luyện trên bộ dữ liệu tự xây dựng.
-- P_cá_nhân: k láng giềng gần nhất (cosine) trên các ghi chú người dùng đã gán danh mục,
-  hỗ trợ cả danh mục do người dùng tự tạo.
-- w tăng theo độ giống của ghi chú gần nhất trong lịch sử (tối đa 0,9).
-"""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -43,7 +34,6 @@ class Categorizer:
             return [], {"personal_weight": 0.0}
         scores = {c.id: 0.0 for c in allowed}
 
-        # 1) Mô hình toàn cục, ánh xạ nhãn chuẩn -> danh mục của người dùng
         g = self.global_proba([text])[0]
         mapping: dict[str, list[str]] = {}
         for c in allowed:
@@ -58,7 +48,6 @@ class Categorizer:
         if total > 0:
             global_scores = {k: v / total for k, v in global_scores.items()}
 
-        # 2) Cá nhân hóa bằng kNN trên lịch sử
         personal_scores = {cid: 0.0 for cid in scores}
         weight = 0.0
         hist = [h for h in (history or []) if h.categoryId in scores and h.text.strip()][-2000:]
@@ -76,7 +65,6 @@ class Categorizer:
                 weight = min(0.9, float(sims[order[0]]) ** 1.5)
 
         if total == 0 and weight == 0:
-            # Chỉ có danh mục tự tạo và chưa có lịch sử: không đủ căn cứ
             return [], {"personal_weight": 0.0}
         if total == 0:
             weight = 1.0

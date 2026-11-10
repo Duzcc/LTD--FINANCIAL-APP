@@ -3,8 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:finance_app/app/app.dart';
 import 'package:finance_app/core/theme/app_theme.dart';
-import 'package:finance_app/data/models/finance_models.dart';
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 import 'package:finance_app/app/main_screen.dart';
 import 'package:finance_app/features/transactions/presentation/add_transaction_screen.dart';
 import 'package:finance_app/features/wallets/presentation/create_wallet_screen.dart';
@@ -13,10 +13,11 @@ import 'package:finance_app/features/transactions/presentation/select_person_scr
 import 'package:finance_app/features/goals/presentation/goals_screen.dart';
 import 'package:finance_app/features/statistics/presentation/statistics_screen.dart';
 import 'package:finance_app/features/ai/presentation/ai_screens.dart';
+import 'package:finance_app/features/ai/presentation/assistant_screen.dart';
 import 'package:finance_app/features/recurring/presentation/recurring_screen.dart';
 import 'package:finance_app/features/settings/presentation/settings_screens.dart';
 import 'package:finance_app/features/settings/presentation/others_screen.dart';
-import 'package:finance_app/core/security/app_lock.dart';
+import 'package:finance_app/features/security/data/services/app_lock.dart';
 
 void main() {
   testWidgets('Local onboarding opens the connected app', (tester) async {
@@ -47,6 +48,7 @@ void main() {
       await tester.pumpWidget(FinanceApp(finance: p, returning: true));
       for (final label in [
         'Sổ giao dịch',
+        'Trợ lý AI',
         'Ngân sách',
         'Tài khoản',
         'Tổng quan'
@@ -69,7 +71,6 @@ void main() {
       }
       await tester.tap(find.text('Lưu giao dịch'));
       await tester.pumpAndSettle();
-      // Ví đang có 0 ₫ nên ứng dụng cảnh báo chi vượt số dư trước khi lưu.
       expect(find.text('Số tiền vượt số dư ví'), findsOneWidget);
       await tester.tap(find.text('Vẫn lưu'));
       await tester.pumpAndSettle();
@@ -135,6 +136,28 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     p.dispose();
   });
+  testWidgets('Transfer above the source balance is blocked without a save anyway prompt', (tester) async {
+    final p = FinanceProvider();
+    p.saveWallet(const MoneyWallet(id: 'cash', name: 'Tiền mặt', opening: 500000));
+    p.saveWallet(const MoneyWallet(id: 'save', name: 'Tiết kiệm', savings: true));
+    final transfer = MoneyEntry(
+        id: 't', kind: EntryKind.transfer, amount: 200000, walletId: 'cash', destinationId: 'save', date: DateTime(2026, 10, 1));
+    p.saveEntry(transfer);
+    await tester.pumpWidget(ChangeNotifierProvider.value(
+        value: p, child: MaterialApp(theme: AppTheme.lightTheme, home: AddTransactionScreen(entry: transfer))));
+    await tester.enterText(find.byKey(const ValueKey('transaction-amount')), '600000');
+    await tester.tap(find.text('Lưu giao dịch'));
+    await tester.pumpAndSettle();
+    expect(find.text('Vẫn lưu'), findsNothing);
+    expect(find.text('Số dư ví Tiền mặt không đủ (còn 500.000 VND).'), findsOneWidget);
+    expect(p.entries.single.amount, 200000);
+    await tester.enterText(find.byKey(const ValueKey('transaction-amount')), '500000');
+    await tester.tap(find.text('Lưu giao dịch'));
+    await tester.pumpAndSettle();
+    expect(p.entries.single.amount, 500000);
+    expect(p.balance('cash'), 0);
+  });
+
   testWidgets('Quick entry and assistant flows work end to end', (tester) async {
     final p = FinanceProvider();
     await tester.pumpWidget(FinanceApp(finance: p, returning: true));
@@ -157,7 +180,6 @@ void main() {
     expect(p.entries.single.categoryId, 'transport');
     expect(p.entries.single.amount, 70000);
 
-    // Mở trợ lý trong cùng ứng dụng (FinanceApp sở hữu và giải phóng provider).
     tester
         .state<NavigatorState>(find.byType(Navigator).first)
         .push(MaterialPageRoute(builder: (_) => const AssistantScreen()));

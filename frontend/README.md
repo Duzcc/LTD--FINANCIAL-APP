@@ -16,31 +16,30 @@ flutter build web --release --no-web-resources-cdn   # bản Web không phụ th
 ```
 lib/
 ├── main.dart                     khởi động: bộ nhớ, thông báo, định kỳ, đồng bộ
-├── app/                          FinanceApp (Provider, theme, khóa), MainScreen, thanh điều hướng
+├── app/                          FinanceApp, MainScreen, thanh điều hướng, NotificationService
 ├── core/                         dùng chung, không phụ thuộc tính năng
-│   ├── network/api_client.dart   gọi REST, chuẩn hóa lỗi
-│   ├── banking/vietqr.dart       danh sách ngân hàng (mã BIN), tạo chuỗi VietQR chuẩn EMVCo + CRC
+│   ├── network/api_client.dart   gọi REST, chuẩn hóa lỗi (ApiException)
 │   ├── validation/validators.dart ràng buộc họ tên, email, mật khẩu, OTP, tài khoản ngân hàng (khớp backend)
-│   ├── ocr/                      nhận dạng chữ trên thiết bị (kênh native: Apple Vision / ML Kit), dựng dòng
-│   ├── security/                 khóa PIN
-│   ├── notifications/            nhắc nhở
+│   ├── utils/                    ngày, đọc/ghi trường JSON
 │   ├── theme/                    màu, theme
 │   └── widgets/                  thành phần giao diện, biểu đồ
-├── data/
-│   ├── models/finance_models.dart
-│   └── finance_provider.dart     sổ cái, quy tắc nghiệp vụ, lưu trữ, đăng nhập & đồng bộ
-└── features/
-    ├── ai/
-    │   ├── data/                 AiRepository (máy chủ trước, thiết bị dự phòng), mô hình dữ liệu AI
-    │   ├── on_device/            Naive Bayes danh mục, parser câu tự nhiên, insights, trợ lý cục bộ
-    │   └── presentation/         Nhập nhanh (gõ/nói), Phân tích, Trợ lý (xác nhận hành động), Quét hóa đơn, Tìm kiếm AI
-    ├── auth/                     đăng nhập/đăng ký → màn hình OTP, quên/đổi mật khẩu
-    ├── banking/                  nhận tiền & đòi nợ bằng VietQR, kết nối SePay (BankRepository)
-    ├── home/  ledger/  transactions/  wallets/  goals/  statistics/
-    ├── recurring/  security/  settings/
+└── features/<tính năng>/
+    ├── domain/                   Dart thuần: entities, quy tắc nghiệp vụ, interface
+    ├── data/                     datasources (REST, SharedPreferences, kênh native), models, repositories
+    └── presentation/             màn hình, widget, ChangeNotifier
 ```
 
-Quy ước: mọi import dùng `package:finance_app/...` (lint `always_use_package_imports`).
+| Tính năng | domain | data | presentation |
+|---|---|---|---|
+| `finance` | entities (ví, giao dịch, danh mục, đối tượng, ngân sách, định kỳ), `LedgerQueries` (số dư, nợ, tổng thu chi), `LedgerRules` (ràng buộc), `FinanceStore` (interface cho tầng dưới) | `FinanceLocalDataSource`, `SyncRemoteDataSource`, `ChangeTracker` (hàng đợi đồng bộ), `AccountSnapshot` | `FinanceProvider`, icon của entity |
+| `auth` | `AccountSession`, `OtpChallenge` | `SessionClient` (tự làm mới token, một lần cho các yêu cầu song song), `AuthRemoteDataSource` | đăng nhập/đăng ký, OTP, quên mật khẩu |
+| `ai` | entities AI, dịch vụ trên thiết bị (Naive Bayes danh mục, parser câu tự nhiên, insights, trợ lý cục bộ, đọc hóa đơn) | `AiRepository` (máy chủ trước, thiết bị dự phòng), `TextRecognizer` (Apple Vision / ML Kit) | nhập nhanh, phân tích, trợ lý, quét hóa đơn, tìm kiếm |
+| `banking` | `PaymentRequestInfo`, `SepayStatus`, VietQR (EMVCo + CRC) | `BankRepository` | nhận tiền / đòi nợ bằng VietQR, kết nối SePay |
+| `security`, `settings` | | khóa PIN, xuất Excel/CSV | màn hình |
+| `home`, `ledger`, `transactions`, `wallets`, `goals`, `statistics`, `recurring` | dùng domain của `finance` | | màn hình, widget |
+
+Quy tắc phụ thuộc: `presentation → data → domain`; `domain` không import Flutter hay tầng trên, `core` không import `features`.
+Mọi import dùng `package:finance_app/...` (lint `always_use_package_imports`).
 
 ## Kiểm thử
 

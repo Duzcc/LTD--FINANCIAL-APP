@@ -1,6 +1,3 @@
-// Kết nối MongoDB cho kiểm thử:
-// - TEST_MONGODB_URI nếu có (CI, Docker, FerretDB…)
-// - ngược lại MongoDB trong bộ nhớ (mongodb-memory-server) để không phải cài MongoDB.
 const mongoose = require('mongoose');
 
 let memory = null;
@@ -12,7 +9,6 @@ async function connectTestDb(dbName) {
     memory = await MongoMemoryServer.create();
     uri = memory.getUri();
   }
-  // Mỗi tệp kiểm thử dùng cơ sở dữ liệu riêng để không ảnh hưởng nhau.
   const url = new URL(uri);
   url.pathname = `/${dbName}`;
   await mongoose.connect(url.toString());

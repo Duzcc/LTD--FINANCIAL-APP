@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -7,11 +9,9 @@ export 'package:finance_app/core/theme/app_colors.dart';
 String money(num value, [String unit = 'VND']) =>
     '${NumberFormat('#,##0.##', 'vi_VN').format(value)} ${unit == 'VND' ? '₫' : unit}';
 
-/// Số tiền hiển thị, được che khi người dùng bật "Ẩn số dư".
 String secret(bool hidden, num value, [String unit = 'VND']) =>
     hidden ? '••••••' : money(value, unit);
 
-/// Rút gọn số lớn cho trục biểu đồ: 1.500.000 → 1,5tr.
 String compactMoney(num value) {
   final v = value.abs();
   if (v >= 1e9) return '${NumberFormat('#,##0.#', 'vi_VN').format(value / 1e9)}tỷ';
@@ -21,14 +21,56 @@ String compactMoney(num value) {
 }
 
 String dayLabel(DateTime date) => DateFormat('dd/MM/yyyy').format(date);
-void message(BuildContext context, Object error) =>
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(error is ArgumentError
-            ? error.message.toString()
-            : error.toString())));
+String errorText(Object error) =>
+    error is ArgumentError ? '${error.message}' : '$error';
 
-/// Màu trạng thái mục tiêu (Bảng 29): xanh – đúng kế hoạch, vàng – sắp chạm
-/// hạn mức (≥ 80%), đỏ – vượt kế hoạch.
+void message(BuildContext context, Object error) => ScaffoldMessenger.of(context)
+    .showSnackBar(SnackBar(content: Text(errorText(error))));
+
+// Chỉ bắt lỗi người dùng có thể gặp: nhập sai, mất mạng, máy chủ từ chối.
+// Lỗi do code viết sai vẫn được ném ra để phát hiện khi chạy thử.
+Future<Object?> failureOf(FutureOr<void> Function() action) async {
+  try {
+    await action();
+    return null;
+  } on Exception catch (e) {
+    return e;
+  } on ArgumentError catch (e) {
+    return e;
+  }
+}
+
+Future<bool> attempt(BuildContext context, FutureOr<void> Function() action) async {
+  final failure = await failureOf(action);
+  if (failure != null && context.mounted) message(context, failure);
+  return failure == null;
+}
+
+mixin BusyState<T extends StatefulWidget> on State<T> {
+  bool busy = false;
+  String? error;
+
+  Future<Object?> runBusy(Future<void> Function() action) async {
+    setState(() {
+      busy = true;
+      error = null;
+    });
+    final failure = await failureOf(action);
+    if (mounted) {
+      setState(() {
+        busy = false;
+        if (failure != null) error = errorText(failure);
+      });
+    }
+    return failure;
+  }
+}
+
+void copyText(BuildContext context, String label, String value) {
+  Clipboard.setData(ClipboardData(text: value));
+  message(context, 'Đã sao chép $label');
+}
+
 Color budgetColor(double used, double target, {bool income = false}) {
   if (target <= 0) return AppColors.textGrey;
   final ratio = used / target;
@@ -38,15 +80,12 @@ Color budgetColor(double used, double target, {bool income = false}) {
   return AppColors.onPlan;
 }
 
-/// Đọc số tiền đã định dạng ("1.250.000" hoặc "12,5") thành số.
 double? parseAmount(String text) {
   final t = text.replaceAll('.', '').replaceAll(' ', '').replaceAll(',', '.');
   if (t.isEmpty) return null;
   return double.tryParse(t);
 }
 
-/// Định dạng số để hiển thị trong ô nhập: phân tách hàng nghìn bằng dấu chấm,
-/// phần thập phân sau dấu phẩy.
 String formatAmountInput(num value) {
   if (value == 0) return '';
   final whole = value.truncate();
@@ -57,13 +96,11 @@ String formatAmountInput(num value) {
   return '$head,$tail';
 }
 
-/// Tự chèn dấu phân tách hàng nghìn khi người dùng gõ số tiền.
 class AmountInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
       TextEditingValue oldValue, TextEditingValue newValue) {
     var input = newValue.text;
-    // Bàn phím dùng dấu chấm thập phân: dấu chấm vừa gõ ở cuối được hiểu là dấu phẩy.
     if (input.length == oldValue.text.length + 1 &&
         input.endsWith('.') &&
         !input.contains(',')) {
@@ -88,7 +125,6 @@ class AmountInputFormatter extends TextInputFormatter {
   }
 }
 
-/// Hộp thoại xác nhận chung. [danger] tô đỏ nút xác nhận.
 Future<bool> confirmAction(BuildContext context,
         {required String title,
         required String content,
@@ -306,7 +342,6 @@ Future<String?> editText(BuildContext context, String title,
                     },
                     child: const Text('Lưu'))
               ]));
-  // The dialog may still be animating out; keep its controller alive until then.
   await Future<void>.delayed(const Duration(milliseconds: 300));
   controller.dispose();
   return value;

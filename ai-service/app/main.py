@@ -1,7 +1,3 @@
-"""Điểm khởi chạy AI service (FastAPI app factory).
-
-    uvicorn app.main:app --host 0.0.0.0 --port 8000
-"""
 from __future__ import annotations
 
 import logging
@@ -31,7 +27,7 @@ async def lifespan(app: FastAPI):
     from app.services.parser import get_parser
 
     get_categorizer()
-    get_parser()  # làm nóng mô hình để yêu cầu đầu tiên không chậm
+    get_parser()
     async with httpx.AsyncClient() as client:
         app.state.assistant = Assistant(client)
         log.info("AI service sẵn sàng (trợ lý: %s)", app.state.assistant.mode)

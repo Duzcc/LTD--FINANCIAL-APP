@@ -1,11 +1,13 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:finance_app/data/models/finance_models.dart';
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/core/widgets/brand_logo.dart';
+import 'package:finance_app/core/utils/dates.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 import 'package:finance_app/core/widgets/charts.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
-import 'package:finance_app/core/widgets/entry_tile.dart';
+import 'package:finance_app/features/transactions/presentation/widgets/entry_tile.dart';
 import 'package:finance_app/features/wallets/presentation/wallets_screen.dart';
 import 'package:finance_app/features/wallets/presentation/create_wallet_screen.dart';
 import 'package:finance_app/features/wallets/presentation/currency_selection_screen.dart';
@@ -15,9 +17,10 @@ import 'package:finance_app/features/ledger/presentation/ledger_screen.dart';
 import 'package:finance_app/features/goals/presentation/goals_screen.dart';
 import 'package:finance_app/features/transactions/presentation/add_transaction_screen.dart';
 import 'package:finance_app/features/ai/presentation/ai_screens.dart';
-import 'package:finance_app/features/ai/data/ai_repository.dart';
-import 'package:finance_app/features/ai/on_device/insights.dart';
+import 'package:finance_app/features/ai/data/repositories/ai_repository.dart';
+import 'package:finance_app/features/ai/domain/services/insights.dart';
 import 'package:finance_app/features/banking/presentation/receive_qr_screen.dart';
+import 'package:finance_app/features/finance/presentation/entity_icons.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -71,8 +74,7 @@ class HomeScreen extends StatelessWidget {
                         key: const ValueKey('quick-entry-button'),
                         tooltip: 'Nhập nhanh bằng AI',
                         onPressed: () => showQuickEntry(context),
-                        icon: const Icon(Icons.auto_awesome,
-                            color: AppColors.primaryGreen)),
+                        icon: const BrandLogo.ai(size: 26)),
                     IconButton(
                         tooltip: 'Tìm giao dịch',
                         onPressed: () =>
@@ -274,10 +276,9 @@ class OverviewTab extends StatelessWidget {
   }
 }
 
-/// Khoản vay/cho vay đã quá hạn hoặc đến hạn trong 7 ngày và vẫn còn dư nợ.
 List<({MoneyEntry entry, int days, double remaining, String unit})> dueDebts(
     FinanceProvider p) {
-  final today = DateUtilsDate.day(DateTime.now());
+  final today = dateOnly(DateTime.now());
   final result = <({MoneyEntry entry, int days, double remaining, String unit})>[];
   final seen = <String>{};
   final principals = p.entries
@@ -293,7 +294,7 @@ List<({MoneyEntry entry, int days, double remaining, String unit})> dueDebts(
     final remaining = p.debt(
         borrowed: e.kind == EntryKind.borrow, personId: e.personId, unit: unit);
     if (remaining <= 0) continue;
-    final days = DateUtilsDate.day(e.dueDate!).difference(today).inDays;
+    final days = dateOnly(e.dueDate!).difference(today).inDays;
     if (days > 7) continue;
     seen.add(key);
     result.add((entry: e, days: days, remaining: remaining, unit: unit));
@@ -348,7 +349,6 @@ class BudgetBar extends StatelessWidget {
   }
 }
 
-/// Thẻ báo cáo lướt được: "Báo cáo chi tiêu" (tuần/tháng) và "Báo cáo xu hướng".
 class ReportCarousel extends StatefulWidget {
   const ReportCarousel({super.key});
   @override
@@ -410,7 +410,7 @@ class _ReportCarouselState extends State<ReportCarousel> {
   }
 
   Widget spending(FinanceProvider p, DateTime now) {
-    final today = DateUtilsDate.day(now);
+    final today = dateOnly(now);
     final DateTime start, prevStart, end;
     if (weekly) {
       start = today.subtract(Duration(days: today.weekday - 1));
@@ -643,8 +643,8 @@ class _DebtOverviewState extends State<DebtOverview> {
             Padding(
                 padding: const EdgeInsets.only(left: 16, bottom: 10),
                 child: Text(
-                    dueLabel(DateUtilsDate.day(e.dueDate!)
-                        .difference(DateUtilsDate.day(DateTime.now()))
+                    dueLabel(dateOnly(e.dueDate!)
+                        .difference(dateOnly(DateTime.now()))
                         .inDays),
                     style: const TextStyle(
                         fontSize: 12, color: AppColors.accentOrange))),
@@ -682,9 +682,9 @@ class _PersonDebt extends StatelessWidget {
     final payable = p.debt(borrowed: true, personId: personId);
     final own = entries.where((e) => e.personId == personId).toList();
     final wallet = own.first.walletId;
-    // Ví có liên kết ngân hàng để tạo mã VietQR đòi nợ (ưu tiên ví của khoản vay)
-    final bankWallet = p.findWallet(wallet)?.hasBank == true
-        ? p.findWallet(wallet)
+    final debtWallet = p.findWallet(wallet);
+    final bankWallet = debtWallet != null && debtWallet.hasBank
+        ? debtWallet
         : p.wallets.where((w) => w.hasBank).firstOrNull;
     final receivableVnd =
         p.debt(borrowed: false, personId: personId, unit: 'VND');

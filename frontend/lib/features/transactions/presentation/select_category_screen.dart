@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:finance_app/data/models/finance_models.dart';
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
+import 'package:finance_app/features/finance/presentation/entity_icons.dart';
 
 class SelectCategoryScreen extends StatefulWidget {
   const SelectCategoryScreen(
@@ -55,7 +56,7 @@ class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
                                   const SizedBox(height: 8),
                                   Wrap(spacing: 8, runSpacing: 8, children: [
                                     for (var i = 0;
-                                        i < MoneyCategory.icons.length;
+                                        i < categoryIcons.length;
                                         i++)
                                       InkWell(
                                           customBorder: const CircleBorder(),
@@ -66,7 +67,7 @@ class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
                                               backgroundColor: symbol == i
                                                   ? const Color(0xFFD9BEA9)
                                                   : AppColors.backgroundBeige,
-                                              child: Icon(MoneyCategory.icons[i],
+                                              child: Icon(categoryIcons[i],
                                                   size: 20,
                                                   color:
                                                       const Color(0xFF8D7564)))),
@@ -88,12 +89,10 @@ class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
     name.dispose();
     if (result == null || !mounted) return;
     final p = context.read<FinanceProvider>();
-    try {
+    attempt(context, () {
       p.saveCategory(
           MoneyCategory(c?.id ?? p.newId(), result.$1, income, result.$2));
-    } catch (e) {
-      message(context, e);
-    }
+    });
   }
 
   @override
@@ -149,11 +148,9 @@ class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
                               if (await confirmDelete(
                                       context, 'Xóa ${c.name}?') &&
                                   context.mounted) {
-                                try {
+                                attempt(context, () {
                                   p.deleteCategory(c.id);
-                                } catch (e) {
-                                  if (context.mounted) message(context, e);
-                                }
+                                });
                               }
                             },
                             itemBuilder: (_) => const [

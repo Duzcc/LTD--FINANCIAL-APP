@@ -1,16 +1,19 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
-import 'package:finance_app/features/ai/on_device/category_model.dart';
-import 'package:finance_app/data/models/finance_models.dart';
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/core/widgets/brand_logo.dart';
+import 'package:finance_app/core/utils/dates.dart';
+import 'package:finance_app/features/ai/domain/services/category_model.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
+import 'package:finance_app/core/widgets/photo_picker.dart';
 import 'package:finance_app/features/wallets/presentation/select_wallet_sheet.dart';
 import 'package:finance_app/features/wallets/presentation/create_wallet_screen.dart';
 import 'package:finance_app/features/transactions/presentation/select_category_screen.dart';
 import 'package:finance_app/features/transactions/presentation/select_person_screen.dart';
+import 'package:finance_app/features/finance/presentation/entity_icons.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   const AddTransactionScreen(
@@ -30,7 +33,6 @@ class AddTransactionScreen extends StatefulWidget {
   final double? initialAmount;
   final DateTime? initialDate;
 
-  /// Ảnh hóa đơn đính kèm sẵn (ví dụ từ màn Quét hóa đơn).
   final String? initialPhoto;
   @override
   State<AddTransactionScreen> createState() => _AddTransactionScreenState();
@@ -80,7 +82,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   String get signature =>
       '$kind|${amount.text}|$walletId|$destinationId|$categoryId|$personId|$date|$dueDate|${note.text}|$excluded|$photo|$repeat';
 
-  /// Mô hình học trên thiết bị gợi ý danh mục từ ghi chú.
   void suggestCategory(String text) {
     if (!(kind.isExpense || kind.isIncome) || text.trim().length < 2) {
       setState(() => suggestedCategory = null);
@@ -96,19 +97,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   Future<void> pickPhoto(ImageSource source) async {
-    try {
-      final x = await ImagePicker()
-          .pickImage(source: source, maxWidth: 1600, imageQuality: 80);
-      if (x == null) return;
-      final dir = await getApplicationDocumentsDirectory();
-      final folder = Directory('${dir.path}/receipts');
-      await folder.create(recursive: true);
-      final saved = await File(x.path)
-          .copy('${folder.path}/${entryId}_${DateTime.now().millisecondsSinceEpoch}.jpg');
-      if (mounted) setState(() => photo = saved.path);
-    } catch (e) {
-      if (mounted) message(context, 'Không lấy được ảnh: $e');
-    }
+    final path = await choosePhoto(context, source, maxWidth: 1600, quality: 80);
+    if (path != null && mounted) setState(() => photo = path);
   }
 
   @override
@@ -160,7 +150,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     });
   }
 
-  /// Số dư ví nếu chưa tính giao dịch đang sửa.
   double available(FinanceProvider p, String id) {
     var value = p.balance(id);
     final old = widget.entry;
@@ -182,7 +171,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     final p = context.read<FinanceProvider>();
     final value = parseAmount(amount.text)!;
     final w = p.wallet(walletId!);
-    if (kind.sign < 0) {
+    if (kind.sign < 0 && kind != EntryKind.transfer) {
       final left = available(p, w.id);
       if (value > left + 1e-9) {
         final go = await confirmAction(context,
@@ -193,8 +182,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         if (!go || !mounted) return;
       }
     }
-    try {
-      setState(() => saving = true);
+    setState(() => saving = true);
+    final saved = await attempt(context, () {
       p.saveEntry(MoneyEntry(
           id: entryId,
           kind: kind,
@@ -210,7 +199,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           photo: photo,
           recurringId: widget.entry?.recurringId));
       if (repeat != null && widget.entry == null) {
-        // Giao dịch vừa lưu là lần đầu tiên của quy tắc định kỳ.
         final rule = RecurringRule(
             id: p.newId(),
             kind: kind,
@@ -229,10 +217,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ? 'Đã lưu giao dịch ${kind.label.toLowerCase()}.'
               : 'Đã cập nhật giao dịch.')));
       Navigator.pop(context, true);
-    } catch (e) {
-      setState(() => saving = false);
-      message(context, e);
-    }
+    });
+    if (!saved && mounted) setState(() => saving = false);
   }
 
   Future<void> leave() async {
@@ -464,8 +450,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                             child: Align(
                                 alignment: Alignment.centerLeft,
                                 child: ActionChip(
-                                    avatar: const Icon(Icons.auto_awesome,
-                                        size: 16, color: AppColors.primaryGreen),
+                                    avatar: const BrandLogo.ai(size: 18),
                                     label: Text(suggestedCategory == categoryId
                                         ? 'AI đã chọn: ${p.category(suggestedCategory)!.name}'
                                         : 'AI gợi ý: ${p.category(suggestedCategory)!.name}'),
@@ -568,8 +553,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                               date = DateTime(d.year, d.month, d.day,
                                   t?.hour ?? date.hour, t?.minute ?? date.minute);
                               if (dueDate != null &&
-                                  DateUtilsDate.day(dueDate!)
-                                      .isBefore(DateUtilsDate.day(date))) {
+                                  dateOnly(dueDate!)
+                                      .isBefore(dateOnly(date))) {
                                 dueDate = null;
                               }
                             });

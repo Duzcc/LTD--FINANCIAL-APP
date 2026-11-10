@@ -6,8 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:finance_app/core/theme/app_theme.dart';
-import 'package:finance_app/data/models/finance_models.dart';
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 import 'package:finance_app/app/main_screen.dart';
 import 'package:finance_app/features/transactions/presentation/add_transaction_screen.dart';
 import 'package:finance_app/features/wallets/presentation/create_wallet_screen.dart';
@@ -16,10 +16,10 @@ import 'package:finance_app/features/statistics/presentation/statistics_screen.d
 import 'package:finance_app/features/ledger/presentation/ledger_screen.dart';
 import 'package:finance_app/features/auth/presentation/auth_screen.dart';
 import 'package:finance_app/features/ai/presentation/ai_screens.dart';
+import 'package:finance_app/features/ai/presentation/assistant_screen.dart';
 import 'package:finance_app/features/recurring/presentation/recurring_screen.dart';
-import 'package:finance_app/core/security/app_lock.dart';
+import 'package:finance_app/features/security/data/services/app_lock.dart';
 
-// Opt-in visual inspection artifacts; no seed data is inserted into the real app.
 void main() {
   testWidgets('Capture phone previews', (tester) async {
     const fontDir = String.fromEnvironment('PREVIEW_FONT_DIR');
@@ -166,7 +166,7 @@ void main() {
     await tester.pumpWidget(wrap(const InsightsScreen()));
     await capture('insights');
     await tester.pumpWidget(wrap(const AssistantScreen()));
-    await tester.tap(find.text('Dự báo chi tiêu cuối tháng'));
+    await tester.tap(find.text('Hôm nay tôi được chi bao nhiêu?'));
     await tester.pumpAndSettle();
     await capture('assistant');
     await tester.pumpWidget(wrap(const RecurringEditor()));

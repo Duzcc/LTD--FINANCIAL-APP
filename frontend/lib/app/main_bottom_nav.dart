@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:finance_app/core/widgets/brand_logo.dart';
 import 'package:finance_app/core/theme/app_colors.dart';
 
 class MainBottomNav extends StatelessWidget {
@@ -36,8 +37,10 @@ class MainBottomNav extends StatelessWidget {
               _buildNavItem(0, Icons.home_rounded, 'Tổng quan'),
               _buildNavItem(1, Icons.receipt_long_rounded, 'Sổ giao dịch'),
               _buildCenterButton(),
-              _buildNavItem(3, Icons.track_changes_rounded, 'Ngân sách'),
-              _buildNavItem(4, Icons.person_outline_rounded, 'Tài khoản'),
+              _buildNavItem(3, Icons.auto_awesome_outlined, 'Trợ lý AI',
+                  logo: true),
+              _buildNavItem(4, Icons.track_changes_rounded, 'Ngân sách'),
+              _buildNavItem(5, Icons.person_outline_rounded, 'Tài khoản'),
             ],
           ),
         ),
@@ -45,7 +48,8 @@ class MainBottomNav extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label) {
+  Widget _buildNavItem(int index, IconData icon, String label,
+      {bool logo = false}) {
     final isSelected = currentIndex == index;
     return Expanded(
       child: InkWell(
@@ -63,20 +67,24 @@ class MainBottomNav extends StatelessWidget {
                   color: AppColors.primaryGreenSurface,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(
-                  icon,
-                  color: AppColors.primaryGreen,
-                  size: 20,
-                ),
+                child: logo
+                    ? const BrandLogo.ai(size: 20)
+                    : Icon(
+                        icon,
+                        color: AppColors.primaryGreen,
+                        size: 20,
+                      ),
               )
             else
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Icon(
-                  icon,
-                  color: AppColors.textGrey,
-                  size: 22,
-                ),
+                child: logo
+                    ? const BrandLogo.ai(size: 22)
+                    : Icon(
+                        icon,
+                        color: AppColors.textGrey,
+                        size: 22,
+                      ),
               ),
             const SizedBox(height: 2),
             Text(

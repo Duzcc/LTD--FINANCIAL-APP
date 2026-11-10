@@ -1,4 +1,3 @@
-"""Hiểu ngôn ngữ: gợi ý danh mục và nhập nhanh bằng câu tự nhiên."""
 from __future__ import annotations
 
 from fastapi import APIRouter

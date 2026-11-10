@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:finance_app/data/models/finance_models.dart';
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 
 void main() {
   final month = DateTime(2026, 10);
@@ -145,6 +145,44 @@ void main() {
     p.dispose();
     restored.dispose();
   });
+  test('Transfer and savings top-up cannot exceed the source wallet balance',
+      () async {
+    final p = FinanceProvider();
+    p.saveWallet(
+        const MoneyWallet(id: 'cash', name: 'Tiền mặt', opening: 300000));
+    p.saveWallet(
+        const MoneyWallet(id: 'saving', name: 'Tiết kiệm', savings: true));
+    expect(
+        () => p.saveEntry(entry('t', EntryKind.transfer, 300001, dest: 'saving')),
+        throwsA(isA<ArgumentError>().having((e) => e.message, 'message',
+            'Số dư ví Tiền mặt không đủ (còn 300.000 VND).')));
+    p.saveEntry(entry('t', EntryKind.transfer, 200000, dest: 'saving'));
+    p.saveEntry(entry('t', EntryKind.transfer, 300000, dest: 'saving'));
+    expect(p.balance('cash'), 0);
+    expect(() => p.saveEntry(entry('back', EntryKind.transfer, 300001,
+            wallet: 'saving', dest: 'cash')),
+        throwsArgumentError);
+    p.saveEntry(entry('back', EntryKind.transfer, 300000,
+        wallet: 'saving', dest: 'cash'));
+    expect(p.balance('saving'), 0);
+    expect(
+        () => p.saveEntry(entry('t', EntryKind.transfer, 300000, wallet: 'cash', dest: 'saving', date: DateTime(2026, 11))),
+        returnsNormally);
+    expect(p.entries, hasLength(2));
+    p.saveRecurring(RecurringRule(
+        id: 'auto',
+        kind: EntryKind.transfer,
+        amount: 5000000,
+        walletId: 'cash',
+        destinationId: 'saving',
+        note: 'Nạp tiết kiệm',
+        frequency: RepeatFrequency.monthly,
+        startDate: DateTime(2026, 10, 1)));
+    expect(p.runRecurring(now: DateTime(2026, 10, 2)), 0);
+    expect(p.recurringError, contains('Số dư ví Tiền mặt không đủ'));
+    await p.flush();
+    p.dispose();
+  });
   test('Wallet rules: duplicate names, savings dates and cascade delete',
       () async {
     final p = FinanceProvider();
@@ -159,16 +197,17 @@ void main() {
             startDate: DateTime(2026, 10, 10),
             deadline: DateTime(2026, 10, 1))),
         throwsArgumentError);
+    p.saveWallet(const MoneyWallet(id: 'cash', name: 'Tiền mặt', opening: 100));
     p.saveWallet(const MoneyWallet(id: 'saving', name: 'Tiết kiệm', savings: true));
     p.saveEntry(entry('t', EntryKind.transfer, 100, dest: 'saving'));
     p.saveEntry(entry('e', EntryKind.expense, 50, wallet: 'saving'));
-    expect(p.totalBalance('VND'), -50);
-    expect(p.totalBalance('VND', spendableOnly: true), -100);
+    expect(p.totalBalance('VND'), 50);
+    expect(p.totalBalance('VND', spendableOnly: true), 0);
     expect(p.walletReferences('saving'), 2);
     expect(() => p.deleteWallet('saving'), throwsArgumentError);
     p.deleteWallet('saving', cascade: true);
     expect(p.entries, isEmpty);
-    expect(p.balance('cash'), 0);
+    expect(p.balance('cash'), 100);
     await p.flush();
     p.dispose();
   });
@@ -184,7 +223,6 @@ void main() {
     expect(() => p.saveEntry(entry('c2', EntryKind.collect, 10, person: 'b')),
         throwsArgumentError);
     p.saveEntry(entry('c3', EntryKind.collect, 100, person: 'a'));
-    // Sửa chính giao dịch thu nợ: không tính lại phần của chính nó.
     p.saveEntry(entry('c3', EntryKind.collect, 60, person: 'a'));
     final t = p.debtTotals(borrowed: false);
     expect(t.principal, 100);

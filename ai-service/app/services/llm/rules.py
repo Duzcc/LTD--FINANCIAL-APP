@@ -1,8 +1,3 @@
-"""Trợ lý dựa trên luật — dùng khi chưa cấu hình mô hình ngôn ngữ hoặc khi mô hình lỗi.
-
-Nhận diện ý định câu hỏi bằng từ khóa (có/không dấu) rồi gọi cùng bộ công cụ với trợ lý LLM,
-nên câu trả lời luôn dựa trên số liệu thật của người dùng.
-"""
 from __future__ import annotations
 
 import re
@@ -22,6 +17,7 @@ def _vnd(x: float | None) -> str:
 INTENTS: list[tuple[str, str]] = [
     (r"\b(ghi|them|nhap|luu)\b.*\d", "record"),
     (r"\b(so du|con bao nhieu tien|tong tai san)\b", "balance"),
+    (r"\b(duoc chi|nen chi|chi duoc|chi toi da|goi y chi tieu|moi ngay chi)\b", "allowance"),
     (r"\b(du bao|cuoi thang|se tieu|het thang|thang sau)\b", "forecast"),
     (r"\b(bat thuong|la|dot bien|kha nghi|trung)\b", "anomaly"),
     (r"\b(goi y|de xuat|nen dat|lap)\b.*\bngan sach\b|\bngan sach\b.*\b(goi y|bao nhieu|nen)\b", "recommend"),
@@ -54,6 +50,19 @@ def answer(question: str, kit: FinanceToolkit) -> tuple[str, list[str]]:
         return (f"Mình đã chuẩn bị giao dịch {_vnd(p['amount'])}"
                 + (f" vào danh mục {p['category']}" if p.get("category") else "")
                 + ". Bấm Xác nhận để lưu nhé."), ["propose_transaction"]
+
+    if intent == "allowance":
+        a = kit.get_spending_allowance()
+        if a["daily_allowance"] is None:
+            return ("Mình chưa có ngân sách tổng hay thu nhập tháng này để tính mức chi mỗi ngày. "
+                    "Hãy đặt ngân sách tổng tháng nhé."), ["get_spending_allowance"]
+        basis = "ngân sách tổng" if a["basis"] == "budget" else "thu nhập sau khi để dành 20%"
+        lines = [f"Theo {basis} ({_vnd(a['month_limit'])}), từ nay đến cuối tháng bạn nên chi tối đa "
+                 f"{_vnd(a['daily_allowance'])}/ngày.",
+                 f"Hôm nay đã chi {_vnd(a['spent_today'])}, "
+                 + (f"còn {_vnd(a['left_today'])}." if a["left_today"] >= 0 else f"vượt {_vnd(-a['left_today'])}.")]
+        lines += [f"• {b['category']}: còn {_vnd(b['remaining'])}" for b in a["tight_budgets"][:3]]
+        return "\n".join(lines), ["get_spending_allowance"]
 
     if intent == "forecast":
         f = kit.forecast_month()

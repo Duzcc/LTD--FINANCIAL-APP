@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/core/validation/validators.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/wallets/presentation/wallets_screen.dart';
 import 'package:finance_app/features/wallets/presentation/currency_selection_screen.dart';
@@ -11,10 +12,11 @@ import 'package:finance_app/features/statistics/presentation/statistics_screen.d
 import 'package:finance_app/features/auth/presentation/auth_screen.dart';
 import 'package:finance_app/features/auth/presentation/forgot_password_screen.dart';
 import 'package:finance_app/features/ai/presentation/ai_screens.dart';
+import 'package:finance_app/features/ai/presentation/assistant_screen.dart';
 import 'package:finance_app/features/recurring/presentation/recurring_screen.dart';
 import 'package:finance_app/features/settings/presentation/settings_screens.dart';
-import 'package:finance_app/core/security/app_lock.dart';
-import 'package:finance_app/features/settings/data/excel_export.dart';
+import 'package:finance_app/features/security/data/services/app_lock.dart';
+import 'package:finance_app/features/settings/data/services/excel_export.dart';
 import 'package:finance_app/features/banking/presentation/sepay_screen.dart';
 
 class OthersScreen extends StatelessWidget {
@@ -155,13 +157,8 @@ class ExportScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.watch<FinanceProvider>();
     final csv = p.exportCsv();
-    Future<void> share({bool csvFile = false}) async {
-      try {
-        await ExcelExport.share(p, csv: csvFile);
-      } catch (e) {
-        if (context.mounted) message(context, 'Không chia sẻ được tệp: $e');
-      }
-    }
+    Future<void> share({bool csvFile = false}) =>
+        attempt(context, () => ExcelExport.share(p, csv: csvFile));
 
     return FinancePage(
         title: 'Xuất dữ liệu',
@@ -198,7 +195,6 @@ class ExportScreen extends StatelessWidget {
   }
 }
 
-/// Thẻ tài khoản: email, trạng thái đồng bộ và nút đồng bộ (mục 2.4.4.6).
 class AccountCard extends StatelessWidget {
   const AccountCard({super.key});
   @override
@@ -348,36 +344,28 @@ Future<void> deleteAccountFlow(BuildContext context) async {
       confirm: 'Xóa tài khoản',
       danger: true);
   if (!ok || !context.mounted) return;
-  try {
+  await attempt(context, () async {
     await p.deleteAccount(password);
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const AuthScreen()), (_) => false);
-  } catch (e) {
-    if (context.mounted) message(context, e);
-  }
+  });
 }
 
 Future<void> verifyEmailFlow(BuildContext context) async {
   final p = context.read<FinanceProvider>();
-  String? hint;
-  try {
-    final dev = await p.resendVerification();
-    hint = dev == null
-        ? 'Mã 6 số đã được gửi tới ${p.session?.email}.'
-        : 'Máy chủ thử nghiệm chưa cấu hình email. Mã: $dev';
-  } catch (e) {
-    if (context.mounted) message(context, e);
-    return;
-  }
-  if (!context.mounted) return;
-  message(context, hint);
+  String? dev;
+  final sent = await attempt(context, () async => dev = await p.resendVerification());
+  if (!sent || !context.mounted) return;
+  message(
+      context,
+      dev == null
+          ? 'Mã 6 số đã được gửi tới ${p.session?.email}.'
+          : 'Máy chủ thử nghiệm chưa cấu hình email. Mã: $dev');
   final code = await editText(context, 'Nhập mã xác thực email');
   if (code == null || !context.mounted) return;
-  try {
+  await attempt(context, () async {
     await p.verifyEmail(code);
     if (context.mounted) message(context, 'Đã xác thực email.');
-  } catch (e) {
-    if (context.mounted) message(context, e);
-  }
+  });
 }

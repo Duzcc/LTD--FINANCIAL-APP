@@ -1,14 +1,14 @@
-"""Chuẩn hóa văn bản tiếng Việt cho các mô hình."""
 from __future__ import annotations
 
+import calendar
 import re
 import unicodedata
+from datetime import datetime
 
 _NUM_RE = re.compile(r"\d+(?:[.,]\d+)*")
 _NON_WORD = re.compile(r"[^0-9a-zA-ZÀ-ỹ\s]+")
 _SPACES = re.compile(r"\s+")
 
-# Viết tắt phổ biến khi ghi chép chi tiêu.
 ABBREVIATIONS = {
     "cf": "cà phê", "cafe": "cà phê", "coffee": "cà phê", "ck": "chuyển khoản",
     "tt": "thanh toán", "sv": "sinh viên", "nv": "nhân viên", "dt": "điện thoại",
@@ -18,15 +18,20 @@ ABBREVIATIONS = {
 }
 
 
+def calendar_date(year: int, month: int, day: int, hour: int = 0) -> datetime | None:
+    # Người dùng hay gõ ngày không có thật (31/11, 29/2 năm thường): trả về None thay vì báo lỗi.
+    if 1 <= month <= 12 and 1 <= day <= calendar.monthrange(year, month)[1]:
+        return datetime(year, month, day, hour)
+    return None
+
+
 def fold(text: str) -> str:
-    """Bỏ dấu tiếng Việt và chuyển về chữ thường: 'Đổ xăng' -> 'do xang'."""
     text = unicodedata.normalize("NFD", text.lower())
     text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
     return text.replace("đ", "d")
 
 
 def normalize(text: str, *, keep_numbers: bool = False) -> str:
-    """Chữ thường, chuẩn NFC, mở rộng viết tắt, thay số bằng <num>."""
     text = unicodedata.normalize("NFC", text or "").lower().strip()
     if not keep_numbers:
         text = _NUM_RE.sub(" 0 ", text)
@@ -36,14 +41,12 @@ def normalize(text: str, *, keep_numbers: bool = False) -> str:
 
 
 def model_text(text: str) -> str:
-    """Văn bản đưa vào mô hình: dạng có dấu + dạng bỏ dấu để chịu được khi người dùng gõ không dấu."""
     n = normalize(text)
     f = fold(n)
     return n if n == f else f"{n} | {f}"
 
 
 def fold_keep_numbers(text: str) -> str:
-    """Bỏ dấu nhưng giữ dấu chấm/phẩy giữa chữ số và dấu '/' để đọc số tiền và ngày."""
     t = fold(unicodedata.normalize("NFC", text or ""))
     t = re.sub(r"[^a-z0-9.,/]+", " ", t)
     t = re.sub(r"(?<!\d)[.,]|[.,](?!\d)", " ", t)

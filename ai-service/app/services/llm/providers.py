@@ -1,12 +1,3 @@
-"""Kết nối mô hình ngôn ngữ lớn có hỗ trợ gọi công cụ.
-
-- AnthropicProvider: Claude qua Messages API (https://api.anthropic.com/v1/messages).
-- OpenAICompatProvider: mọi máy chủ tương thích OpenAI Chat Completions — OpenAI, Ollama
-  (http://localhost:11434/v1), LM Studio, vLLM... cho phép chạy mô hình mở (Qwen2.5, Llama 3.1) ngay trên máy.
-
-Mỗi provider tự chạy vòng lặp agent: gọi mô hình -> thực thi công cụ -> trả kết quả -> lặp
-cho tới khi mô hình trả lời bằng văn bản hoặc hết số bước.
-"""
 from __future__ import annotations
 
 import json

@@ -2,16 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:finance_app/core/network/api_client.dart';
-import 'package:finance_app/core/widgets/entry_tile.dart';
+import 'package:finance_app/features/transactions/presentation/widgets/entry_tile.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
-import 'package:finance_app/data/finance_provider.dart';
-import 'package:finance_app/data/models/finance_models.dart';
-import 'package:finance_app/features/ai/data/ai_repository.dart';
-import 'package:finance_app/features/ai/on_device/category_model.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
+import 'package:finance_app/features/ai/data/repositories/ai_repository.dart';
+import 'package:finance_app/features/ai/domain/services/category_model.dart';
 
-/// Tìm giao dịch bằng câu tự nhiên: "cafe tháng trước trên 50k", "grab tuần này".
-/// Máy chủ hiểu bộ lọc thời gian/số tiền và xếp hạng theo ngữ nghĩa; khi ngoại
-/// tuyến thì tìm theo từ khóa không dấu trên thiết bị.
 class SmartSearchScreen extends StatefulWidget {
   const SmartSearchScreen({super.key});
   @override
@@ -31,42 +28,48 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
     super.dispose();
   }
 
+  static const _filterLabels = {
+    'start': 'thời gian',
+    'end': 'thời gian',
+    'min_amount': 'số tiền',
+    'max_amount': 'số tiền',
+    'kinds': 'loại giao dịch',
+    'text': 'từ khóa',
+  };
+
   Future<void> search(String q) async {
     if (q.trim().isEmpty) return;
     final p = context.read<FinanceProvider>();
     setState(() => busy = true);
-    List<MoneyEntry> found;
-    String note;
-    try {
-      if (!p.signedIn) throw const ApiException(0, 'OFFLINE', '');
-      final (ids, filters) = await AiRepository(p).search(q.trim());
-      final byId = {for (final e in p.entries) e.id: e};
-      found = [for (final id in ids) if (byId[id] != null) byId[id]!];
-      const labels = {
-        'start': 'thời gian',
-        'end': 'thời gian',
-        'min_amount': 'số tiền',
-        'max_amount': 'số tiền',
-        'kinds': 'loại giao dịch',
-        'text': 'từ khóa',
-      };
-      final used = {for (final k in filters.keys) labels[k] ?? k};
-      note = 'AI máy chủ${used.isEmpty ? '' : ' • hiểu theo ${used.join(', ')}'}';
-    } on ApiException {
-      final words = foldVietnamese(q).split(' ').where((w) => w.length > 1).toList();
-      found = p.entries.where((e) {
-        final hay = foldVietnamese('${e.note} ${p.category(e.categoryId)?.name ?? ''} ${p.personName(e.personId)}');
-        return words.every(hay.contains);
-      }).toList()
-        ..sort((a, b) => b.date.compareTo(a.date));
-      note = 'Tìm theo từ khóa trên thiết bị';
-    }
+    final remote = p.signedIn ? await AiRepository(p).search(q.trim()).orNullOnApiError() : null;
+    final (found, note) = remote == null ? _searchOnDevice(p, q) : _fromServer(p, remote);
     if (!mounted) return;
     setState(() {
       busy = false;
       results = found.take(100).toList();
       info = note;
     });
+  }
+
+  (List<MoneyEntry>, String) _fromServer(FinanceProvider p, (List<String>, Map<String, dynamic>) remote) {
+    final (ids, filters) = remote;
+    final byId = {for (final e in p.entries) e.id: e};
+    final used = {for (final k in filters.keys) _filterLabels[k] ?? k};
+    return (
+      [for (final id in ids) if (byId[id] != null) byId[id]!],
+      'AI máy chủ${used.isEmpty ? '' : ' • hiểu theo ${used.join(', ')}'}'
+    );
+  }
+
+  // Không có mạng hoặc chưa đăng nhập: tìm các giao dịch chứa đủ mọi từ đã gõ.
+  (List<MoneyEntry>, String) _searchOnDevice(FinanceProvider p, String q) {
+    final words = foldVietnamese(q).split(' ').where((w) => w.length > 1).toList();
+    final found = p.entries.where((e) {
+      final hay = foldVietnamese('${e.note} ${p.category(e.categoryId)?.name ?? ''} ${p.personName(e.personId)}');
+      return words.every(hay.contains);
+    }).toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+    return (found, 'Tìm theo từ khóa trên thiết bị');
   }
 
   @override

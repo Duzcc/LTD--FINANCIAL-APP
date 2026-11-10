@@ -1,4 +1,3 @@
-"""Phụ thuộc dùng chung cho các endpoint (lấy từ app.state, khởi tạo một lần trong lifespan)."""
 from __future__ import annotations
 
 from fastapi import Request

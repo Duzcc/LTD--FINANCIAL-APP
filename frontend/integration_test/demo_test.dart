@@ -9,20 +9,16 @@ import 'package:integration_test/integration_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:finance_app/main.dart' as app;
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 import 'package:finance_app/app/main_screen.dart';
 import 'package:finance_app/features/ai/presentation/ai_screens.dart';
 import 'package:finance_app/features/ai/presentation/receipt_scan_screen.dart';
 import 'package:finance_app/features/ai/presentation/smart_search_screen.dart';
-import 'package:finance_app/core/ocr/text_recognizer.dart';
-import 'package:finance_app/features/ai/data/ai_repository.dart';
-import 'package:finance_app/features/ai/on_device/receipt_parser.dart';
+import 'package:finance_app/features/ai/data/datasources/text_recognizer.dart';
+import 'package:finance_app/features/ai/data/repositories/ai_repository.dart';
+import 'package:finance_app/features/ai/domain/services/receipt_parser.dart';
 import 'package:path_provider/path_provider.dart';
 
-/// Chạy thử toàn bộ luồng chính trên máy ảo thật, gọi backend thật:
-/// đăng ký → nhập nhanh bằng AI → ngân sách → đồng bộ → trợ lý AI (đề xuất + xác nhận)
-/// → phân tích của AI service → tìm kiếm ngữ nghĩa.
-/// Vẽ một hóa đơn (hơi nghiêng như ảnh chụp) thành tệp PNG để thử OCR thật trên thiết bị.
 Future<String> renderReceipt() async {
   const lines = [
     'CIRCLE K', '12 Lê Lợi, Q.1', 'HÓA ĐƠN BÁN HÀNG', 'Ngày: 18/10/2026 19:32', '',
@@ -65,8 +61,6 @@ void main() {
     await t.pump();
   }
 
-  // Android: chuyển bề mặt sang ảnh để chụp (convertFlutterSurfaceToImage) làm pumpAndSettle không
-  // bao giờ dừng trên máy ảo → chỉ chụp ảnh trên iOS, Android vẫn chạy đủ các bước kiểm tra.
   final canShoot = defaultTargetPlatform != TargetPlatform.android;
   Future<void> shot(WidgetTester t, String name) async {
     await settle(t, 300);
@@ -94,7 +88,6 @@ void main() {
     app.main();
     await settle(t, 1500);
 
-    // 1. Đăng ký tài khoản mới trên backend
     await tapText(t, 'Đăng ký');
     final email = 'demo${DateTime.now().millisecondsSinceEpoch % 100000}@nhom3.vn';
     await t.enterText(find.widgetWithText(TextFormField, 'Họ và tên'), 'Trần Văn Đức');
@@ -110,7 +103,6 @@ void main() {
     final p = Provider.of<FinanceProvider>(t.element(find.byType(MainScreen)), listen: false);
     expect(p.signedIn, isTrue);
 
-    // 2. Ghi giao dịch bằng câu tự nhiên (AI trên thiết bị)
     Future<void> quick(String text, String name) async {
       await t.tap(find.byKey(const ValueKey('quick-entry-button')));
       await settle(t);
@@ -129,7 +121,6 @@ void main() {
     await quick('cho Minh mượn 500k', '06_nhap_nhanh_cho_vay');
     expect(p.entries.length, 4);
 
-    // 3. Ngân sách tháng
     await tapText(t, 'Ngân sách', last: true);
     await t.tap(find.byTooltip('Sửa mục tiêu tháng'));
     await settle(t);
@@ -137,7 +128,6 @@ void main() {
     await tapText(t, 'Lưu', last: true);
     await shot(t, '07_ngan_sach');
 
-    // 4. Tổng quan sau khi có dữ liệu
     await tapText(t, 'Tổng quan', last: true);
     await shot(t, '08_tong_quan');
     await t.drag(find.byType(ListView).first, const Offset(0, -600));
@@ -145,7 +135,6 @@ void main() {
     await tapText(t, 'Sổ nợ');
     await shot(t, '10_so_no');
 
-    // 5. Tài khoản: trạng thái đồng bộ, trợ lý AI
     await tapText(t, 'Tài khoản', last: true);
     await p.syncNow();
     await settle(t, 800);
@@ -154,11 +143,9 @@ void main() {
     expect(p.syncError, isNull);
     await tapText(t, 'Hỏi trợ lý tài chính');
     await tapText(t, 'Dự báo chi tiêu cuối tháng');
-    // Trả lời đến từ AI service (dự báo) hoặc trợ lý trên thiết bị (dự kiến)
     await waitFor(t, find.textContaining(RegExp('dự kiến|Dự báo cả tháng')));
     await shot(t, '12_tro_ly_ai');
 
-    // 6. Trợ lý đề xuất ghi giao dịch, người dùng xác nhận
     await t.enterText(find.byKey(const ValueKey('assistant-input')), 'ghi giúp trà sữa 35k');
     await t.testTextInput.receiveAction(TextInputAction.send);
     await waitFor(t, find.text('Xác nhận'), seconds: 30);
@@ -171,14 +158,12 @@ void main() {
     expect(p.entries.any((e) => e.amount == 35000), isTrue);
     final nav = Navigator.of(t.element(find.byType(MainScreen, skipOffstage: false)));
 
-    // 7. Phân tích thông minh từ AI service (dự báo có khoảng tin cậy, bất thường, gợi ý ngân sách)
     nav.push(MaterialPageRoute<void>(builder: (_) => const InsightsScreen()));
     await waitFor(t, find.textContaining(RegExp('Khoảng 80%|trên thiết bị')), seconds: 30);
     await shot(t, '14_phan_tich_ai');
     nav.pop();
     await settle(t);
 
-    // 8. Tìm kiếm bằng câu tự nhiên
     nav.push(MaterialPageRoute<void>(builder: (_) => const SmartSearchScreen()));
     await settle(t);
     await t.enterText(find.byType(TextField).first, 'phở hôm nay');
@@ -186,7 +171,6 @@ void main() {
     await waitFor(t, find.textContaining('kết quả'), seconds: 30);
     await shot(t, '15_tim_kiem_ai');
 
-    // 9. Đọc hóa đơn bằng OCR thật trên thiết bị (Apple Vision / ML Kit) + phân tích
     final path = await renderReceipt();
     final ocr = await const TextRecognizer().recognize(path);
     expect(ocr, isNotNull, reason: 'thiết bị phải có OCR');
@@ -198,7 +182,6 @@ void main() {
     expect(server.confidence, greaterThanOrEqualTo(0.8));
     debugPrint('Hóa đơn: ${server.merchant} ${server.total} ${server.date} nguồn=${server.source} tin cậy=${server.confidence}');
 
-    // Màn Quét hóa đơn với văn bản vừa nhận dạng
     nav.push(MaterialPageRoute<void>(builder: (_) => const ReceiptScanScreen()));
     await settle(t);
     await tapText(t, 'Hoặc dán nội dung hóa đơn');

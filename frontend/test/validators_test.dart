@@ -18,6 +18,8 @@ void main() {
       expect(validateEmail(e), 'Email không hợp lệ', reason: e);
     }
     expect(validateEmail('${'a' * 65}@test.vn'), 'Email quá dài');
+    expect(validateLoginEmail('old_user@corp.com'), isNull, reason: 'email cũ vẫn đăng nhập được');
+    expect(validateLoginEmail('khongphaiemail'), isNotNull);
   });
 
   test('Mật khẩu mới: 8–72 ký tự, chữ + số, không khoảng trắng, khác email', () {

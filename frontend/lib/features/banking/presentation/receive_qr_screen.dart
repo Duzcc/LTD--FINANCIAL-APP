@@ -1,23 +1,20 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:finance_app/core/banking/vietqr.dart';
+import 'package:finance_app/features/banking/domain/vietqr.dart';
 import 'package:finance_app/core/network/api_client.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
-import 'package:finance_app/data/finance_provider.dart';
-import 'package:finance_app/features/banking/data/bank_repository.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
+import 'package:finance_app/features/banking/data/repositories/bank_repository.dart';
 
-/// Nhận tiền vào tài khoản ngân hàng đã liên kết với ví bằng mã VietQR.
-/// Khi đăng nhập và đã kết nối SePay, tiền về sẽ được tự ghi thành giao dịch.
 class ReceiveQrScreen extends StatefulWidget {
   const ReceiveQrScreen(
       {super.key, required this.walletId, this.personId, this.amount});
   final String walletId;
 
-  /// Có [personId] → thu nợ từ người này.
   final String? personId;
   final double? amount;
   @override
@@ -74,39 +71,38 @@ class _ReceiveQrScreenState extends State<ReceiveQrScreen> {
     });
     PaymentRequestInfo? created;
     if (p.signedIn) {
-      try {
-        created = await BankRepository(p).create(
-            walletId: w.id,
-            amount: value,
-            kind: collecting ? 'collect' : 'income',
-            personId: widget.personId,
-            note: note.text);
-      } on ApiException catch (e) {
-        if (!e.isNetwork) {
-          if (mounted) {
-            setState(() => busy = false);
-            message(context, e.message);
-          }
-          return;
+      final failure = await failureOf(() async => created = await BankRepository(p).create(
+          walletId: w.id,
+          amount: value,
+          kind: collecting ? 'collect' : 'income',
+          personId: widget.personId,
+          note: note.text));
+      final offline = failure is ApiException && failure.isNetwork;
+      if (failure != null && !offline) {
+        if (mounted) {
+          setState(() => busy = false);
+          message(context, failure);
         }
-        offlineReason = 'Không kết nối được máy chủ nên chưa thể tự ghi giao dịch khi tiền về.';
+        return;
       }
+      // Mất mạng vẫn cho hiện mã QR để nhận tiền, chỉ là không tự ghi giao dịch được.
+      if (offline) offlineReason = 'Không kết nối được máy chủ nên chưa thể tự ghi giao dịch khi tiền về.';
     } else {
       offlineReason = 'Bạn đang dùng ngoại tuyến: hãy tự ghi giao dịch sau khi nhận tiền. Đăng nhập và kết nối SePay để ghi tự động.';
     }
     if (!mounted) return;
-    // Mã đối soát đứng đầu nội dung để không bị cắt khi giới hạn 25 ký tự.
+    final made = created;
     final text = transferContent(
-        [if (created != null) created.code, note.text].join(' '));
+        [if (made != null) made.code, note.text].join(' '));
     setState(() {
       busy = false;
-      request = created;
+      request = made;
       requested = value;
       content = text;
       payload = buildVietQr(
           bin: w.bankBin!, account: w.bankAccount!, amount: value, content: text);
     });
-    if (created != null) {
+    if (made != null) {
       poller = Timer.periodic(const Duration(seconds: 4), (_) => refresh());
     }
   }
@@ -115,33 +111,22 @@ class _ReceiveQrScreenState extends State<ReceiveQrScreen> {
     final current = request;
     if (current == null || !current.isPending) return;
     final p = context.read<FinanceProvider>();
-    try {
-      final next = await BankRepository(p).get(current.id);
-      if (!mounted) return;
-      if (!next.isPending) poller?.cancel();
-      if (next.isPaid) await p.syncNow(); // tải giao dịch backend vừa ghi
-      if (mounted) setState(() => request = next);
-    } on ApiException {
-      // mất mạng tạm thời: thử lại ở lần sau
-    }
+    final next = await BankRepository(p).get(current.id).orNullOnApiError();
+    if (next == null || !mounted) return;
+    if (!next.isPending) poller?.cancel();
+    if (next.isPaid) await p.syncNow();
+    if (mounted) setState(() => request = next);
   }
 
   Future<void> cancel() async {
     final current = request;
     if (current == null) return;
-    try {
+    await attempt(context, () async {
       final next = await BankRepository(context.read<FinanceProvider>())
           .cancel(current.id);
       poller?.cancel();
       if (mounted) setState(() => request = next);
-    } catch (e) {
-      if (mounted) message(context, e);
-    }
-  }
-
-  void copy(String label, String value) {
-    Clipboard.setData(ClipboardData(text: value));
-    message(context, 'Đã sao chép $label');
+    });
   }
 
   @override
@@ -157,11 +142,10 @@ class _ReceiveQrScreenState extends State<ReceiveQrScreen> {
     }
     return FinancePage(
         title: collecting ? 'Thu nợ bằng VietQR' : 'Nhận tiền bằng VietQR',
-        child: payload == null ? _form(p, w.name) : _qr(p));
+        child: payload == null ? _form(p, w) : _qr(p, w));
   }
 
-  Widget _form(FinanceProvider p, String walletName) {
-    final w = p.findWallet(widget.walletId)!;
+  Widget _form(FinanceProvider p, MoneyWallet w) {
     return Form(
         key: form,
         child: ListView(padding: const EdgeInsets.all(16), children: [
@@ -170,7 +154,7 @@ class _ReceiveQrScreenState extends State<ReceiveQrScreen> {
                   contentPadding: EdgeInsets.zero,
                   leading: const RoundIcon(Icons.account_balance_outlined),
                   title: Text(bankByBin(w.bankBin)?.name ?? 'Ngân hàng'),
-                  subtitle: Text('${w.bankAccount} • ${w.bankHolder}\nVí: $walletName'))),
+                  subtitle: Text('${w.bankAccount} • ${w.bankHolder}\nVí: ${w.name}'))),
           const SizedBox(height: 12),
           if (collecting)
             Padding(
@@ -210,8 +194,7 @@ class _ReceiveQrScreenState extends State<ReceiveQrScreen> {
         ]));
   }
 
-  Widget _qr(FinanceProvider p) {
-    final w = p.findWallet(widget.walletId)!;
+  Widget _qr(FinanceProvider p, MoneyWallet w) {
     final bank = bankByBin(w.bankBin)?.name ?? '';
     final r = request;
     final shareText = [
@@ -256,7 +239,7 @@ class _ReceiveQrScreenState extends State<ReceiveQrScreen> {
                 subtitle: Text(w.bankAccount!),
                 trailing: IconButton(
                     tooltip: 'Sao chép',
-                    onPressed: () => copy('số tài khoản', w.bankAccount!),
+                    onPressed: () => copyText(context, 'số tài khoản', w.bankAccount!),
                     icon: const Icon(Icons.copy, size: 20))),
             if (content!.isNotEmpty)
               ListTile(
@@ -264,7 +247,7 @@ class _ReceiveQrScreenState extends State<ReceiveQrScreen> {
                   subtitle: Text(content!),
                   trailing: IconButton(
                       tooltip: 'Sao chép',
-                      onPressed: () => copy('nội dung', content!),
+                      onPressed: () => copyText(context, 'nội dung', content!),
                       icon: const Icon(Icons.copy, size: 20))),
           ])),
       const SizedBox(height: 12),

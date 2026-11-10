@@ -1,7 +1,3 @@
-"""Ảnh chụp dữ liệu tài chính của một người dùng mà backend gửi kèm yêu cầu.
-
-AI service không lưu dữ liệu người dùng (stateless): mọi thứ cần cho một yêu cầu đều nằm trong snapshot.
-"""
 from __future__ import annotations
 
 from datetime import datetime
@@ -28,8 +24,7 @@ class FinanceSnapshot(BaseModel):
             return datetime.now(DEFAULT_TZ)
         return self.now if self.now.tzinfo else self.now.replace(tzinfo=DEFAULT_TZ)
 
-    def model_post_init(self, __context) -> None:  # noqa: D401
-        """Đưa mọi thời điểm về múi giờ của người dùng để so sánh nhất quán."""
+    def model_post_init(self, __context) -> None:
         self.now = now = self.resolved_now()
         tz = now.tzinfo
         for t in self.transactions:
@@ -39,7 +34,6 @@ class FinanceSnapshot(BaseModel):
                 t.date = t.date.astimezone(tz)
 
     def history(self) -> list[LabeledText]:
-        """Ghi chú đã gán danh mục -> dữ liệu cá nhân hóa cho bộ phân loại."""
         return [LabeledText(text=t.note[:500], categoryId=t.categoryId)
                 for t in self.transactions if t.note.strip() and t.categoryId][-2000:]
 

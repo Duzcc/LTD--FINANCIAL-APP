@@ -1,4 +1,3 @@
-"""Gom các router của API v1 (yêu cầu khóa dịch vụ)."""
 from fastapi import APIRouter, Depends
 
 from app.core.security import require_service_key

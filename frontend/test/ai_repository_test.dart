@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:finance_app/core/network/api_client.dart';
-import 'package:finance_app/data/finance_provider.dart';
-import 'package:finance_app/data/models/finance_models.dart';
-import 'package:finance_app/features/ai/data/ai_repository.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
+import 'package:finance_app/features/ai/data/repositories/ai_repository.dart';
 import 'helpers/fake_backend.dart';
 
 void main() {
@@ -103,6 +103,40 @@ void main() {
     p.dispose();
   });
 
+  test('Nhiều yêu cầu cùng gặp 401 chỉ làm mới token một lần', () async {
+    final (p, server) = await signedIn();
+    server.ai['/api/ai/chat'] = (_) => {'reply': 'Chào', 'source': 'ai-service', 'actions': []};
+    server.token = 'tok2';
+    final history = [
+      {'role': 'user', 'content': 'chào'}
+    ];
+    final replies = await Future.wait([AiRepository(p).chat(history), AiRepository(p).chat(history)]);
+    expect(replies.map((r) => r.source), ['ai-service', 'ai-service']);
+    expect(server.refreshCalls, 1);
+    expect(p.session!.token, 'tok2');
+    p.dispose();
+  });
+
+  test('Phân tích máy chủ: dữ liệu đổi trong lúc chờ thì không coi kết quả là mới; lỗi thì chờ trước khi thử lại', () async {
+    final (p, server) = await signedIn();
+    final repo = AiRepository(p);
+    server.ai['/api/ai/insights'] = (_) {
+      p.saveEntry(MoneyEntry(
+          id: 'e9', kind: EntryKind.expense, amount: 1, walletId: 'cash', categoryId: 'food', date: DateTime.now()));
+      return {'forecast': {'spent': 1, 'projected': 2, 'lower': 1, 'upper': 3, 'daysLeft': 1, 'method': 'x'}};
+    };
+    expect(await repo.insights(), isNotNull);
+    expect(repo.cachedInsights, isNull, reason: 'kết quả được tính trước khi có giao dịch mới');
+
+    server.ai.remove('/api/ai/insights');
+    await repo.insights();
+    final calls = server.aiCalls.length;
+    repo.refreshInsightsIfStale();
+    await Future<void>.delayed(Duration.zero);
+    expect(server.aiCalls.length, calls, reason: 'vừa lỗi thì không gọi lại ngay');
+    p.dispose();
+  });
+
   test('Đọc hóa đơn từ văn bản', () async {
     final (p, server) = await signedIn();
     server.ai['/api/ai/receipts/text'] = (b) => {
@@ -117,7 +151,7 @@ void main() {
         };
     final r = await AiRepository(p).receiptFromText('TỔNG CỘNG 46.000');
     expect(r.total, 46000);
-    expect(r.items.single.$1, 'Nước suối');
+    expect(r.items.single.name, 'Nước suối');
     p.dispose();
   });
 }

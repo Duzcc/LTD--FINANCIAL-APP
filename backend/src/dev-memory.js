@@ -1,5 +1,3 @@
-// Chạy backend với MongoDB nhúng (mongodb-memory-server) để demo nhanh khi máy chưa cài MongoDB.
-// Dữ liệu lưu trong backend/.data nên vẫn còn sau khi khởi động lại.
 const fs = require('fs');
 const path = require('path');
 const { MongoMemoryServer } = require('mongodb-memory-server');

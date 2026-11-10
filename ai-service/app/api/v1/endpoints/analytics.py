@@ -1,4 +1,3 @@
-"""Phân tích: dự báo, bất thường, gợi ý ngân sách, tìm kiếm ngữ nghĩa."""
 from __future__ import annotations
 
 from dataclasses import asdict

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/core/widgets/brand_logo.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 import 'package:finance_app/core/network/api_client.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/app/main_screen.dart';
@@ -8,9 +9,6 @@ import 'package:finance_app/core/validation/validators.dart';
 import 'package:finance_app/features/auth/presentation/forgot_password_screen.dart';
 import 'package:finance_app/features/auth/presentation/otp_screen.dart';
 
-export 'package:finance_app/core/validation/validators.dart';
-
-/// Sau khi đăng nhập thành công: hỏi cách xử lý dữ liệu nếu cần rồi vào ứng dụng.
 Future<void> finishSignIn(BuildContext context, bool needsDecision,
     {required bool fromSettings}) async {
   final p = context.read<FinanceProvider>();
@@ -49,7 +47,6 @@ Future<void> finishSignIn(BuildContext context, bool needsDecision,
   }
 }
 
-/// Chọn địa chỉ backend (máy chủ API chạy độc lập với ứng dụng).
 Future<void> editServer(BuildContext context) async {
   final p = context.read<FinanceProvider>();
   final controller = TextEditingController(text: p.serverUrl);
@@ -111,21 +108,19 @@ Future<void> editServer(BuildContext context) async {
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key, this.fromSettings = false});
 
-  /// Mở từ mục Tài khoản (đang dùng ngoại tuyến) thay vì màn hình đầu tiên.
   final bool fromSettings;
   @override
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> {
+class _AuthScreenState extends State<AuthScreen> with BusyState {
   final form = GlobalKey<FormState>();
   final name = TextEditingController(),
       email = TextEditingController(),
       password = TextEditingController(),
       confirm = TextEditingController(),
       offlineName = TextEditingController();
-  bool registering = false, busy = false, showPassword = false;
-  String? error;
+  bool registering = false, showPassword = false;
 
   @override
   void dispose() {
@@ -138,12 +133,7 @@ class _AuthScreenState extends State<AuthScreen> {
   Future<void> submit() async {
     if (!form.currentState!.validate()) return;
     final p = context.read<FinanceProvider>();
-    setState(() {
-      busy = true;
-      error = null;
-    });
-    try {
-      // Bước 1: máy chủ kiểm tra thông tin và gửi OTP; bước 2: nhập mã ở OtpScreen.
+    await runBusy(() async {
       final challenge = registering
           ? await p.register(
               name: name.text, email: email.text, password: password.text)
@@ -153,11 +143,7 @@ class _AuthScreenState extends State<AuthScreen> {
       confirm.clear();
       await openPage(context,
           OtpScreen(challenge: challenge, fromSettings: widget.fromSettings));
-    } catch (e) {
-      if (mounted) setState(() => error = e.toString());
-    } finally {
-      if (mounted) setState(() => busy = false);
-    }
+    });
   }
 
   @override
@@ -179,14 +165,7 @@ class _AuthScreenState extends State<AuthScreen> {
                               if (!widget.fromSettings) ...[
                                 const Align(
                                     alignment: Alignment.centerLeft,
-                                    child: CircleAvatar(
-                                        radius: 36,
-                                        backgroundColor: Color(0xFFE6D8CB),
-                                        child: Icon(
-                                            Icons
-                                                .account_balance_wallet_outlined,
-                                            size: 34,
-                                            color: Color(0xFF917560)))),
+                                    child: BrandLogo.app(size: 76)),
                                 const SizedBox(height: 24),
                                 const Text('Tiền của bạn.\nKế hoạch của bạn.',
                                     style: TextStyle(
@@ -237,7 +216,9 @@ class _AuthScreenState extends State<AuthScreen> {
                                       counterText: '',
                                       labelText: 'Email',
                                       prefixIcon: Icon(Icons.mail_outline)),
-                                  validator: validateEmail),
+                                  validator: (v) => registering
+                                      ? validateEmail(v)
+                                      : validateLoginEmail(v)),
                               const SizedBox(height: 12),
                               TextFormField(
                                   key: const ValueKey('auth-password'),

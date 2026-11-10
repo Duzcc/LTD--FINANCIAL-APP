@@ -1,25 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:finance_app/core/banking/vietqr.dart';
+import 'package:finance_app/features/banking/domain/vietqr.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
-import 'package:finance_app/data/finance_provider.dart';
-import 'package:finance_app/features/banking/data/bank_repository.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/banking/data/repositories/bank_repository.dart';
 import 'package:finance_app/features/wallets/presentation/create_wallet_screen.dart';
 
-/// Kết nối ngân hàng: các ví đã liên kết tài khoản và cấu hình webhook SePay
-/// để tiền chuyển vào qua VietQR được tự ghi thành giao dịch.
 class SepayScreen extends StatefulWidget {
   const SepayScreen({super.key});
   @override
   State<SepayScreen> createState() => _SepayScreenState();
 }
 
-class _SepayScreenState extends State<SepayScreen> {
+class _SepayScreenState extends State<SepayScreen> with BusyState {
   SepayStatus? status;
   List<PaymentRequestInfo> requests = [];
-  String? error;
-  bool loading = false;
 
   @override
   void initState() {
@@ -30,11 +25,7 @@ class _SepayScreenState extends State<SepayScreen> {
   Future<void> load() async {
     final p = context.read<FinanceProvider>();
     if (!p.signedIn) return;
-    setState(() {
-      loading = true;
-      error = null;
-    });
-    try {
+    await runBusy(() async {
       final repo = BankRepository(p);
       final s = await repo.sepay();
       final list = await repo.list();
@@ -44,11 +35,7 @@ class _SepayScreenState extends State<SepayScreen> {
           requests = list;
         });
       }
-    } catch (e) {
-      if (mounted) setState(() => error = e.toString());
-    } finally {
-      if (mounted) setState(() => loading = false);
-    }
+    });
   }
 
   Future<void> createKey() async {
@@ -61,34 +48,27 @@ class _SepayScreenState extends State<SepayScreen> {
       return;
     }
     if (!mounted) return;
-    try {
+    await attempt(context, () async {
       final s = await BankRepository(context.read<FinanceProvider>()).createKey();
       if (mounted) setState(() => status = s);
-    } catch (e) {
-      if (mounted) message(context, e);
-    }
+    });
   }
 
   Future<void> revoke() async {
     if (!await confirmAction(context,
-        title: 'Ngắt kết nối SePay?',
-        content: 'Tiền chuyển vào sẽ không còn được tự ghi thành giao dịch.',
-        confirm: 'Ngắt kết nối',
+        title: 'Tắt webhook SePay?',
+        content: status?.pollingEnabled == true
+            ? 'Máy chủ vẫn đối soát tiền về qua API SePay, chỉ chậm hơn vài giây.'
+            : 'Tiền chuyển vào sẽ không còn được tự ghi thành giao dịch.',
+        confirm: 'Tắt webhook',
         danger: true)) {
       return;
     }
     if (!mounted) return;
-    try {
+    await attempt(context, () async {
       await BankRepository(context.read<FinanceProvider>()).revokeKey();
       await load();
-    } catch (e) {
-      if (mounted) message(context, e);
-    }
-  }
-
-  void copy(String label, String value) {
-    Clipboard.setData(ClipboardData(text: value));
-    message(context, 'Đã sao chép $label');
+    });
   }
 
   @override
@@ -127,11 +107,27 @@ class _SepayScreenState extends State<SepayScreen> {
                 const Text(
                     'Cần đăng nhập tài khoản để máy chủ nhận thông báo tiền về từ SePay. Khi dùng ngoại tuyến bạn vẫn tạo được mã VietQR để nhận tiền.',
                     style: TextStyle(height: 1.5))
-              else if (loading && s == null)
+              else if (busy && s == null)
                 const Center(child: CircularProgressIndicator())
               else if (error != null)
                 Text(error!, style: const TextStyle(color: AppColors.accentRed))
               else if (s != null) ...[
+                if (s.pollingEnabled) ...[
+                  Panel(
+                      color: AppColors.primaryGreenSurface,
+                      child: Row(children: [
+                        const Icon(Icons.sync, color: AppColors.primaryGreen),
+                        const SizedBox(width: 12),
+                        Expanded(
+                            child: Text(
+                                'Đang bật đối soát qua API SePay: máy chủ kiểm tra tiền về mỗi ${s.pollSeconds} giây khi có mã QR đang chờ. Không cần cấu hình webhook.',
+                                style: const TextStyle(height: 1.4))),
+                      ])),
+                  const SizedBox(height: 12),
+                  const Text('Webhook (tùy chọn, báo nhanh hơn)',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                ],
                 Panel(
                     padding: EdgeInsets.zero,
                     child: Column(children: [
@@ -141,7 +137,7 @@ class _SepayScreenState extends State<SepayScreen> {
                               color: s.connected
                                   ? AppColors.primaryGreen
                                   : AppColors.textSecondary),
-                          title: Text(s.connected ? 'Đã tạo khóa webhook' : 'Chưa kết nối'),
+                          title: Text(s.connected ? 'Đã tạo khóa webhook' : 'Webhook chưa bật'),
                           subtitle: s.keyHint == null
                               ? null
                               : Text('Khóa kết thúc bằng …${s.keyHint}')),
@@ -150,7 +146,7 @@ class _SepayScreenState extends State<SepayScreen> {
                           subtitle: Text(s.webhookUrl),
                           trailing: IconButton(
                               tooltip: 'Sao chép',
-                              onPressed: () => copy('URL webhook', s.webhookUrl),
+                              onPressed: () => copyText(context, 'URL webhook', s.webhookUrl),
                               icon: const Icon(Icons.copy, size: 20))),
                       if (s.apiKey != null)
                         ListTile(
@@ -159,7 +155,7 @@ class _SepayScreenState extends State<SepayScreen> {
                             subtitle: SelectableText(s.apiKey!),
                             trailing: IconButton(
                                 tooltip: 'Sao chép',
-                                onPressed: () => copy('API Key', s.apiKey!),
+                                onPressed: () => copyText(context, 'API Key', s.apiKey!),
                                 icon: const Icon(Icons.copy, size: 20))),
                     ])),
                 const SizedBox(height: 8),
@@ -167,18 +163,18 @@ class _SepayScreenState extends State<SepayScreen> {
                   Expanded(
                       child: FilledButton(
                           onPressed: createKey,
-                          child: Text(s.connected ? 'Tạo khóa mới' : 'Tạo khóa kết nối'))),
+                          child: Text(s.connected ? 'Tạo khóa mới' : 'Tạo khóa webhook'))),
                   if (s.connected) ...[
                     const SizedBox(width: 10),
                     Expanded(
                         child: OutlinedButton(
-                            onPressed: revoke, child: const Text('Ngắt kết nối'))),
+                            onPressed: revoke, child: const Text('Tắt webhook'))),
                   ],
                 ]),
                 const SizedBox(height: 16),
                 const Panel(
                     child: Text(
-                        'Cách kết nối:\n'
+                        'Cách bật webhook:\n'
                         '1. Đăng ký tại my.sepay.vn và thêm tài khoản ngân hàng của bạn (giống số tài khoản đã liên kết với ví).\n'
                         '2. Vào Tích hợp → Webhooks → Thêm webhook: sự kiện "Có tiền vào", dán URL webhook ở trên.\n'
                         '3. Kiểu chứng thực: API Key, dán API Key ở trên.\n'

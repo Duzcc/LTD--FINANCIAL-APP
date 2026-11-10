@@ -1,10 +1,10 @@
 #!/bin/zsh -l
 # Chạy một kịch bản integration_test trên thiết bị: chay_kiem_thu_thiet_bi.sh <id-thiết-bị> <tệp> [thư-mục-ảnh]
-ROOT="$HOME/Desktop/Android-NHOM3"
+ROOT="${0:A:h:h}"
 DEV=$1; TARGET=$2; OUTDIR=${3:-demo}
 cd "$ROOT/frontend"
-rm -rf build/demo 2>/dev/null || mv build/demo "$ROOT/_to_delete/demo_$(date +%s)" 2>/dev/null
-( sleep 1200; pkill -f "flutter_tools.*drive" ) &
+rm -rf build/demo
+( sleep 1200; pkill -f "flutter_tools.*drive.*-d $DEV" ) &
 WD=$!
 START=$(date +%s)
 if [[ "$DEV" == emulator-* ]]; then RUN=flutter; else RUN="$ROOT/tool/flutter_ios.sh"; fi

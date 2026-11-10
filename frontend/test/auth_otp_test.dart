@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:finance_app/core/network/api_client.dart';
 import 'package:finance_app/app/app.dart';
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 import 'package:finance_app/app/main_screen.dart';
 import 'package:finance_app/features/auth/presentation/auth_screen.dart';
 import 'package:finance_app/features/auth/presentation/otp_screen.dart';

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:finance_app/data/models/finance_models.dart';
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/transactions/presentation/select_category_screen.dart';
+import 'package:finance_app/features/finance/presentation/entity_icons.dart';
 
-/// Ngân sách (màn hình Mục tiêu): mục tiêu tổng của tháng và mục tiêu theo danh mục.
 class GoalsScreen extends StatefulWidget {
   const GoalsScreen({super.key});
   @override
@@ -27,7 +27,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
       message(context, 'Nhập số tiền mục tiêu lớn hơn 0.');
       return;
     }
-    try {
+    attempt(context, () {
       p.saveBudget(MoneyBudget(
           id: current?.id ?? p.newId(),
           categoryId: null,
@@ -35,9 +35,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
           amount: amount,
           currency: p.currency,
           income: income));
-    } catch (e) {
-      message(context, e);
-    }
+    });
   }
 
   @override
@@ -384,7 +382,7 @@ class _BudgetEditorState extends State<BudgetEditor> {
               FilledButton(
                   onPressed: () {
                     if (!form.currentState!.validate()) return;
-                    try {
+                    attempt(context, () {
                       p.saveBudget(MoneyBudget(
                           id: widget.budget?.id ?? p.newId(),
                           categoryId: categoryId!,
@@ -394,9 +392,7 @@ class _BudgetEditorState extends State<BudgetEditor> {
                           currency: unit,
                           income: widget.income));
                       Navigator.pop(context);
-                    } catch (e) {
-                      message(context, e);
-                    }
+                    });
                   },
                   child: const Text('Lưu mục tiêu')),
               if (widget.budget != null)

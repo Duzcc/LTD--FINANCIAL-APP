@@ -1,10 +1,9 @@
-"""Đọc hóa đơn: sửa lỗi OCR, dựng dòng từ khối chữ, bỏ phiếu tổng tiền, OCR đầu-cuối trên ảnh tổng hợp."""
 import io
 import random
 
 import pytest
 
-from app.services.receipt import OcrBox, available_engines, clean_ocr_numbers, group_rows, ocr_image, parse_receipt_text
+from app.services.receipt import OcrBox, available_engines, clean_ocr_numbers, from_llm_json, group_rows, ocr_image, parse_receipt_text
 from ml.data.receipts import make_receipt
 
 
@@ -15,7 +14,6 @@ def test_clean_ocr_numbers():
 
 
 def test_group_rows_with_skew():
-    # Ảnh nghiêng ~3°: số tiền bên phải thấp hơn nhãn bên trái nhưng vẫn cùng dòng
     boxes = [OcrBox("Tổng cộng:", 10, 100, 120, 20, angle=0.05), OcrBox("154.000", 500, 124, 90, 20, angle=0.05),
              OcrBox("Tiền thừa:", 10, 130, 120, 20, angle=0.05), OcrBox("46.000", 500, 154, 80, 20, angle=0.05)]
     assert group_rows(boxes) == ["Tổng cộng:  154.000", "Tiền thừa:  46.000"]
@@ -54,3 +52,26 @@ def test_end_to_end_ocr_on_synthetic_receipts():
         text, _engine = ocr_image(buf.getvalue())
         correct += parse_receipt_text(text).total == label.total
     assert correct >= 5
+
+
+def test_items_keep_quantity_unit_price_and_time():
+    from tests.test_analytics import RECEIPT
+    r = parse_receipt_text(RECEIPT)
+    water = r.items[0]
+    assert (water.quantity, water.unit_price, water.amount) == (2, 6_000, 12_000)
+    assert r.items[1].quantity is None
+    assert (r.date.hour, r.date.minute) == (19, 32)
+
+
+def test_quantity_on_line_below_name():
+    r = parse_receipt_text("WINMART\nSữa tươi Vinamilk 1L\n3 32.000 96.000\nDầu gội Clear\n1 x 89.000 89.000\nTổng cộng 185.000")
+    assert [(i.name, i.quantity, i.unit_price) for i in r.items] == [
+        ("Sữa tươi Vinamilk 1L", 3, 32_000), ("Dầu gội Clear", 1, 89_000)]
+
+
+def test_receipt_kind():
+    assert parse_receipt_text("CIRCLE K\nNước suối 10.000\nTổng cộng 10.000").kind == "expense"
+    assert parse_receipt_text("SHOPEE\nHoàn tiền đơn hàng\nSố tiền 250.000").kind == "income"
+    assert parse_receipt_text("Bạn đã nhận 500.000đ từ NGUYEN VAN A").kind == "income"
+    assert from_llm_json('{"kind": "income", "total": 500000}').kind == "income"
+    assert from_llm_json('{"kind": "gift", "total": 500000}').kind == "expense"

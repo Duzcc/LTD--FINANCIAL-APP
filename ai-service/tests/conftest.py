@@ -1,4 +1,3 @@
-"""Dữ liệu mẫu dùng chung cho các bài kiểm thử."""
 from __future__ import annotations
 
 import itertools
@@ -13,7 +12,6 @@ from fastapi.testclient import TestClient
 from app.schemas.common import Category, Person, Transaction, Wallet
 from app.schemas.finance import FinanceSnapshot
 
-# Không để tệp .env của máy phát triển ảnh hưởng kiểm thử (biến môi trường được ưu tiên hơn .env).
 for _k in ("SERVICE_API_KEY", "LLM_PROVIDER", "LLM_API_KEY", "LLM_MODEL", "LLM_BASE_URL", "VISION_MODEL"):
     os.environ[_k] = ""
 
@@ -24,7 +22,7 @@ CATEGORIES = [
     Category(id="food", name="Ăn uống"), Category(id="transport", name="Đi lại"), Category(id="house", name="Nhà cửa"),
     Category(id="self", name="Bản thân"), Category(id="health", name="Sức khỏe"), Category(id="life", name="Sinh hoạt"),
     Category(id="salary", name="Lương", income=True), Category(id="bonus", name="Thưởng", income=True),
-    Category(id="coffee", name="Cà phê"),  # danh mục người dùng tự tạo
+    Category(id="coffee", name="Cà phê"),
 ]
 PEOPLE = [Person(id="p1", name="Hà"), Person(id="p2", name="Linh")]
 WALLETS = [Wallet(id="cash", name="Tiền mặt", balance=2_000_000), Wallet(id="bank", name="Vietcombank", balance=15_000_000),

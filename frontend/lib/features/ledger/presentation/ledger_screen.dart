@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/core/utils/dates.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
-import 'package:finance_app/core/widgets/entry_tile.dart';
+import 'package:finance_app/features/transactions/presentation/widgets/entry_tile.dart';
 import 'package:finance_app/features/transactions/presentation/add_transaction_screen.dart';
 
 enum LedgerSort { newest, oldest, amountDesc, amountAsc }
@@ -14,8 +15,6 @@ const _sortLabels = {
   LedgerSort.amountAsc: 'Số tiền tăng dần',
 };
 
-/// Sổ giao dịch: tìm kiếm, lọc theo tháng/khoảng ngày, loại, ví, danh mục,
-/// đối tượng và sắp xếp theo thời gian hoặc số tiền.
 class LedgerScreen extends StatefulWidget {
   const LedgerScreen({super.key, this.initialCategoryId});
   final String? initialCategoryId;
@@ -54,8 +53,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
     final q = query.trim().toLowerCase();
     final entries = (range == null
             ? p.inMonth(month, unit: p.currency)
-            : p.between(DateUtilsDate.day(range!.start),
-                DateUtilsDate.day(range!.end).add(const Duration(days: 1)),
+            : p.between(dateOnly(range!.start),
+                dateOnly(range!.end).add(const Duration(days: 1)),
                 unit: p.currency))
         .where((e) =>
             (walletId.isEmpty ||
@@ -89,11 +88,11 @@ class _LedgerScreenState extends State<LedgerScreen> {
     final rows = <Widget>[];
     DateTime? lastDay;
     for (final e in entries) {
-      final day = DateUtilsDate.day(e.date);
+      final day = dateOnly(e.date);
       if (byDate && day != lastDay) {
         lastDay = day;
         final dayEntries =
-            entries.where((x) => DateUtilsDate.day(x.date) == day);
+            entries.where((x) => dateOnly(x.date) == day);
         final net = dayEntries.fold(
             0.0,
             (s, x) =>
@@ -288,7 +287,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
 
 String _weekday(DateTime d) {
   const names = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'];
-  final today = DateUtilsDate.day(DateTime.now());
+  final today = dateOnly(DateTime.now());
   if (d == today) return 'Hôm nay • ${dayLabel(d)}';
   if (d == today.subtract(const Duration(days: 1))) return 'Hôm qua • ${dayLabel(d)}';
   return '${names[d.weekday - 1]} • ${dayLabel(d)}';

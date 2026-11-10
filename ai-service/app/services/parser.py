@@ -1,11 +1,3 @@
-"""Hiểu câu nhập nhanh tiếng Việt (NLU) -> giao dịch có cấu trúc.
-
-Kết hợp:
-- mô hình phân loại ý định (loại giao dịch) đã huấn luyện,
-- luật ưu tiên cho các mẫu câu chắc chắn (vay/nợ, chuyển tiền, lãi),
-- trích xuất thực thể: số tiền, ngày giờ, người, ví,
-- bộ phân loại danh mục có cá nhân hóa.
-"""
 from __future__ import annotations
 
 import re
@@ -22,7 +14,6 @@ from .registry import load_model
 
 DEBT_KINDS = {"lend", "collect", "interestIncome", "borrow", "repay", "interestExpense"}
 
-# Luật có độ chính xác cao, áp dụng trước mô hình.
 _RULES: list[tuple[str, str]] = [
     (r"\b(thu lai|lai tiet kiem|lai cho vay)\b", "interestIncome"),
     (r"\bcho\s+\w+(\s\w+)?\s+(muon|vay)\b", "lend"),
@@ -67,14 +58,12 @@ class QuickEntryParser:
     def classify_kind(self, text: str) -> tuple[str, float, list[tuple[str, float]]]:
         low = text.lower()
         f = fold(text)
-        # "trả lãi" (tiền lãi) khác "trả lại" (hoàn trả) khi có dấu; không dấu thì dựa vào ngữ cảnh.
         if "trả lãi" in low or "đóng lãi" in low:
             return "interestExpense", 0.97, []
         if re.search(r"\btra lai\b", f) and "trả lại" not in low and re.search(r"\btra lai\s+(vay|the|ngan hang|thang|khoan)", f):
             return "interestExpense", 0.9, []
         if re.search(r"(nhận|thu)\s+lãi|lãi\s+(tiết kiệm|cho vay|gửi)", low):
             return "interestIncome", 0.95, []
-        # "X cho mình/tôi/em mượn" là đi vay chứ không phải cho vay.
         if re.search(r"\bcho\s+(mình|tôi|em|tao|tớ)\s+(mượn|vay)\b", low) or re.search(r"\bcho\s+(toi|tao|to)\s+(muon|vay)\b", f):
             return "borrow", 0.95, []
         if _PRONOUN_START.search(f) and re.search(r"\btra\b", f):
@@ -121,7 +110,6 @@ class QuickEntryParser:
             new_name = None
         wallet_id, dest_id = self._wallet(text, wallets)
 
-        # Ghi chú: câu gốc bỏ phần số tiền
         note = text.strip()
         if amount:
             kept = [w for w in note.split() if find_amount(w) is None or re.match(r"^\d{1,2}/\d{1,2}", w)]

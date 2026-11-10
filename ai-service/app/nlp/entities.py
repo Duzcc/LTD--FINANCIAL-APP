@@ -1,11 +1,10 @@
-"""Trích xuất thực thể từ câu tiếng Việt: số tiền, ngày giờ, tên người."""
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from .text import fold, fold_keep_numbers
+from .text import calendar_date, fold, fold_keep_numbers
 
 _AMOUNT = re.compile(
     r"(\d+(?:[.,]\d+)*)\s*(k|nghin|ngan|ng|tr|trieu|cu|ty|ti|d|dong|vnd|usd|\$)?(\d{1,3})?\b"
@@ -23,10 +22,6 @@ class Amount:
 
 
 def find_amount(text: str) -> Amount | None:
-    """Đọc số tiền: '45k', '1tr2', '1,5tr', '200.000', '2 triệu', 'phở 45' (hiểu là 45.000).
-
-    Ưu tiên số có đơn vị khi câu có nhiều số ("2 ly cà phê 60k" -> 60.000).
-    """
     f = fold_keep_numbers(text)
     unitless: Amount | None = None
     for m in _AMOUNT.finditer(f):
@@ -63,7 +58,6 @@ def find_amount(text: str) -> Amount | None:
 
 
 def find_date(text: str, now: datetime) -> tuple[datetime, bool]:
-    """Ngày giao dịch: hôm nay/qua/kia, 'ngày 5', '5/10', buổi sáng/trưa/chiều/tối. Trả về (ngày, có_nhắc_ngày)."""
     f = fold_keep_numbers(text)
     date = now.replace(second=0, microsecond=0)
     mentioned = False
@@ -76,24 +70,22 @@ def find_date(text: str, now: datetime) -> tuple[datetime, bool]:
     else:
         dm = re.search(r"\b(\d{1,2})\s*/\s*(\d{1,2})(?:\s*/\s*(\d{2,4}))?\b", f)
         day = re.search(r"\bngay\s+(\d{1,2})\b", f)
-        try:
-            if dm:
-                d, mth = int(dm.group(1)), int(dm.group(2))
-                y = int(dm.group(3)) if dm.group(3) else now.year
-                y = y + 2000 if y < 100 else y
-                cand = datetime(y, mth, d, 12)
-                if not dm.group(3) and cand > now + timedelta(days=1):
-                    cand = cand.replace(year=y - 1)
-                date, mentioned = cand, True
-            elif day:
-                d = int(day.group(1))
-                cand = datetime(now.year, now.month, d, 12)
-                if cand > now + timedelta(days=1):
-                    prev_month = (now.replace(day=1) - timedelta(days=1))
-                    cand = datetime(prev_month.year, prev_month.month, d, 12)
-                date, mentioned = cand, True
-        except ValueError:
-            pass
+        cand = None
+        if dm:
+            d, mth = int(dm.group(1)), int(dm.group(2))
+            y = int(dm.group(3)) if dm.group(3) else now.year
+            y = y + 2000 if y < 100 else y
+            cand = calendar_date(y, mth, d, 12)
+            if cand and not dm.group(3) and cand > now + timedelta(days=1):
+                cand = calendar_date(y - 1, mth, d, 12)
+        elif day:
+            d = int(day.group(1))
+            cand = calendar_date(now.year, now.month, d, 12)
+            if cand and cand > now + timedelta(days=1):
+                prev_month = now.replace(day=1) - timedelta(days=1)
+                cand = calendar_date(prev_month.year, prev_month.month, d, 12)
+        if cand:
+            date, mentioned = cand, True
     hour = None
     if re.search(r"\bsang\b", f):
         hour = 8
@@ -117,7 +109,6 @@ def original_words(text: str) -> list[str]:
 
 
 def restore_name(text: str, folded_name: str) -> str | None:
-    """Lấy lại tên có dấu từ câu gốc ('binh' -> 'Bình'); None nếu là đại từ ('mình')."""
     words = original_words(text)
     parts = folded_name.split()
     for i in range(len(words) - len(parts) + 1):
@@ -130,7 +121,6 @@ def restore_name(text: str, folded_name: str) -> str | None:
 
 
 def find_person(text: str, known: list[dict]) -> tuple[str | None, str | None]:
-    """(id người đã có, tên người mới) xuất hiện trong câu."""
     f = fold(text)
     for p in sorted(known, key=lambda p: -len(p.get("name", ""))):
         n = fold(p.get("name", "")).strip()

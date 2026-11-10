@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/home/presentation/home_screen.dart';
 import 'package:finance_app/features/ledger/presentation/ledger_screen.dart';
 import 'package:finance_app/features/transactions/presentation/add_transaction_screen.dart';
 import 'package:finance_app/features/goals/presentation/goals_screen.dart';
+import 'package:finance_app/features/ai/presentation/assistant_screen.dart';
 import 'package:finance_app/features/settings/presentation/others_screen.dart';
 import 'package:finance_app/app/main_bottom_nav.dart';
 
@@ -33,7 +34,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) return;
-    // Quay lại ứng dụng: ghi các giao dịch định kỳ đến hạn và đồng bộ.
     final p = context.read<FinanceProvider>();
     final created = p.runRecurring();
     if (created > 0) message(context, 'Đã tự ghi $created giao dịch định kỳ đến hạn.');
@@ -62,6 +62,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                     HomeScreen(),
                     LedgerScreen(),
                     SizedBox.shrink(),
+                    AssistantScreen(),
                     GoalsScreen(),
                     OthersScreen()
                   ])),

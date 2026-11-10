@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:finance_app/data/finance_provider.dart';
-import 'package:finance_app/core/security/app_lock.dart';
-import 'package:finance_app/core/notifications/notification_service.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/security/data/services/app_lock.dart';
+import 'package:finance_app/app/notification_service.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/security/presentation/lock_screen.dart';
 import 'package:finance_app/features/wallets/presentation/currency_selection_screen.dart';
 
-/// Tỷ giá dùng để quy đổi tổng tài sản nhiều tiền tệ (người dùng tự cập nhật).
 class RatesScreen extends StatelessWidget {
   const RatesScreen({super.key});
   @override
@@ -33,11 +32,9 @@ class RatesScreen extends StatelessWidget {
                         final text = await editText(context, 'Giá 1 $unit (VND)',
                             initial: formatAmountInput(p.rates[unit] ?? 0), numeric: true);
                         if (text == null || !context.mounted) return;
-                        try {
+                        attempt(context, () {
                           p.setRate(unit, parseAmount(text) ?? 0);
-                        } catch (e) {
-                          message(context, e);
-                        }
+                        });
                       }),
               ])),
           const SizedBox(height: 12),
@@ -59,7 +56,6 @@ class RatesScreen extends StatelessWidget {
   }
 }
 
-/// Nhắc ghi chép hằng ngày và nhắc hạn nợ bằng thông báo hệ điều hành.
 class RemindersScreen extends StatelessWidget {
   const RemindersScreen({super.key});
 
@@ -140,7 +136,6 @@ class RemindersScreen extends StatelessWidget {
   }
 }
 
-/// Khóa ứng dụng bằng mã PIN.
 class SecurityScreen extends StatelessWidget {
   const SecurityScreen({super.key});
   @override

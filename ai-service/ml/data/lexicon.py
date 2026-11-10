@@ -1,11 +1,4 @@
-"""Từ vựng giao dịch tiếng Việt dùng để sinh bộ dữ liệu huấn luyện.
-
-Mỗi danh mục gồm: hành động (verbs), đồ vật/dịch vụ (items), nơi chốn/thương hiệu
-(places). Nhãn danh mục trùng mã danh mục mặc định của ứng dụng.
-"""
-
 CATEGORIES = {
-    # ---------------- chi tiêu ----------------
     "food": {
         "income": False,
         "name": "Ăn uống",
@@ -117,7 +110,6 @@ CATEGORIES = {
         "places": ["Con Cưng", "Bibo Mart", "Kids Plaza", "trường mầm non", "trung tâm tiếng Anh"],
         "extra": ["đóng tiền học cho bé", "mua sữa cho con", "tiền ăn của bé"],
     },
-    # ---------------- thu nhập ----------------
     "salary": {
         "income": True,
         "name": "Lương",
@@ -164,7 +156,6 @@ COMPANIONS = ["", "", "", "với bạn", "cùng đồng nghiệp", "với gia đ
 AMOUNTS = ["", "", "20k", "35k", "45k", "50.000", "60k", "100k", "120k", "150.000", "200k", "350k", "500k",
            "1tr", "1tr2", "1,5tr", "2 triệu", "3tr", "5 triệu", "15tr", "25k", "70.000", "80k"]
 
-# Ý định (loại giao dịch) cho mô hình NLU.
 INTENT_TEMPLATES = {
     "expense": ["{item} {amount}", "{verb} {item} {amount} {time}", "chi {amount} cho {item}", "trả tiền {item} {amount}",
                 "{time} {verb} {item} hết {amount}", "mua {item} ở {place} {amount}", "thanh toán {item} {amount}"],

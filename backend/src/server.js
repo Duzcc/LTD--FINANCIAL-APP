@@ -1,16 +1,17 @@
 const mongoose = require('mongoose');
 const config = require('./config');
 const app = require('./app');
+const { startPolling } = require('./services/sepay.service');
 
 async function start() {
   await mongoose.connect(config.mongoUri, { dbName: config.mongoDb, serverSelectionTimeoutMS: 15000 });
   console.log(`MongoDB đã kết nối: ${config.mongoUri.replace(/\/\/[^@]*@/, '//***@')} (db: ${config.mongoDb})`);
   const server = app.listen(config.port, '0.0.0.0', () => console.log(`API đang chạy tại http://0.0.0.0:${config.port}`));
+  startPolling();
   const stop = () => server.close(() => mongoose.disconnect().then(() => process.exit(0)));
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
 }
-// Gợi ý cách khắc phục cho các lỗi kết nối MongoDB thường gặp.
 function hint(e) {
   const m = `${e.message} ${e.cause?.message || ''}`;
   if (/ECONNREFUSED/.test(m)) return 'Chưa có MongoDB chạy ở địa chỉ này. Kiểm tra MONGODB_URI trong .env, hoặc chạy "npm run dev:mem" để dùng MongoDB nhúng.';

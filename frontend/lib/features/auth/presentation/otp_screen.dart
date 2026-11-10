@@ -2,12 +2,12 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 import 'package:finance_app/core/network/api_client.dart';
+import 'package:finance_app/core/validation/validators.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/auth/presentation/auth_screen.dart';
 
-/// Bước 2 của đăng nhập/đăng ký: nhập mã OTP 6 số đã gửi tới email.
 class OtpScreen extends StatefulWidget {
   const OtpScreen(
       {super.key, required this.challenge, this.fromSettings = false});
@@ -17,22 +17,17 @@ class OtpScreen extends StatefulWidget {
   State<OtpScreen> createState() => _OtpScreenState();
 }
 
-class _OtpScreenState extends State<OtpScreen> {
+class _OtpScreenState extends State<OtpScreen> with BusyState {
   final form = GlobalKey<FormState>();
   final code = TextEditingController();
   late OtpChallenge challenge = widget.challenge;
   late DateTime expiresAt, resendAt;
   Timer? ticker;
-  bool busy = false;
-  String? error;
 
   @override
   void initState() {
     super.initState();
     restartClock();
-    ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
-    });
   }
 
   @override
@@ -46,6 +41,12 @@ class _OtpScreenState extends State<OtpScreen> {
     final now = DateTime.now();
     expiresAt = now.add(Duration(seconds: challenge.expiresIn));
     resendAt = now.add(Duration(seconds: challenge.resendAfter));
+    ticker?.cancel();
+    ticker = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) return;
+      setState(() {});
+      if (secondsUntil(expiresAt) == 0 && secondsUntil(resendAt) == 0) t.cancel();
+    });
   }
 
   int secondsUntil(DateTime t) {
@@ -56,7 +57,6 @@ class _OtpScreenState extends State<OtpScreen> {
   String clock(int s) =>
       '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
 
-  /// Phiên OTP bị hủy (hết hạn, sai/gửi lại quá nhiều lần): quay lại đăng nhập.
   void leave(String reason) {
     message(context, reason);
     Navigator.pop(context);
@@ -65,34 +65,22 @@ class _OtpScreenState extends State<OtpScreen> {
   Future<void> verify() async {
     if (busy || !form.currentState!.validate()) return;
     final p = context.read<FinanceProvider>();
-    setState(() {
-      busy = true;
-      error = null;
-    });
-    try {
+    final failure = await runBusy(() async {
       final needs = await p.verifyOtp(challenge, code.text);
       if (!mounted) return;
       ticker?.cancel();
       await finishSignIn(context, needs, fromSettings: widget.fromSettings);
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      if (e.code == 'OTP_EXPIRED') return leave(e.message);
-      code.clear();
-      setState(() => error = e.message);
-    } catch (e) {
-      if (mounted) setState(() => error = e.toString());
-    } finally {
-      if (mounted) setState(() => busy = false);
-    }
+    });
+    if (failure == null || !mounted) return;
+    if (_expired(failure)) return leave('$failure');
+    code.clear();
   }
+
+  bool _expired(Object failure) => failure is ApiException && failure.code == 'OTP_EXPIRED';
 
   Future<void> resend() async {
     final p = context.read<FinanceProvider>();
-    setState(() {
-      busy = true;
-      error = null;
-    });
-    try {
+    final failure = await runBusy(() async {
       final next = await p.resendOtp(challenge);
       if (!mounted) return;
       setState(() {
@@ -101,13 +89,8 @@ class _OtpScreenState extends State<OtpScreen> {
         code.clear();
       });
       message(context, 'Đã gửi lại mã OTP tới ${challenge.email}.');
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      if (e.code == 'OTP_EXPIRED') return leave(e.message);
-      setState(() => error = e.message);
-    } finally {
-      if (mounted) setState(() => busy = false);
-    }
+    });
+    if (failure != null && mounted && _expired(failure)) leave('$failure');
   }
 
   @override

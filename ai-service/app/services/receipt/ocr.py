@@ -1,10 +1,3 @@
-"""Các bộ nhận dạng chữ (OCR) phía máy chủ, chọn tự động theo môi trường.
-
-- AppleVisionOcr: Vision framework của macOS 13+ (hỗ trợ tiếng Việt, chính xác cao, chạy cục bộ).
-- TesseractOcr: Tesseract 5 + gói `vie` (Linux/Docker), có tiền xử lý ảnh: xám, tăng tương phản,
-  phóng to, khử nghiêng bằng phân tích hình chiếu, nhị phân hóa Otsu.
-Mỗi engine trả về danh sách khối chữ có tọa độ; `layout.group_rows` dựng lại dòng.
-"""
 from __future__ import annotations
 
 import io
@@ -13,6 +6,7 @@ import math
 import shutil
 import sys
 from functools import lru_cache
+from importlib.util import find_spec
 from typing import Protocol
 
 from .layout import OcrBox, group_rows
@@ -21,7 +15,6 @@ log = logging.getLogger(__name__)
 
 
 def _load_gray(data: bytes, color: bool = False):
-    """Mở ảnh (xoay theo EXIF), phóng to tới ≥ 1400px chiều ngang, tăng tương phản."""
     from PIL import Image, ImageOps
 
     img = ImageOps.exif_transpose(Image.open(io.BytesIO(data)))
@@ -33,7 +26,6 @@ def _load_gray(data: bytes, color: bool = False):
 
 
 def skew_angle(img) -> float:
-    """Góc nghiêng (độ) làm phương sai hình chiếu ngang lớn nhất — dòng chữ thẳng hàng nhất."""
     import numpy as np
     from PIL import Image
 
@@ -73,17 +65,12 @@ class AppleVisionOcr:
     def available(self) -> bool:
         if sys.platform != "darwin":
             return False
-        try:
-            import Vision  # type: ignore  # noqa: F401
-            return True
-        except ImportError:
-            return False
+        return find_spec("Vision") is not None
 
     def recognize(self, data: bytes) -> list[str]:
         import Vision  # type: ignore
         from Foundation import NSData  # type: ignore
 
-        # Làm thẳng ảnh trước (giống bước tiền xử lý của Tesseract) rồi mới nhận dạng
         img = deskew(_load_gray(data, color=True))
         buf = io.BytesIO()
         img.save(buf, "JPEG", quality=92)
@@ -106,7 +93,7 @@ class AppleVisionOcr:
             if not cands:
                 continue
             c = cands[0]
-            bb = obs.boundingBox()  # chuẩn hóa 0..1, gốc dưới-trái → đổi sang pixel, gốc trên-trái
+            bb = obs.boundingBox()
             tl, tr = obs.topLeft(), obs.topRight()
             angle = math.atan2(-(tr.y - tl.y) * H, (tr.x - tl.x) * W)
             boxes.append(OcrBox(str(c.string()), bb.origin.x * W, (1 - bb.origin.y - bb.size.height) * H,
@@ -117,7 +104,7 @@ class AppleVisionOcr:
 class TesseractOcr:
     name = "tesseract"
 
-    @lru_cache(maxsize=1)  # noqa: B019 - engine là singleton
+    @lru_cache(maxsize=1)  # noqa: B019
     def _langs(self) -> str:
         import pytesseract  # type: ignore
 
@@ -125,14 +112,7 @@ class TesseractOcr:
         return "+".join(lang for lang in ("vie", "eng") if lang in have) or "eng"
 
     def available(self) -> bool:
-        if not shutil.which("tesseract"):
-            return False
-        try:
-            import pytesseract  # type: ignore  # noqa: F401
-            from PIL import Image  # type: ignore  # noqa: F401
-            return True
-        except ImportError:
-            return False
+        return bool(shutil.which("tesseract")) and all(find_spec(m) is not None for m in ("pytesseract", "PIL"))
 
     @staticmethod
     def preprocess(data: bytes):
@@ -140,7 +120,6 @@ class TesseractOcr:
         from PIL import Image
 
         img = deskew(_load_gray(data))
-        # Nhị phân hóa Otsu
         a = np.asarray(img)
         hist = np.bincount(a.ravel(), minlength=256).astype(np.float64)
         w = np.cumsum(hist)
@@ -155,7 +134,6 @@ class TesseractOcr:
         img, _ = self.preprocess(data)
         d = pytesseract.image_to_data(img, lang=self._langs(), config="--psm 4 --oem 1",
                                       output_type=pytesseract.Output.DICT)
-        # Gom từ thành khối theo (block, par, line) của Tesseract, rồi dựng dòng theo tọa độ
         groups: dict[tuple[int, int, int], list[int]] = {}
         for i, word in enumerate(d["text"]):
             if word.strip() and float(d["conf"][i]) > 10:
@@ -180,13 +158,13 @@ def available_engines() -> list[str]:
 
 
 def ocr_image(data: bytes) -> tuple[str, str] | None:
-    """Trả về (văn bản theo dòng, tên engine) hoặc None nếu không engine nào dùng được."""
     for engine in ENGINES:
         if not engine.available():
             continue
+        # Một công cụ đọc chữ bị lỗi thì thử công cụ tiếp theo thay vì dừng hẳn.
         try:
             rows = engine.recognize(data)
-        except Exception as exc:  # noqa: BLE001 - thử engine kế tiếp
+        except Exception as exc:
             log.warning("OCR %s lỗi: %s", engine.name, exc)
             continue
         if rows:

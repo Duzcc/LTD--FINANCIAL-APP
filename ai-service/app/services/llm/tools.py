@@ -1,9 +1,3 @@
-"""Bộ công cụ (function calling) cho trợ lý tài chính.
-
-Mô hình ngôn ngữ không bao giờ thấy toàn bộ dữ liệu thô; nó gọi các công cụ dưới đây để lấy đúng
-con số cần thiết. Các công cụ "propose_*" không ghi dữ liệu: chúng tạo đề xuất để người dùng xác nhận
-trên ứng dụng (human-in-the-loop).
-"""
 from __future__ import annotations
 
 import calendar
@@ -32,7 +26,13 @@ TOOL_SPECS: list[dict[str, Any]] = [
          "income": {"type": "boolean", "description": "true để xem thu nhập"}}, "required": ["period"]}},
     {"name": "forecast_month", "description": "Dự báo tổng chi cuối tháng này (kèm khoảng tin cậy) và tháng sau.",
      "input_schema": {"type": "object", "properties": {}}},
-    {"name": "find_transactions", "description": "Tìm giao dịch theo từ khóa và/hoặc khoảng thời gian.",
+    {"name": "get_spending_allowance",
+     "description": "Gợi ý mức được chi mỗi ngày từ nay đến cuối tháng để giữ ngân sách / mục tiêu tiết kiệm, "
+                    "kèm số đã chi hôm nay và các ngân sách danh mục sắp hết.",
+     "input_schema": {"type": "object", "properties": {}}},
+    {"name": "find_transactions",
+     "description": "Tìm giao dịch theo từ khóa và/hoặc khoảng thời gian. Danh sách kết quả được hiển thị "
+                    "cho người dùng dưới câu trả lời.",
      "input_schema": {"type": "object", "properties": {
          "query": {"type": "string"}, "days": {"type": "integer", "description": "Số ngày gần nhất, mặc định 30"},
          "limit": {"type": "integer"}}}},
@@ -66,12 +66,12 @@ class FinanceToolkit:
         handler = self.handlers.get(name)
         if handler is None:
             return {"error": f"Không có công cụ {name}"}
+        # AI có thể gọi công cụ với tham số sai; báo lại cho AI tự sửa thay vì làm hỏng cả câu trả lời.
         try:
             return handler(**(args or {}))
         except TypeError as exc:
             return {"error": f"Tham số không hợp lệ: {exc}"}
 
-    # ------------------------------------------------------------ tiện ích
     def _local(self, d: datetime) -> datetime:
         if d.tzinfo is None and self.now.tzinfo is not None:
             return d.replace(tzinfo=self.now.tzinfo)
@@ -97,7 +97,6 @@ class FinanceToolkit:
         return sum(t.amount for t in self.s.transactions
                    if not t.excluded and t.kind in kinds and s <= self._local(t.date) < e)
 
-    # ------------------------------------------------------------ công cụ
     def get_overview(self) -> dict:
         ms, me = self._range("this_month")
         ls, le = self._range("last_month")
@@ -140,11 +139,40 @@ class FinanceToolkit:
             hay = fold(f"{t.note} {self.names.get(t.categoryId or '', '')}")
             if q and q not in hay:
                 continue
-            hits.append({"date": self._local(t.date).date().isoformat(), "kind": t.kind, "amount": round(t.amount),
-                         "category": self.names.get(t.categoryId or ""), "note": t.note[:80]})
+            hits.append({"id": t.id, "date": self._local(t.date).date().isoformat(), "kind": t.kind,
+                         "amount": round(t.amount), "category": self.names.get(t.categoryId or ""), "note": t.note[:80]})
             if len(hits) >= max(1, min(limit, 50)):
                 break
+        if hits:
+            self.actions = [a for a in self.actions if a["type"] != "show_transactions"]
+            self.actions.append({"type": "show_transactions", "data": {"ids": [h["id"] for h in hits]}})
         return {"count": len(hits), "transactions": hits}
+
+    def get_spending_allowance(self) -> dict:
+        ms, me = self._range("this_month")
+        today = self.now.replace(hour=0, minute=0, second=0, microsecond=0)
+        days_in_month = calendar.monthrange(self.now.year, self.now.month)[1]
+        days_left = days_in_month - self.now.day + 1
+        spent = self._sum(ms, me, EXPENSE_KINDS)
+        spent_today = self._sum(today, me, EXPENSE_KINDS)
+        overall = next((b for b in self.s.budgets if b.categoryId is None and not b.income), None)
+        if overall is not None:
+            limit, basis = overall.amount, "budget"
+        else:
+            income = self._sum(ms, me, INCOME_KINDS)
+            if not income:
+                ls, le = self._range("last_month")
+                income = self._sum(ls, le, INCOME_KINDS)
+            limit, basis = (income * 0.8, "income_minus_20pct_savings") if income else (None, "none")
+        spent_before_today = spent - spent_today
+        daily = round(max(0.0, limit - spent_before_today) / days_left) if limit is not None else None
+        tight = [x for x in self.get_budget_status()["budgets"]
+                 if x["category"] != "Tổng" and x["status"] != "ok"]
+        return {"basis": basis, "month_limit": round(limit) if limit is not None else None,
+                "spent_this_month": round(spent), "spent_today": round(spent_today), "days_left_incl_today": days_left,
+                "daily_allowance": daily,
+                "left_today": None if daily is None else round(daily - spent_today),
+                "tight_budgets": tight}
 
     def get_budget_status(self) -> dict:
         ms, me = self._range("this_month")
@@ -170,7 +198,7 @@ class FinanceToolkit:
                 lent[pid] = lent.get(pid, 0.0) + DEBT_OUT[t.kind] * t.amount
             elif t.kind in DEBT_IN:
                 owed[pid] = owed.get(pid, 0.0) + DEBT_IN[t.kind] * t.amount
-        fmt = lambda d: [{"person": people.get(k, "Không rõ"), "amount": round(v)} for k, v in d.items() if v > 0.5]  # noqa: E731
+        fmt = lambda d: [{"person": people.get(k, "Không rõ"), "amount": round(v)} for k, v in d.items() if v > 0.5]
         return {"others_owe_me": fmt(lent), "i_owe_others": fmt(owed)}
 
     def get_anomalies(self) -> dict:

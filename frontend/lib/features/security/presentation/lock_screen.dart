@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:finance_app/core/security/app_lock.dart';
+import 'package:finance_app/features/security/data/services/app_lock.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 
-/// Đặt trên toàn ứng dụng: hiện màn khóa khi mở app hoặc quay lại sau thời gian ở nền.
 class LockGate extends StatefulWidget {
   const LockGate({super.key, required this.child});
   final Widget child;
@@ -47,7 +46,6 @@ class _LockGateState extends State<LockGate> with WidgetsBindingObserver {
   }
 }
 
-/// Bàn phím nhập mã PIN dùng chung cho mở khóa và đặt mã.
 class PinPad extends StatelessWidget {
   const PinPad(
       {super.key,
@@ -162,7 +160,6 @@ class _LockScreenState extends State<LockScreen> {
   }
 }
 
-/// Đặt mã PIN mới (nhập hai lần) hoặc xác nhận mã hiện tại trước khi tắt/đổi.
 class PinSetupScreen extends StatefulWidget {
   const PinSetupScreen({super.key, this.verifyOnly = false});
   final bool verifyOnly;

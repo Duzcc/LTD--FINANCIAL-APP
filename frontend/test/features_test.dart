@@ -2,14 +2,15 @@ import 'dart:convert';
 import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:finance_app/features/ai/on_device/local_assistant.dart';
-import 'package:finance_app/features/ai/on_device/category_model.dart';
-import 'package:finance_app/features/ai/on_device/insights.dart';
-import 'package:finance_app/features/ai/on_device/quick_parser.dart';
-import 'package:finance_app/data/models/finance_models.dart';
-import 'package:finance_app/data/finance_provider.dart';
-import 'package:finance_app/core/security/app_lock.dart';
-import 'package:finance_app/features/settings/data/excel_export.dart';
+import 'package:finance_app/features/ai/domain/entities/ai_models.dart';
+import 'package:finance_app/features/ai/domain/services/local_assistant.dart';
+import 'package:finance_app/features/ai/domain/services/category_model.dart';
+import 'package:finance_app/features/ai/domain/services/insights.dart';
+import 'package:finance_app/features/ai/domain/services/quick_parser.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/security/data/services/app_lock.dart';
+import 'package:finance_app/features/settings/data/services/excel_export.dart';
 
 void main() {
   final now = DateTime(2026, 10, 20, 10);
@@ -36,7 +37,7 @@ void main() {
           note: 'Tiền nhà',
           frequency: RepeatFrequency.monthly,
           startDate: DateTime(2026, 7, 31, 9)));
-      expect(p.runRecurring(now: now), 3); // 31/7, 31/8, 30/9
+      expect(p.runRecurring(now: now), 3);
       expect(p.entries.map((e) => e.date.day).toList()..sort(), [30, 31, 31]);
       expect(p.runRecurring(now: now), 0);
       expect(p.recurring.single.upcoming, DateTime(2026, 10, 31, 9));
@@ -48,6 +49,7 @@ void main() {
 
     test('Tự nạp tiết kiệm hằng tuần và dừng ở ngày kết thúc', () {
       final p = FinanceProvider();
+      p.saveWallet(const MoneyWallet(id: 'cash', name: 'Tiền mặt', opening: 300000));
       p.saveWallet(const MoneyWallet(id: 'save', name: 'Tiết kiệm', savings: true));
       p.saveRecurring(RecurringRule(
           id: 'auto',
@@ -58,7 +60,7 @@ void main() {
           frequency: RepeatFrequency.weekly,
           startDate: DateTime(2026, 10, 1),
           endDate: DateTime(2026, 10, 15)));
-      expect(p.runRecurring(now: now), 3); // 1, 8, 15
+      expect(p.runRecurring(now: now), 3);
       expect(p.balance('save'), 300000);
       expect(p.recurring.single.active, isFalse);
       p.dispose();
@@ -75,7 +77,7 @@ void main() {
           personId: 'an',
           frequency: RepeatFrequency.monthly,
           startDate: DateTime(2026, 10, 1)));
-      expect(p.runRecurring(now: now), 0); // chưa có khoản vay nào để trả
+      expect(p.runRecurring(now: now), 0);
       expect(p.recurringError, isNotNull);
       expect(p.recurring.single.active, isFalse);
       p.dispose();
@@ -178,6 +180,17 @@ void main() {
     final tips = FinanceInsights(p, now: DateTime(2026, 11, 1, 12)).all();
     expect(tips.first.title, 'Đang học thói quen chi tiêu của bạn');
     expect(FinanceInsights(p, now: DateTime(2026, 11, 5, 12)).all().first.title, startsWith('Dự báo chi tiêu'));
+    p.dispose();
+  });
+
+  test('Dự báo máy chủ ngày cuối tháng: trung bình/ngày lấy từ số đã chi', () {
+    final p = FinanceProvider();
+    final f = FinanceInsights(p,
+            now: DateTime(2026, 10, 31),
+            server: const ForecastResult(
+                spent: 3100000, projected: 3100000, lower: 3100000, upper: 3100000, daysLeft: 0, method: 'x'))
+        .forecast();
+    expect(f.dailyAverage, 100000);
     p.dispose();
   });
 

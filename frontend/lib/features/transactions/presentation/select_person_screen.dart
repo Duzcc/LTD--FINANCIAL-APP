@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:finance_app/data/models/finance_models.dart';
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 
 class SelectPersonScreen extends StatefulWidget {
@@ -37,11 +37,9 @@ class _SelectPersonScreenState extends State<SelectPersonScreen> {
             ])));
     if (group == null || !mounted) return;
     final p = context.read<FinanceProvider>();
-    try {
+    attempt(context, () {
       p.savePerson(MoneyPerson(person?.id ?? p.newId(), name, group));
-    } catch (e) {
-      message(context, e);
-    }
+    });
   }
 
   @override
@@ -86,11 +84,9 @@ class _SelectPersonScreenState extends State<SelectPersonScreen> {
                                 if (await confirmDelete(
                                         context, 'Xóa ${person.name}?') &&
                                     context.mounted) {
-                                  try {
+                                  attempt(context, () {
                                     p.deletePerson(person.id);
-                                  } catch (e) {
-                                    if (context.mounted) message(context, e);
-                                  }
+                                  });
                                 }
                               },
                               itemBuilder: (_) => const [

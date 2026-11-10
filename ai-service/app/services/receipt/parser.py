@@ -1,11 +1,3 @@
-"""Phân tích văn bản hóa đơn tiếng Việt (sau OCR) thành dữ liệu có cấu trúc.
-
-Thiết kế để chịu lỗi OCR:
-- sửa nhầm ký tự trong số (O→0, l/I/|→1, S→5, B→8), số có dấu cách "46. 000", "46 000";
-- so khớp từ khóa trên chữ đã bỏ dấu và chuẩn hóa (TỔNG C0NG, Tong thanh toan...);
-- chọn tổng theo thứ hạng từ khóa, rồi kiểm tra chéo bằng tiền khách đưa − tiền thừa và tổng các dòng hàng;
-- trả về độ tin cậy để ứng dụng biết khi nào cần người dùng kiểm tra kỹ.
-"""
 from __future__ import annotations
 
 import re
@@ -13,9 +5,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from difflib import SequenceMatcher
 
-from app.nlp.text import fold
+from app.nlp.text import calendar_date, fold
 
-# Từ khóa tổng (đã bỏ dấu), thứ hạng càng nhỏ càng chắc chắn là số phải trả
 _TOTAL_KEYS: list[tuple[str, int]] = [
     ("tong thanh toan", 0), ("tong tien thanh toan", 0), ("khach phai tra", 0), ("khach can tra", 0),
     ("can thanh toan", 0), ("phai thanh toan", 0), ("grand total", 0), ("amount due", 0),
@@ -29,6 +20,10 @@ _NOT_ITEM = ("giam gia", "chiet khau", "discount", "vat", "thue", "khuyen mai", 
 _HEADER = ("ten hang", "don gia", "thanh tien", "t.tien", "d.gia", "sl ", "mat hang", "so luong")
 _NOT_MERCHANT = ("dia chi", "dc:", "d/c", "dt:", "dt ", "tel", "hotline", "mst", "ma so thue", "hoa don",
                  "phieu", "so hd", "ngay", "thu ngan", "nhan vien", "ban hang", "www", "http")
+# Dấu hiệu tiền đi vào túi người dùng: hoàn tiền, nhận chuyển khoản, phiếu lương.
+# Không dùng "phiếu thu" vì phiếu thu được đưa cho người trả tiền, tức vẫn là khoản chi.
+INCOME_MARKERS = ("hoan tien", "tien hoan", "hoan tra", "refund", "ban da nhan", "nhan tien tu", "nhan chuyen khoan",
+                  "ghi co", "phieu luong", "bang luong", "thuc linh", "luong thuc nhan")
 KNOWN_MERCHANTS = ("circle k", "winmart", "bach hoa xanh", "highlands", "phuc long", "co.opmart", "coopmart",
                    "co.op", "7-eleven", "gs25", "familymart", "ministop", "lotte", "aeon", "big c", "go!",
                    "mm mega", "kfc", "lotteria", "jollibee", "pharmacity", "long chau", "an khang",
@@ -48,6 +43,7 @@ class ReceiptItem:
     name: str
     amount: float
     quantity: float | None = None
+    unit_price: float | None = None
 
 
 @dataclass
@@ -57,6 +53,7 @@ class ReceiptResult:
     date: datetime | None = None
     items: list[ReceiptItem] = field(default_factory=list)
     source: str = "text"
+    kind: str = "expense"
     raw_text: str = ""
     confidence: float = 0.0
     checks: list[str] = field(default_factory=list)
@@ -69,16 +66,14 @@ class ReceiptResult:
 
 
 def clean_ocr_numbers(line: str) -> str:
-    """Sửa lỗi OCR thường gặp bên trong các cụm trông giống số tiền."""
     def fix(m: re.Match[str]) -> str:
         tok = m.group(0)
         if not any(c.isdigit() for c in tok):
-            return tok  # từ thường như "BOSS", "SOS"
+            return tok
         fixed = tok.translate(str.maketrans({"O": "0", "o": "0", "D": "0", "l": "1", "I": "1", "|": "1",
                                              "S": "5", "B": "8", "Z": "2"}))
         return fixed if re.fullmatch(r"\d{1,3}(?:[.,]\d{3})+|\d{4,}", fixed) else tok
     line = re.sub(r"[0-9OolI|SBZD][0-9OolI|SBZD.,]{2,}[0-9OolI|SBZD]", fix, line)
-    # "46. 000" / "46 ,000" -> "46.000"; "46 000" (dấu cách hàng nghìn) -> "46.000"
     line = re.sub(r"(\d)\s+([.,])\s*(\d{3})(?!\d)", r"\1\2\3", line)
     line = re.sub(r"(\d)([.,])\s+(\d{3})(?!\d)", r"\1\2\3", line)
     line = re.sub(r"(?<![\d.,])(\d{1,3}) (\d{3})(?![\d.,]| ?x)", r"\1.\2", line)
@@ -90,7 +85,7 @@ def amounts(line: str) -> list[float]:
     for m in _NUM.finditer(line):
         raw = m.group(1)
         grouped = re.fullmatch(r"\d{1,3}([.,]\d{3})+", raw) is not None
-        if not grouped and len(raw) >= 9:  # số điện thoại, mã số
+        if not grouped and len(raw) >= 9:
             continue
         v = float(re.sub(r"[.,]", "", raw))
         if 500 <= v <= 5e9:
@@ -99,7 +94,6 @@ def amounts(line: str) -> list[float]:
 
 
 def _has(f: str, keys, fuzzy: bool = False) -> bool:
-    """Có chứa từ khóa không; `fuzzy` chịu được 1 ký tự OCR sai ("tien thira" ~ "tien thua")."""
     if any(k in f for k in keys):
         return True
     if not fuzzy:
@@ -115,8 +109,12 @@ def _has(f: str, keys, fuzzy: bool = False) -> bool:
     return False
 
 
+def receipt_kind(lines: list[str]) -> str:
+    text = " ".join(_key(ln) for ln in lines)
+    return "income" if any(k in text for k in INCOME_MARKERS) else "expense"
+
+
 def _key(line: str) -> str:
-    """Chữ thường, bỏ dấu, sửa 0→o giữa các chữ cái (T0NG C0NG)."""
     f = fold(line)
     return re.sub(r"(?<=[a-z])0|0(?=[a-z])", "o", f)
 
@@ -132,9 +130,8 @@ def _parse_date(lines: list[str]) -> datetime | None:
                 y = y + 2000 if y < 100 else y
                 if not (2000 <= y <= now.year + 1):
                     continue
-                try:
-                    dt = datetime(y, mth, d)
-                except ValueError:
+                dt = calendar_date(y, mth, d)
+                if dt is None:
                     continue
                 t = re.search(r"(\d{1,2})[:h](\d{2})", f[m.end():m.end() + 12])
                 if t and int(t.group(1)) < 24 and int(t.group(2)) < 60:
@@ -158,20 +155,32 @@ def _merchant(lines: list[str]) -> str | None:
     return None
 
 
+def _quantity(line: str, vals: list[float]) -> tuple[float | None, float | None]:
+    if len(vals) >= 2:
+        unit, amount = vals[-2], vals[-1]
+        count = amount / unit
+        if unit <= amount and count == int(count) and count <= 99:
+            return count, unit
+    m = re.search(r"(?<![\d.,])(\d{1,3})\s*[xX*]\s*[\d.,]+", line)
+    if m and vals and int(m.group(1)) > 0:
+        return float(m.group(1)), round(vals[-1] / int(m.group(1)))
+    return None, None
+
+
 def parse_receipt_text(text: str) -> ReceiptResult:
     lines = [clean_ocr_numbers(ln.strip()) for ln in text.splitlines() if ln.strip()]
-    r = ReceiptResult(raw_text=text, merchant=_merchant(lines), date=_parse_date(lines))
+    r = ReceiptResult(raw_text=text, merchant=_merchant(lines), date=_parse_date(lines), kind=receipt_kind(lines))
 
     cash = change = subtotal = discount = None
-    candidates: list[tuple[int, int, float]] = []  # (hạng, vị trí, số tiền)
+    candidates: list[tuple[int, int, float]] = []
     first_summary = len(lines)
     for i, ln in enumerate(lines):
         f = _key(ln)
         vals = amounts(ln)
         if not vals and i + 1 < len(lines) and not re.search(r"[a-z]{3}", _key(lines[i + 1])):
-            vals = amounts(lines[i + 1])  # nhãn và số bị tách thành hai dòng
+            vals = amounts(lines[i + 1])
         exact = _has(f, _CHANGE) or _has(f, _CASH) or _has(f, _SUBTOTAL)
-        fz = not exact  # chỉ so khớp gần đúng khi không có từ khóa nào khớp chính xác
+        fz = not exact
         if _has(f, _CHANGE, fuzzy=fz):
             change = vals[-1] if vals else change
             first_summary = min(first_summary, i)
@@ -195,7 +204,6 @@ def parse_receipt_text(text: str) -> ReceiptResult:
                 first_summary = min(first_summary, i)
                 break
 
-    # Dòng hàng: giữa phần đầu và phần tổng
     header_end = next((i for i, ln in enumerate(lines[:first_summary]) if _has(_key(ln) + " ", _HEADER)), -1)
     start = header_end + 1 if header_end >= 0 else 0
     pending_name: str | None = None
@@ -208,21 +216,18 @@ def parse_receipt_text(text: str) -> ReceiptResult:
         if _has(f, _NOT_MERCHANT + _NOT_ITEM) or (r.merchant and ln.startswith(r.merchant)) or set(ln) <= set("-=_*. "):
             pending_name = None
             continue
-        qty_m = re.search(r"(?<!\d)(\d{1,3})\s*[xX*]\s*[\d.,]+", ln)
-        qty = float(qty_m.group(1)) if qty_m else None
+        qty, unit = _quantity(ln, vals)
         if vals and has_text and len(re.sub(r"[^A-Za-zÀ-ỹ]", "", name)) >= 2:
-            r.items.append(ReceiptItem(name[:60], vals[-1], qty))
+            r.items.append(ReceiptItem(name[:60], vals[-1], qty, unit))
             pending_name = None
-        elif vals and pending_name:  # dòng "2 x 12.000      24.000" dưới tên hàng
-            r.items.append(ReceiptItem(pending_name[:60], vals[-1], qty))
+        elif vals and pending_name:
+            r.items.append(ReceiptItem(pending_name[:60], vals[-1], qty, unit))
             pending_name = None
         elif has_text and not vals:
             pending_name = ln.strip(" .:-*")
     items_sum = sum(i.amount for i in r.items)
 
-    # Chọn tổng bằng "bỏ phiếu" giữa các nguồn độc lập trên hóa đơn. Mỗi giá trị kèm biến thể đã
-    # sửa lỗi OCR (giá VND hầu như là bội số của 500đ: "586.060" → "586.000").
-    sources: list[tuple[str, float, float]] = []  # (tên nguồn, giá trị, trọng số)
+    sources: list[tuple[str, float, float]] = []
     if candidates:
         best_rank = min(c[0] for c in candidates)
         for rank, _, v in candidates:
@@ -240,7 +245,6 @@ def parse_receipt_text(text: str) -> ReceiptResult:
         out = [(v, 1.0)]
         if v >= 10_000 and v % 500:
             digits = str(int(v))
-            # OCR hay đọc 0 thành 6/8/9/3 ở phần nghìn: "454.999" → "454.000"
             tail = re.sub("[3689]", "0", digits[-3:])
             if tail != digits[-3:]:
                 out.append((float(digits[:-3] + tail), 0.9))

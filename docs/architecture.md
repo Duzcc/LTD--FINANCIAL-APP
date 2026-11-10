@@ -13,7 +13,7 @@ flowchart LR
   subgraph API["backend/ — Node.js + Express"]
     R[REST /api/*] --> S[services: ledger, store, sync]
     R --> AIR[/api/ai/*/] --> SN[aiSnapshot<br/>dựng snapshot, quy đổi tiền tệ]
-    SN --> AC[aiServiceClient<br/>X-API-Key, timeout, 503]
+    SN --> AC[ai-service.client<br/>X-API-Key, timeout, 503]
   end
   subgraph AIS["ai-service/ — Python FastAPI"]
     E[/v1/*/] --> M1[Categorizer<br/>TF-IDF + LogReg + kNN]

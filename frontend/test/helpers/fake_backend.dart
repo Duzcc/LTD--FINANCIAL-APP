@@ -1,12 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 
-/// Backend giả lập tối giản để kiểm tra luồng đăng nhập và đồng bộ của app.
 class FakeBackend {
   final requests = <http.Request>[];
-  // Đi qua JSON để mọi danh sách là List<dynamic> giống dữ liệu thật từ API.
   Map<String, dynamic> snapshot = jsonDecode(jsonEncode({
     'user': {'id': 'u1', 'name': 'An', 'email': 'an@test.vn', 'currency': 'VND'},
     'wallets': [
@@ -25,12 +23,14 @@ class FakeBackend {
   List<Map<String, dynamic>> batches = [];
   static const otpCode = '123456';
 
-  /// Yêu cầu nhận tiền VietQR gần nhất (test đổi 'status' để giả lập SePay báo tiền về).
   Map<String, dynamic>? bankRequest;
 
-  /// Phản hồi giả cho các API AI (đường dẫn -> hàm tạo JSON). Thiếu = 503.
   final ai = <String, Map<String, dynamic> Function(Map<String, dynamic>)>{};
   final aiCalls = <String>[];
+
+  String token = 'tok';
+  String refreshToken = 'r0';
+  int refreshCalls = 0;
 
   MockClient get client => MockClient((request) async {
         requests.add(request);
@@ -67,9 +67,19 @@ class FakeBackend {
               }
             }, 400);
           }
-          return json({'token': 'tok', 'user': snapshot['user']});
+          return json({'token': token, 'refreshToken': refreshToken, 'user': snapshot['user']});
         }
-        if (request.headers['Authorization'] != 'Bearer tok') {
+        if (path == '/api/auth/refresh') {
+          refreshCalls++;
+          if (body()['refreshToken'] != refreshToken) {
+            return json({
+              'error': {'code': 'UNAUTHORIZED', 'message': 'Hết phiên'}
+            }, 401);
+          }
+          refreshToken = 'r$refreshCalls';
+          return json({'token': token, 'refreshToken': refreshToken});
+        }
+        if (request.headers['Authorization'] != 'Bearer $token') {
           return json({
             'error': {'code': 'UNAUTHORIZED', 'message': 'Hết phiên'}
           }, 401);
@@ -123,8 +133,6 @@ class FakeBackend {
       });
 }
 
-
-/// Đăng nhập hai bước như ứng dụng thật: mật khẩu rồi mã OTP.
 Future<bool> signInWithOtp(FinanceProvider p,
     {String email = 'an@test.vn', String password = '123456'}) async {
   final challenge = await p.signIn(email: email, password: password);

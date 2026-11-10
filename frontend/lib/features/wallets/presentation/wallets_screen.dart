@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:finance_app/data/models/finance_models.dart';
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/core/utils/dates.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/wallets/presentation/create_wallet_screen.dart';
 import 'package:finance_app/features/wallets/presentation/wallet_detail_screen.dart';
+import 'package:finance_app/features/finance/presentation/entity_icons.dart';
 
 class WalletsScreen extends StatelessWidget {
   const WalletsScreen({super.key});
@@ -20,7 +22,6 @@ class WalletsScreen extends StatelessWidget {
       child: const WalletList());
 }
 
-/// Danh sách ví (tab Ví ở Tổng quan và màn hình Cài đặt ví).
 class WalletList extends StatefulWidget {
   const WalletList({super.key});
   @override
@@ -133,10 +134,10 @@ class SavingsProgress extends StatelessWidget {
   Widget build(BuildContext context) {
     final w = wallet;
     final ratio = w.target == 0 ? 0.0 : (balance / w.target);
-    final today = DateUtilsDate.day(DateTime.now());
+    final today = dateOnly(DateTime.now());
     final daysLeft = w.deadline == null
         ? null
-        : DateUtilsDate.day(w.deadline!).difference(today).inDays;
+        : dateOnly(w.deadline!).difference(today).inDays;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       LinearProgressIndicator(
           value: ratio.clamp(0, 1),

@@ -1,4 +1,3 @@
-"""Trợ lý hội thoại có gọi công cụ."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends

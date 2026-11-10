@@ -1,13 +1,3 @@
-"""Kiểm định lùi (backtest) bộ dự báo cuối tháng trên người dùng mô phỏng.
-
-Mỗi người dùng có: mức chi nền, hệ số cuối tuần, khoản cố định đầu tháng (tiền nhà),
-khoản lớn ngẫu nhiên, xu hướng tăng/giảm nhẹ. Tại các ngày 5, 10, 15, 20, 25 của 6 tháng cuối,
-so sánh sai số tuyệt đối phần trăm (MAPE) của:
-  - run_rate: chi đến nay / số ngày đã qua × số ngày trong tháng (cách app cũ dùng)
-  - forecaster: hồ sơ thứ-trong-tuần + Holt (dịch vụ hiện tại)
-
-    python -m ml.evaluate_forecaster
-"""
 from __future__ import annotations
 
 import calendar
@@ -54,7 +44,7 @@ def main() -> None:
     errs: dict[str, dict[int, list[float]]] = {"run_rate": {}, "forecaster": {}}
     for seed in range(40):
         txs = simulate(seed)
-        for month in range(4, 10):  # 4..9/2026
+        for month in range(4, 10):
             last = calendar.monthrange(2026, month)[1]
             actual = sum(t.amount for t in txs if t.date.year == 2026 and t.date.month == month)
             if actual <= 0:

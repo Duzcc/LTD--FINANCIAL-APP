@@ -1,8 +1,5 @@
-// Kiểm thử tích hợp backend ↔ AI service bằng một AI service giả lập (stub),
-// và (tùy chọn) với AI service thật khi đặt E2E_AI_URL=http://localhost:8000.
 process.env.NODE_ENV = 'test';
 process.env.AUTH_RATE_LIMIT = '1000';
-// Không để tệp .env của máy phát triển ảnh hưởng kết quả kiểm thử.
 process.env.AI_PROVIDER = '';
 process.env.AI_RATE_LIMIT = '1000';
 const { test, before, after } = require('node:test');

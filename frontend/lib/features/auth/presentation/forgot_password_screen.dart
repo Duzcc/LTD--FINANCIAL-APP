@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/core/validation/validators.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/auth/presentation/auth_screen.dart';
 
-/// Quên mật khẩu: bước 1 nhận mã qua email, bước 2 nhập mã và mật khẩu mới.
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen(
       {super.key, this.email = '', this.fromSettings = false});
@@ -15,14 +15,14 @@ class ForgotPasswordScreen extends StatefulWidget {
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with BusyState {
   final form = GlobalKey<FormState>();
   late final email = TextEditingController(text: widget.email);
   final code = TextEditingController(),
       password = TextEditingController(),
       confirm = TextEditingController();
-  bool codeSent = false, busy = false;
-  String? error, hint;
+  bool codeSent = false;
+  String? hint;
 
   @override
   void dispose() {
@@ -34,17 +34,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   Future<void> run(Future<void> Function(FinanceProvider p) action) async {
     if (!form.currentState!.validate()) return;
-    setState(() {
-      busy = true;
-      error = null;
-    });
-    try {
-      await action(context.read<FinanceProvider>());
-    } catch (e) {
-      if (mounted) setState(() => error = e.toString());
-    } finally {
-      if (mounted) setState(() => busy = false);
-    }
+    await runBusy(() => action(context.read<FinanceProvider>()));
   }
 
   Future<void> sendCode(FinanceProvider p) async {
@@ -84,7 +74,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 keyboardType: TextInputType.emailAddress,
                 decoration: const InputDecoration(
                     labelText: 'Email', prefixIcon: Icon(Icons.mail_outline)),
-                validator: validateEmail),
+                validator: validateLoginEmail),
             if (hint != null) ...[
               const SizedBox(height: 12),
               Panel(
@@ -151,20 +141,17 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ])));
 }
 
-/// Đổi mật khẩu: xác thực bằng mật khẩu hiện tại.
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
   @override
   State<ChangePasswordScreen> createState() => _ChangePasswordScreenState();
 }
 
-class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
+class _ChangePasswordScreenState extends State<ChangePasswordScreen> with BusyState {
   final form = GlobalKey<FormState>();
   final current = TextEditingController(),
       next = TextEditingController(),
       confirm = TextEditingController();
-  bool busy = false;
-  String? error;
   @override
   void dispose() {
     for (final c in [current, next, confirm]) {
@@ -175,22 +162,11 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   Future<void> save() async {
     if (!form.currentState!.validate()) return;
-    setState(() {
-      busy = true;
-      error = null;
-    });
-    try {
-      await context
-          .read<FinanceProvider>()
-          .changePassword(current.text, next.text);
-      if (!mounted) return;
-      message(context, 'Đã đổi mật khẩu. Các thiết bị khác cần đăng nhập lại.');
-      Navigator.pop(context);
-    } catch (e) {
-      if (mounted) setState(() => error = e.toString());
-    } finally {
-      if (mounted) setState(() => busy = false);
-    }
+    final failure = await runBusy(() =>
+        context.read<FinanceProvider>().changePassword(current.text, next.text));
+    if (failure != null || !mounted) return;
+    message(context, 'Đã đổi mật khẩu. Các thiết bị khác cần đăng nhập lại.');
+    Navigator.pop(context);
   }
 
   @override

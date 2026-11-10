@@ -1,4 +1,3 @@
-"""Định nghĩa pipeline học máy dùng chung cho huấn luyện và suy luận."""
 from __future__ import annotations
 
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -9,10 +8,6 @@ from app.nlp.text import model_text
 
 
 def text_features() -> FeatureUnion:
-    """Kết hợp n-gram từ (1–2) và n-gram ký tự (2–5) trên văn bản đã chuẩn hóa (có dấu + bỏ dấu).
-
-    N-gram ký tự giúp mô hình chịu được lỗi chính tả, viết tắt và gõ không dấu.
-    """
     return FeatureUnion([
         ("word", TfidfVectorizer(preprocessor=model_text, analyzer="word", ngram_range=(1, 2),
                                  min_df=1, sublinear_tf=True, token_pattern=r"(?u)\b\w+\b")),

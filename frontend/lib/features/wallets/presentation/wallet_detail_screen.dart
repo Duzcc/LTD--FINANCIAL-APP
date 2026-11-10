@@ -1,17 +1,18 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:finance_app/data/models/finance_models.dart';
-import 'package:finance_app/data/finance_provider.dart';
-import 'package:finance_app/core/widgets/entry_tile.dart';
+import 'package:finance_app/core/utils/dates.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/transactions/presentation/widgets/entry_tile.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/transactions/presentation/add_transaction_screen.dart';
 import 'package:finance_app/features/wallets/presentation/create_wallet_screen.dart';
 import 'package:finance_app/features/wallets/presentation/wallets_screen.dart';
 import 'package:finance_app/features/recurring/presentation/recurring_screen.dart';
 import 'package:finance_app/features/banking/presentation/receive_qr_screen.dart';
+import 'package:finance_app/features/finance/presentation/entity_icons.dart';
 
-/// Thông tin và các giao dịch của một ví; sửa hoặc xóa ví.
 class WalletDetailScreen extends StatefulWidget {
   const WalletDetailScreen({super.key, required this.walletId});
   final String walletId;
@@ -99,8 +100,8 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
                           style: const TextStyle(fontSize: 12)),
                       if (w.target > balance && w.deadline != null)
                         Builder(builder: (_) {
-                          final days = DateUtilsDate.day(w.deadline!)
-                              .difference(DateUtilsDate.day(DateTime.now()))
+                          final days = dateOnly(w.deadline!)
+                              .difference(dateOnly(DateTime.now()))
                               .inDays;
                           if (days <= 0) {
                             return const Text('Đã đến hạn mục tiêu.',
@@ -155,8 +156,8 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
                           .firstOrNull;
                       final days = w.deadline == null
                           ? 0
-                          : DateUtilsDate.day(w.deadline!)
-                              .difference(DateUtilsDate.day(DateTime.now()))
+                          : dateOnly(w.deadline!)
+                              .difference(dateOnly(DateTime.now()))
                               .inDays;
                       final months = math.max(1, (days / 30).ceil());
                       openPage(

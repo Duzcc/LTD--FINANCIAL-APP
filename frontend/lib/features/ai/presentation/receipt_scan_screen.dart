@@ -2,41 +2,33 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
 import 'package:finance_app/core/network/api_client.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
-import 'package:finance_app/data/finance_provider.dart';
-import 'package:finance_app/data/models/finance_models.dart';
-import 'package:finance_app/features/ai/data/ai_models.dart';
-import 'package:finance_app/features/ai/data/ai_repository.dart';
-import 'package:finance_app/features/ai/on_device/quick_parser.dart';
+import 'package:finance_app/core/widgets/photo_picker.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
+import 'package:finance_app/features/ai/domain/entities/ai_models.dart';
+import 'package:finance_app/features/ai/data/repositories/ai_repository.dart';
+import 'package:finance_app/features/ai/domain/services/quick_parser.dart';
 import 'package:finance_app/features/ai/presentation/ai_screens.dart';
 
-/// Quét hóa đơn bằng OCR.
-///
-/// Ảnh được nhận dạng chữ ngay trên điện thoại (Apple Vision / Google ML Kit), sau đó phân tích
-/// tổng tiền, ngày, cửa hàng, các dòng hàng. Tổng tiền được kiểm tra chéo (dòng TỔNG, tiền khách
-/// đưa − tiền thừa, tổng các dòng hàng) và hiện độ tin cậy; người dùng sửa được trước khi lưu.
-/// Ảnh hóa đơn được đính kèm vào giao dịch.
 class ReceiptScanScreen extends StatefulWidget {
   const ReceiptScanScreen({super.key, this.repository});
 
-  /// Cho phép kiểm thử thay bằng kho AI giả lập.
   final AiRepository? repository;
   @override
   State<ReceiptScanScreen> createState() => _ReceiptScanScreenState();
 }
 
-class _ReceiptScanScreenState extends State<ReceiptScanScreen> {
+class _ReceiptScanScreenState extends State<ReceiptScanScreen> with BusyState {
   final pasted = TextEditingController();
   final total = TextEditingController();
   final note = TextEditingController();
   String? imagePath;
   ReceiptResult? result;
-  String? error;
-  bool busy = false, showPaste = false, showText = false;
+  bool showPaste = false, showText = false;
 
   AiRepository get repo => widget.repository ?? AiRepository(context.read<FinanceProvider>());
 
@@ -49,69 +41,41 @@ class _ReceiptScanScreenState extends State<ReceiptScanScreen> {
   }
 
   Future<void> _run(Future<ReceiptResult> Function() task) async {
-    setState(() {
-      busy = true;
-      error = null;
-      result = null;
-    });
-    try {
-      final r = await task();
-      if (!mounted) return;
+    setState(() => result = null);
+    ReceiptResult? read;
+    final failure = await runBusy(() async => read = await task());
+    if (!mounted) return;
+    final r = read;
+    if (r == null) {
       setState(() {
-        result = r;
-        total.text = r.total == null ? '' : formatAmountInput(r.total!);
-        note.text = r.note.isEmpty ? 'Hóa đơn' : r.note;
-        if (r.total == null) error = 'Không tìm thấy tổng tiền — hãy nhập tay hoặc chụp lại rõ hơn.';
-      });
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        error = e.code == 'AI_NOT_SUPPORTED'
-            ? 'Máy chủ chưa bật đọc ảnh hóa đơn. Bạn có thể dán nội dung hóa đơn bên dưới.'
-            : e.message;
+        if (failure is ApiException && failure.code == 'AI_NOT_SUPPORTED') {
+          error = 'Máy chủ chưa bật đọc ảnh hóa đơn. Bạn có thể dán nội dung hóa đơn bên dưới.';
+        }
         showPaste = true;
       });
-    } finally {
-      if (mounted) setState(() => busy = false);
-    }
-  }
-
-  /// Lưu ảnh vào thư mục ứng dụng để đính kèm giao dịch, rồi đọc hóa đơn.
-  Future<void> pick(ImageSource source) async {
-    final XFile? file;
-    try {
-      file = await ImagePicker().pickImage(source: source, maxWidth: 2200, imageQuality: 90);
-    } catch (_) {
-      if (mounted) message(context, 'Không mở được camera/thư viện ảnh.');
       return;
     }
-    if (file == null) return;
-    var path = file.path;
-    try {
-      final dir = Directory('${(await getApplicationDocumentsDirectory()).path}/receipts');
-      await dir.create(recursive: true);
-      path = (await File(file.path).copy('${dir.path}/hoa_don_${DateTime.now().millisecondsSinceEpoch}.jpg')).path;
-    } catch (_) {
-      // giữ đường dẫn tạm của image_picker
-    }
-    if (!mounted) return;
+    setState(() {
+      result = r;
+      total.text = r.total == null ? '' : formatAmountInput(r.total!);
+      note.text = r.note.isEmpty ? 'Hóa đơn' : r.note;
+      if (r.total == null) error = 'Không tìm thấy tổng tiền — hãy nhập tay hoặc chụp lại rõ hơn.';
+    });
+  }
+
+  Future<void> pick(ImageSource source) async {
+    final path = await choosePhoto(context, source);
+    if (path == null || !mounted) return;
     setState(() => imagePath = path);
-    final r = repo;
-    await _run(() => r.readReceipt(path));
+    await _run(() => repo.readReceipt(path));
   }
 
   Future<void> analyzeText() async {
     final r = repo;
     final text = pasted.text;
     await _run(() async {
-      if (r.remoteAvailable) {
-        try {
-          return (await r.receiptFromText(text)).withSource('AI máy chủ', text: text);
-        } on ApiException {
-          // phân tích trên thiết bị
-        }
-      }
-      return r.parseLocally(text);
+      final remote = r.remoteAvailable ? await r.receiptFromText(text).orNullOnApiError() : null;
+      return remote?.withSource('AI máy chủ', text: text) ?? r.parseLocally(text);
     });
   }
 
@@ -129,7 +93,7 @@ class _ReceiptScanScreenState extends State<ReceiptScanScreen> {
     await openParsedEntry(
         context,
         ParsedEntry(
-            kind: EntryKind.expense,
+            kind: r.kind,
             amount: amount,
             date: date,
             note: note.text.trim().isEmpty ? 'Hóa đơn' : note.text.trim(),
@@ -233,20 +197,35 @@ class _ReceiptScanScreenState extends State<ReceiptScanScreen> {
                     child: Text('Tổng tiền khớp với: ${r.checks.join(', ')}',
                         style: const TextStyle(fontSize: 11, color: AppColors.textSecondary))),
               const Divider(),
-              for (final (name, amount) in r.items)
+              for (final i in r.items)
                 Padding(
                     padding: const EdgeInsets.symmetric(vertical: 2),
                     child: Row(children: [
-                      Expanded(child: Text(name, style: const TextStyle(fontSize: 13))),
-                      Text(money(amount, p.currency), style: const TextStyle(fontSize: 13)),
+                      Expanded(
+                          child: Text(
+                              i.quantity == null || i.quantity == 1 ? i.name : '${i.name} × ${i.quantity!.round()}',
+                              style: const TextStyle(fontSize: 13))),
+                      Text(money(i.amount, p.currency), style: const TextStyle(fontSize: 13)),
                     ])),
               if (r.items.isNotEmpty) const Divider(),
+              SegmentedButton<EntryKind>(
+                  segments: const [
+                    ButtonSegment(value: EntryKind.expense, label: Text('Khoản chi'), icon: Icon(Icons.arrow_upward)),
+                    ButtonSegment(value: EntryKind.income, label: Text('Khoản thu'), icon: Icon(Icons.arrow_downward)),
+                  ],
+                  selected: {r.kind},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (s) => setState(() => result = repo.categorize(r, s.first))),
+              const SizedBox(height: 12),
               TextField(
                   key: const ValueKey('receipt-total'),
                   controller: total,
                   keyboardType: TextInputType.number,
                   inputFormatters: [AmountInputFormatter()],
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 20, color: AppColors.accentRed),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 20,
+                      color: r.kind == EntryKind.income ? AppColors.primaryGreen : AppColors.accentRed),
                   decoration: InputDecoration(labelText: 'Tổng cộng', suffixText: p.currency)),
               const SizedBox(height: 8),
               TextField(controller: note, decoration: const InputDecoration(labelText: 'Ghi chú')),
@@ -270,7 +249,7 @@ class _ReceiptScanScreenState extends State<ReceiptScanScreen> {
               SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(
-                      onPressed: create, icon: const Icon(Icons.add), label: const Text('Tạo giao dịch chi'))),
+                      onPressed: create, icon: const Icon(Icons.add), label: Text(r.kind == EntryKind.income ? 'Tạo giao dịch thu' : 'Tạo giao dịch chi'))),
             ])),
           ],
         ]));

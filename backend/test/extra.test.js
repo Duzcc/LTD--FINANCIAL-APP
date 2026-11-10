@@ -1,7 +1,5 @@
-// Kiểm thử các chức năng mở rộng: refresh token, xác thực email, giao dịch định kỳ, trợ lý AI.
 process.env.NODE_ENV = 'test';
 process.env.AUTH_RATE_LIMIT = '1000';
-// Không để tệp .env của máy phát triển ảnh hưởng kết quả kiểm thử.
 process.env.AI_PROVIDER = '';
 process.env.AI_SERVICE_URL = '';
 const { test, before, after } = require('node:test');
@@ -41,7 +39,6 @@ test('Refresh token xoay vòng và bị thu hồi khi đăng xuất', async () =
 test('Xác thực email bằng mã', async () => {
   let r = await auth(request(app).get('/api/auth/me'));
   assert.equal(r.body.user.emailVerified, true, 'đã xác thực qua OTP khi đăng ký');
-  // Tài khoản cũ chưa xác thực vẫn dùng được mã xác thực trong mục Tài khoản
   await User.updateOne({ email: 'chi@test.vn' }, { emailVerified: false });
   r = await auth(request(app).post('/api/auth/verify-email')).send({ code: '000000' });
   assert.equal(r.status, 400);

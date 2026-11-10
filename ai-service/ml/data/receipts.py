@@ -1,11 +1,3 @@
-"""Sinh ảnh hóa đơn tiếng Việt tổng hợp (có nhãn) để kiểm thử và đánh giá OCR + bộ phân tích hóa đơn.
-
-Mô phỏng hóa đơn máy in nhiệt 80mm của cửa hàng tiện lợi, siêu thị, quán cà phê, nhà thuốc:
-tên cửa hàng, địa chỉ, ngày giờ, bảng hàng (tên / SL x đơn giá / thành tiền), giảm giá, tổng,
-tiền khách đưa, tiền thừa. Ảnh được làm "bẩn" như chụp thật: xoay nhẹ, mờ, nhiễu, nén JPEG.
-
-    python -m ml.data.receipts --out ml/data/receipts --n 40
-"""
 from __future__ import annotations
 
 import argparse
@@ -44,7 +36,7 @@ class Label:
     file: str
     merchant: str
     total: int
-    date: str  # YYYY-MM-DD
+    date: str
     items: list[tuple[str, int]]
 
 
@@ -75,7 +67,7 @@ def make_receipt(rnd: random.Random, idx: int) -> tuple[Image.Image, Label, str]
     cash = next(c for c in (50000, 100000, 200000, 500000, 1000000) if c >= total)
 
     w = 46
-    rows: list[tuple[str, str]] = []  # (căn lề, nội dung)
+    rows: list[tuple[str, str]] = []
     rows += [("c", store), ("c", f"{rnd.randint(1, 300)} {rnd.choice(STREETS)}, Q.{rnd.randint(1, 12)}"),
              ("c", f"ĐT: 0{rnd.randint(200000000, 999999999)}"), ("c", "HÓA ĐƠN BÁN HÀNG"),
              ("l", rnd.choice(["Ngày: ", "Ngày bán: ", ""])
@@ -110,7 +102,6 @@ def make_receipt(rnd: random.Random, idx: int) -> tuple[Image.Image, Label, str]
         draw.text((x, y), text, fill=rnd.randint(0, 60), font=font)
         y += line_h
 
-    # Làm bẩn như ảnh chụp: giấy ngả màu, xoay nhẹ, mờ, nhiễu, nén JPEG
     img = img.rotate(rnd.uniform(-2.5, 2.5), resample=Image.BICUBIC, expand=True, fillcolor=235)
     if rnd.random() < 0.6:
         img = img.filter(ImageFilter.GaussianBlur(rnd.uniform(0.3, 1.0)))

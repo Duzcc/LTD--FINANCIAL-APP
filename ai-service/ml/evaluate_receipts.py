@@ -1,8 +1,3 @@
-"""Đánh giá đầu-cuối đọc hóa đơn: ảnh hóa đơn tổng hợp → OCR → dựng dòng → phân tích.
-
-    python -m ml.evaluate_receipts --n 40           # dùng engine OCR có sẵn trên máy
-Chỉ số: tỷ lệ đúng tổng tiền, ngày, cửa hàng; độ tin cậy trung bình khi đúng/sai.
-"""
 from __future__ import annotations
 
 import argparse

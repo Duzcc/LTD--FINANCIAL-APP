@@ -1,10 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:finance_app/core/banking/vietqr.dart';
+import 'package:finance_app/features/banking/domain/vietqr.dart';
 import 'package:finance_app/core/validation/validators.dart';
-import 'package:finance_app/data/finance_provider.dart';
-import 'package:finance_app/data/models/finance_models.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
 
-/// Đọc chuỗi TLV của EMVCo thành bảng id → giá trị.
 Map<String, String> tlv(String s) {
   final out = <String, String>{};
   var i = 0;

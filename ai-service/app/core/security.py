@@ -1,4 +1,3 @@
-"""Xác thực giữa backend và AI service bằng khóa dùng chung."""
 from __future__ import annotations
 
 import hmac

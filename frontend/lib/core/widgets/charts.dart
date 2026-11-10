@@ -34,7 +34,6 @@ FlGridData _grid() => FlGridData(
     getDrawingHorizontalLine: (_) =>
         const FlLine(color: AppColors.divider, strokeWidth: 1));
 
-/// Biểu đồ cột đơn giản so sánh vài giá trị (ví dụ: kỳ trước – kỳ này).
 class CompareBarChart extends StatelessWidget {
   const CompareBarChart(
       {super.key, required this.labels, required this.values, required this.colors});
@@ -68,7 +67,6 @@ class CompareBarChart extends StatelessWidget {
   }
 }
 
-/// Biểu đồ cột ghép thu nhập (xanh) – chi tiêu (đỏ) theo từng kỳ.
 class IncomeExpenseChart extends StatelessWidget {
   const IncomeExpenseChart(
       {super.key,
@@ -114,7 +112,6 @@ class IncomeExpenseChart extends StatelessWidget {
   }
 }
 
-/// Đường lũy kế theo ngày: kỳ này (liền) so với kỳ trước (nét đứt).
 class TrendLineChart extends StatelessWidget {
   const TrendLineChart(
       {super.key,
@@ -161,7 +158,6 @@ class TrendLineChart extends StatelessWidget {
   }
 }
 
-/// Vòng tròn phần trăm (tiến độ trả nợ / thu nợ / tiết kiệm).
 class PercentRing extends StatelessWidget {
   const PercentRing(
       {super.key, required this.value, required this.color, this.size = 64});

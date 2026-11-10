@@ -1,7 +1,5 @@
-// Kiểm thử tích hợp API (MongoDB trong bộ nhớ hoặc TEST_MONGODB_URI).
 process.env.NODE_ENV = 'test';
 process.env.AUTH_RATE_LIMIT = '1000';
-// Không để tệp .env của máy phát triển ảnh hưởng kết quả kiểm thử.
 process.env.AI_PROVIDER = '';
 process.env.AI_SERVICE_URL = '';
 const { test, before, after } = require('node:test');
@@ -46,7 +44,6 @@ test('Đăng ký, đăng nhập bằng OTP gửi qua email, bảo vệ API', asy
   assert.equal(r.body.otpRequired, true);
   assert.equal(r.body.token, undefined, 'chưa cấp token khi chưa nhập OTP');
   assert.match(r.body.devCode, /^\d{6}$/);
-  // Email chưa xác thực: được đăng ký lại, mã cũ bị hủy
   const first = r.body;
   r = await api().post('/api/auth/register').send({ name: 'An', email: 'an@test.vn', password: 'Matkhau1' });
   assert.equal(r.status, 201);
@@ -124,6 +121,15 @@ test('Giao dịch: sửa, chuyển tiền, vay nợ, lọc và sắp xếp', asy
   assert.equal(r.status, 400);
   r = await auth(api().post('/api/transactions')).send({ id: 'tr', kind: 'transfer', amount: 200000, walletId: 'bank', destinationId: 'cash', date: '2026-10-06' });
   assert.equal(r.status, 201);
+  r = await auth(api().post('/api/transactions')).send({ kind: 'transfer', amount: 800001, walletId: 'bank', destinationId: 'cash', date: '2026-10-06' });
+  assert.equal(r.status, 400, 'chuyển vượt số dư ví nguồn');
+  assert.match(r.body.error.message, /Số dư ví Ngân hàng không đủ \(còn 800\.000 VND\)/);
+  r = await auth(api().put('/api/transactions/tr')).send({ kind: 'transfer', amount: 1000001, walletId: 'bank', destinationId: 'cash', date: '2026-10-06' });
+  assert.equal(r.status, 400, 'sửa chuyển tiền vượt số dư');
+  r = await auth(api().put('/api/transactions/tr')).send({ kind: 'transfer', amount: 1000000, walletId: 'bank', destinationId: 'cash', date: '2026-10-06' });
+  assert.equal(r.status, 200, 'sửa trong số dư, tính lại phần giao dịch cũ');
+  r = await auth(api().put('/api/transactions/tr')).send({ kind: 'transfer', amount: 200000, walletId: 'bank', destinationId: 'cash', date: '2026-10-06' });
+  assert.equal(r.status, 200);
   r = await auth(api().post('/api/people')).send({ id: 'binh', name: 'Bình', group: 'Bạn bè & Đồng nghiệp' });
   assert.equal(r.status, 201);
   r = await auth(api().post('/api/transactions')).send({ kind: 'lend', amount: 100000, walletId: 'bank', date: '2026-10-07' });
@@ -239,12 +245,37 @@ test('Đăng xuất chỉ thu hồi phiên của thiết bị đó; { all: true 
   assert.equal((await me(a.token)).status, 401, 'thiết bị A đã đăng xuất');
   assert.equal((await api().post('/api/auth/refresh').send({ refreshToken: a.refreshToken })).status, 401);
   assert.equal((await me(b.token)).status, 200, 'thiết bị B vẫn đăng nhập');
-  // Làm mới token giữ nguyên phiên của thiết bị B
   const b2 = (await api().post('/api/auth/refresh').send({ refreshToken: b.refreshToken })).body;
   assert.equal((await me(b2.token)).status, 200);
   const c = await login(app, 'da@test.vn', 'Matkhau1');
   assert.equal((await api().post('/api/auth/logout').set('Authorization', `Bearer ${c.token}`).send({ all: true })).status, 204);
   assert.equal((await me(b2.token)).status, 401, 'đăng xuất mọi thiết bị');
+});
+
+test('Refresh token chỉ dùng được một lần kể cả khi gửi song song', async () => {
+  await signup(app, 'Song', 'song@test.vn', 'Matkhau1');
+  const a = await login(app, 'song@test.vn', 'Matkhau1');
+  const refresh = () => api().post('/api/auth/refresh').send({ refreshToken: a.refreshToken });
+  const results = await Promise.all([refresh(), refresh(), refresh()]);
+  assert.deepEqual(results.map((r) => r.status).sort(), [200, 401, 401]);
+  const won = results.find((r) => r.status === 200).body;
+  assert.equal((await api().get('/api/auth/me').set('Authorization', `Bearer ${a.token}`)).status, 200,
+    'access token cũ của cùng thiết bị vẫn dùng được trong lúc xoay vòng');
+  assert.equal((await api().post('/api/auth/refresh').send({ refreshToken: won.refreshToken })).status, 200);
+});
+
+test('Đăng xuất bằng token cũ (chưa có sid) không đăng xuất thiết bị khác', async () => {
+  await signup(app, 'Cũ', 'cu@test.vn', 'Matkhau1');
+  const a = await login(app, 'cu@test.vn', 'Matkhau1');
+  const b = await login(app, 'cu@test.vn', 'Matkhau1');
+  const { User } = require('../src/models');
+  const { signAccessToken } = require('../src/services/session.service');
+  const legacy = signAccessToken(await User.findOne({ email: 'cu@test.vn' }));
+  const r = await api().post('/api/auth/logout').set('Authorization', `Bearer ${legacy}`)
+    .send({ refreshToken: a.refreshToken });
+  assert.equal(r.status, 204);
+  assert.equal((await api().post('/api/auth/refresh').send({ refreshToken: a.refreshToken })).status, 401);
+  assert.equal((await api().get('/api/auth/me').set('Authorization', `Bearer ${b.token}`)).status, 200);
 });
 
 test('Khóa đăng nhập sau nhiều lần sai mật khẩu; giới hạn nhập sai OTP', async () => {
@@ -265,4 +296,29 @@ test('Khóa đăng nhập sau nhiều lần sai mật khẩu; giới hạn nhậ
   r = await api().post('/api/auth/login').send({ email: 'khoa@test.vn', password: 'Matkhau1' });
   assert.equal(r.status, 429);
   assert.equal(r.body.error.code, 'ACCOUNT_LOCKED');
+});
+
+test('Đăng ký lại email chưa xác thực không đổi được mật khẩu khi chưa nhập OTP; email cũ vẫn đăng nhập được', async () => {
+  const { User } = require('../src/models');
+  const bcrypt = require('bcryptjs');
+  await User.create({ name: 'Cũ', email: 'old_user@corp.com', passwordHash: await bcrypt.hash('cu123456', 10) });
+  let r = await api().post('/api/auth/register').send({ name: 'Ke Gian', email: 'victim@test.vn', password: 'Matkhau1' });
+  await api().post('/api/auth/verify-otp').send({ otpToken: r.body.otpToken, code: r.body.devCode });
+  await User.updateOne({ email: 'victim@test.vn' }, { emailVerified: false });
+  r = await api().post('/api/auth/register').send({ name: 'Ke Gian', email: 'victim@test.vn', password: 'Chiemquyen9' });
+  assert.equal(r.status, 201);
+  assert.equal((await api().post('/api/auth/login').send({ email: 'victim@test.vn', password: 'Matkhau1' })).status, 200,
+    'mật khẩu cũ vẫn dùng được khi chưa nhập OTP');
+  assert.equal((await api().post('/api/auth/login').send({ email: 'victim@test.vn', password: 'Chiemquyen9' })).status, 401);
+  assert.equal((await api().post('/api/auth/login').send({ email: 'Old_User@corp.com', password: 'cu123456' })).status, 200);
+});
+
+test('Đoán OTP song song không vượt quá số lần cho phép', async () => {
+  await signup(app, 'Song Song', 'race@test.vn', 'Matkhau1');
+  const step = (await api().post('/api/auth/login').send({ email: 'race@test.vn', password: 'Matkhau1' })).body;
+  const guesses = Array.from({ length: 12 }, (_, i) => String(100000 + i)).filter((c) => c !== step.devCode);
+  const rs = await Promise.all(guesses.map((code) => api().post('/api/auth/verify-otp').send({ otpToken: step.otpToken, code })));
+  assert.ok(rs.filter((x) => x.body.error?.code === 'INVALID_CODE').length <= config.otp.maxAttempts - 1);
+  assert.equal((await api().post('/api/auth/verify-otp').send({ otpToken: step.otpToken, code: step.devCode })).status, 400,
+    'phiên OTP đã bị hủy sau khi hết lượt');
 });

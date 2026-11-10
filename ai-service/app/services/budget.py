@@ -1,10 +1,3 @@
-"""Gợi ý ngân sách tháng.
-
-Với mỗi danh mục chi: lấy chuỗi tổng chi theo tháng (tối đa 6 tháng gần nhất, bỏ tháng hiện tại),
-đề xuất = trung vị (ổn định) nhưng không thấp hơn phân vị 40, làm tròn lên 50.000đ.
-Nếu biết thu nhập tháng: so khung 50/30/20 (thiết yếu / mong muốn / tiết kiệm) và cắt bớt nhóm
-"mong muốn" để đạt mục tiêu tiết kiệm.
-"""
 from __future__ import annotations
 
 import math
@@ -24,7 +17,7 @@ class BudgetSuggestion:
     amount: float
     history_median: float
     months: int
-    group: str  # needs | wants
+    group: str
     note: str
 
 

@@ -1,7 +1,5 @@
 const { Schema, Types } = require('mongoose');
 
-// Mỗi bản ghi thuộc về một người dùng (MaNguoiDung) và có mã do client cấp (clientId),
-// duy nhất trong phạm vi người dùng. API trả về clientId dưới tên "id".
 function ownedPlugin(schema) {
   schema.add({
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },

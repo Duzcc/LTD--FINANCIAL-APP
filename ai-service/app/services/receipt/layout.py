@@ -1,11 +1,3 @@
-"""Dựng lại các dòng của hóa đơn từ kết quả OCR có tọa độ.
-
-OCR (Apple Vision, ML Kit, Tesseract) thường trả về *từng khối chữ* riêng: nhãn "Tổng thanh toán:" bên trái
-và số "154.000" bên phải là hai khối khác nhau, ảnh chụp lại hơi nghiêng. Ta:
-1. ước lượng góc nghiêng (trung vị góc các khối, nếu OCR cung cấp),
-2. xoay tâm các khối về phương ngang,
-3. gom các khối chồng lấn theo chiều dọc thành một dòng, sắp xếp trái → phải.
-"""
 from __future__ import annotations
 
 import math
@@ -15,16 +7,15 @@ from dataclasses import dataclass
 @dataclass
 class OcrBox:
     text: str
-    x: float  # trái (đơn vị bất kỳ, gốc trên-trái)
-    y: float  # trên
+    x: float
+    y: float
     w: float
     h: float
     confidence: float = 1.0
-    angle: float | None = None  # độ nghiêng của khối (radian) nếu biết
+    angle: float | None = None
 
 
 def estimate_skew(boxes: list[OcrBox]) -> float:
-    """Độ nghiêng của ảnh: trung vị góc các khối *dài* (khối ngắn như "20.000" thường bị OCR báo góc 0)."""
     with_angle = [b for b in boxes if b.angle is not None and b.w > 3 * b.h]
     if not with_angle:
         return 0.0

@@ -1,4 +1,3 @@
-"""Nạp các mô hình đã huấn luyện (artifacts) một lần khi khởi động."""
 from __future__ import annotations
 
 import json
@@ -28,27 +27,32 @@ def metrics() -> dict:
     return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
 
-def models_ready() -> bool:
+MODEL_NAMES = ("categorizer", "intent")
+
+
+# Thiếu hoặc hỏng file mô hình thì trả lỗi về để ensure_models() huấn luyện lại.
+def _load_models() -> Exception | None:
     try:
-        load_model("categorizer")
-        load_model("intent")
-        return True
-    except Exception:  # noqa: BLE001
-        return False
+        for name in MODEL_NAMES:
+            load_model(name)
+    except Exception as exc:
+        return exc
+    return None
+
+
+def models_ready() -> bool:
+    return _load_models() is None
 
 
 def ensure_models() -> None:
-    """Huấn luyện lại nếu thiếu mô hình hoặc mô hình không đọc được (khác phiên bản thư viện)."""
-    try:
-        load_model("categorizer")
-        load_model("intent")
+    error = _load_models()
+    if error is None:
         return
-    except Exception as exc:  # noqa: BLE001
-        log.warning("Không nạp được mô hình (%s) — huấn luyện lại từ bộ dữ liệu.", exc)
+    log.warning("Không nạp được mô hình (%s) — huấn luyện lại từ bộ dữ liệu.", error)
     load_model.cache_clear()
     metrics.cache_clear()
-    from ml.train import main as train  # nhập muộn: chỉ cần khi huấn luyện
+    from ml.train import main as train
 
     train([])
-    load_model("categorizer")
-    load_model("intent")
+    for name in MODEL_NAMES:
+        load_model(name)

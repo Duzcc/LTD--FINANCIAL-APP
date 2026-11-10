@@ -80,16 +80,16 @@ có thể triển khai trên **ba máy chủ khác nhau**:
 
 | Chức năng | Mô tả | Mã nguồn |
 |---|---|---|
-| Giao dịch định kỳ | Hằng ngày/tuần/tháng/năm, chu kỳ N, ngày bắt đầu/kết thúc; tự ghi khi đến hạn (mở hoặc quay lại app); ngày 31 tự lùi về cuối tháng; mã giao dịch cố định `<quy tắc>_r<yyyymmdd>` nên không trùng khi đồng bộ nhiều thiết bị; chọn "Lặp lại định kỳ" ngay trong form thêm giao dịch | `data/models/finance_models.dart`, `data/finance_provider.dart`, `features/recurring/` |
+| Giao dịch định kỳ | Hằng ngày/tuần/tháng/năm, chu kỳ N, ngày bắt đầu/kết thúc; tự ghi khi đến hạn (mở hoặc quay lại app); ngày 31 tự lùi về cuối tháng; mã giao dịch cố định `<quy tắc>_r<yyyymmdd>` nên không trùng khi đồng bộ nhiều thiết bị; chọn "Lặp lại định kỳ" ngay trong form thêm giao dịch | `features/finance/`, `features/recurring/` |
 | Tự động nạp tiết kiệm | Từ chi tiết ví tiết kiệm: tạo lịch chuyển tiền hằng tháng với số tiền gợi ý theo mục tiêu và ngày kết thúc | `features/wallets/` |
 | Thông báo nhắc nhở | Nhắc ghi chép theo các mốc giờ (09:00, 15:00, 20:00 hoặc tùy chọn); nhắc trước 1 ngày và đúng ngày đến hạn thu/trả nợ | `core/notifications/`, `flutter_local_notifications` |
 | Ảnh hóa đơn | Chụp hoặc chọn ảnh, lưu trong thư mục ứng dụng, xem phóng to | `image_picker`, `path_provider` |
-| Khóa ứng dụng bằng PIN | PIN 4 số, băm SHA-256 có muối, khóa lại khi app ở nền quá 30 giây, chặn 30 giây sau 5 lần sai | `core/security/`, `features/security/` |
+| Khóa ứng dụng bằng PIN | PIN 4 số, băm SHA-256 có muối, khóa lại khi app ở nền quá 30 giây, chặn 30 giây sau 5 lần sai | `features/security/` |
 | Xuất Excel và chia sẻ | Tệp `.xlsx` 3 trang (Giao dịch, Ví, Ngân sách) và `.csv`, gửi qua bảng chia sẻ hệ điều hành | `features/settings/data/`, `share_plus` |
 | Tỷ giá quy đổi | Bảng tỷ giá do người dùng cập nhật, đồng bộ theo tài khoản; hiện tổng tài sản quy đổi khi có nhiều tiền tệ | `features/settings/` |
-| Refresh token | Access token JWT 1 giờ + refresh token 30 ngày xoay vòng (chỉ lưu bản băm); app tự làm mới khi gặp lỗi 401 | `backend/src/routes/auth.js`, `FinanceProvider._call` |
+| Refresh token | Access token JWT 1 giờ + refresh token 30 ngày xoay vòng (chỉ lưu bản băm); app tự làm mới khi gặp lỗi 401 | `backend/src/services/session.service.js`, `features/auth/data/datasources/session_client.dart` |
 | Xác thực OTP qua email | Đăng ký/đăng nhập chỉ cấp phiên sau khi nhập đúng mã OTP gửi về email | `POST /api/auth/verify-otp`, `POST /api/auth/resend-otp` |
-| Kết nối ngân hàng (VietQR + SePay) | Liên kết tài khoản ngân hàng với ví VND; tạo mã VietQR (chuẩn NAPAS, tạo trên máy, không cần mạng) để nhận tiền hoặc đòi nợ; mã đối soát `LTD…` trong nội dung chuyển khoản, khi SePay báo tiền về thì backend tự ghi giao dịch thu nhập/thu nợ (chống trùng, khớp số tài khoản) | `core/banking/vietqr.dart`, `features/banking/`, `backend/src/routes/bank.js` |
+| Kết nối ngân hàng (VietQR + SePay) | Liên kết tài khoản ngân hàng với ví VND; tạo mã VietQR (chuẩn NAPAS, tạo trên máy, không cần mạng) để nhận tiền hoặc đòi nợ; mã đối soát `LTD…` trong nội dung chuyển khoản, khi SePay báo tiền về thì backend tự ghi giao dịch thu nhập/thu nợ (chống trùng, khớp số tài khoản) | `features/banking/`, `backend/src/services/bank.service.js`, `backend/src/services/sepay.service.js` |
 
 ### 2.3. Tính năng AI
 
@@ -109,7 +109,7 @@ có thể triển khai trên **ba máy chủ khác nhau**:
 - Số dư ví = số dư ban đầu + các giao dịch, được tính lại mỗi lần nên không bị cộng/trừ lặp khi sửa.
 - Tiền tệ được tổng hợp riêng; tỷ giá do người dùng cập nhật dùng để quy đổi tổng tài sản và cho phân tích AI.
 - Tiền gốc vay/nợ và chuyển ví không tính vào thu chi; thu lãi và trả lãi được tính.
-- Cùng một bộ quy tắc được kiểm tra ở cả app (`FinanceProvider`) và backend (`backend/src/services/ledger.js`).
+- Cùng một bộ quy tắc được kiểm tra ở cả app (`features/finance/domain/ledger_rules.dart`) và backend (`backend/src/domain/ledger.js`).
 
 ---
 
@@ -125,7 +125,7 @@ flowchart LR
   subgraph API["backend/ — Node.js + Express"]
     R[REST /api/*] --> S[ledger · store · sync]
     R --> AIR[/api/ai/*/] --> SN[aiSnapshot]
-    SN --> AC[aiServiceClient]
+    SN --> AC[ai-service.client]
   end
   subgraph AIS["ai-service/ — FastAPI"]
     E[/v1/*/] --> M[Categorizer · Parser · Forecaster<br/>Anomaly · Budget · Receipt OCR · Search]
@@ -179,25 +179,24 @@ LTD--FINANCIAL-APP/
 ├── frontend/                       # Ứng dụng Flutter
 │   ├── lib/
 │   │   ├── main.dart               # khởi động: bộ nhớ, thông báo, định kỳ, đồng bộ
-│   │   ├── app/                    # FinanceApp (Provider, theme, khóa), MainScreen, thanh điều hướng
-│   │   ├── core/                   # dùng chung: network, ocr, security, notifications, theme, widgets,
-│   │   │                           # banking (VietQR), validation (ràng buộc dữ liệu tài khoản)
-│   │   ├── data/                   # models + FinanceProvider (sổ cái, quy tắc, lưu trữ, đồng bộ)
-│   │   └── features/               # ai, auth (đăng nhập + OTP), banking (VietQR, SePay), home, ledger,
-│   │                               # transactions, wallets, goals, statistics, recurring, security, settings
+│   │   ├── app/                    # FinanceApp, MainScreen, thanh điều hướng, thông báo
+│   │   ├── core/                   # dùng chung: network, validation, utils, theme, widgets
+│   │   └── features/<tính năng>/   # domain (entities, quy tắc) · data (datasources, repositories) · presentation
+│   │                               # finance, auth, ai, banking, home, ledger, transactions, wallets,
+│   │                               # goals, statistics, recurring, security, settings
 │   ├── test/                       # kiểm thử đơn vị & giao diện
 │   ├── integration_test/           # kịch bản demo đầu-cuối trên máy ảo
 │   ├── android/  ios/  web/
 │   └── pubspec.yaml
 ├── backend/                        # REST API
 │   ├── src/
-│   │   ├── app.js · server.js · config.js · dev-memory.js
-│   │   ├── models/                 # User, Wallet, Category, Person, Transaction, Budget, Recurring, RefreshToken,
-│   │   │                           # OtpChallenge, PaymentRequest, BankEvent
-│   │   ├── routes/                 # auth (OTP), resources (CRUD), reports, sync, ai, bank (VietQR + SePay)
-│   │   ├── services/               # ledger (nghiệp vụ), store, aiSnapshot, mailer, banks, ai (LLM dự phòng)
-│   │   ├── clients/                # aiServiceClient
-│   │   └── middleware/             # auth (JWT), error, async
+│   │   ├── app.js · server.js · dev-memory.js · config/
+│   │   ├── routes/ → controllers/ → services/ → repositories/ → models/
+│   │   ├── domain/                 # quy tắc thuần: sổ cái, snapshot AI, ngân hàng
+│   │   ├── validators/             # kiểm tra đầu vào
+│   │   ├── integrations/           # AI service, LLM, SePay
+│   │   ├── middleware/             # auth (JWT), error, rate-limit, async-handler
+│   │   └── utils/                  # ApiError, crypto, time
 │   ├── scripts/migrate-db.js       # chuyển dữ liệu MongoDB nhúng → MongoDB thật (npm run db:migrate)
 │   ├── test/                       # api, extra, bank, ai (+ helpers/db.js, helpers/auth.js)
 │   ├── docs/openapi.yaml           # đặc tả OpenAPI 3
@@ -347,10 +346,17 @@ trên màn hình OTP và trong log backend. Để gửi email thật bằng Gmai
 - **VietQR** không cần cấu hình: sửa một ví VND → bật *Liên kết tài khoản ngân hàng* → chọn ngân hàng, nhập số tài khoản
   và tên chủ tài khoản. Chi tiết ví có nút *Nhận tiền bằng VietQR*; Sổ nợ có nút *Đòi nợ bằng QR*. Mã tạo ngay trên máy,
   quét được bằng mọi ứng dụng ngân hàng tại Việt Nam.
-- **Tự ghi giao dịch khi tiền về** (cần đăng nhập):
+- **Tự ghi giao dịch khi tiền về** (cần đăng nhập). Có hai cách, dùng một hoặc cả hai; cùng một giao dịch không bao giờ bị ghi hai lần.
+- **Cách 1 — API Token (đơn giản, không cần địa chỉ công khai):**
+  1. Trên [my.sepay.vn](https://my.sepay.vn): thêm tài khoản ngân hàng đã liên kết với ví → *Cấu hình công ty → API Access* → tạo API Token.
+  2. Đặt `SEPAY_API_TOKEN=<token>` trong `backend/.env` rồi khởi động lại backend. Log hiện
+     `Đối soát SePay qua User API: mỗi 15 giây khi có mã QR đang chờ`.
+  3. Backend chỉ hỏi SePay khi có mã QR đang chờ (mỗi `SEPAY_POLL_SECONDS` giây, và ngay khi app kiểm tra trạng thái mã),
+     tôn trọng giới hạn 3 yêu cầu/giây của SePay.
+- **Cách 2 — Webhook (báo gần như tức thì):**
   1. Backend phải truy cập được từ Internet: tên miền thật, hoặc khi chạy trên máy dùng `ngrok http 3000` / `cloudflared`,
      rồi đặt `PUBLIC_URL=https://…` trong `backend/.env`.
-  2. Trong app: *Tài khoản → Kết nối ngân hàng • VietQR → Tạo khóa kết nối* → sao chép **URL webhook** và **API Key** (khóa chỉ hiện một lần).
+  2. Trong app: *Tài khoản → Kết nối ngân hàng • VietQR → Tạo khóa webhook* → sao chép **URL webhook** và **API Key** (khóa chỉ hiện một lần).
   3. Trên [my.sepay.vn](https://my.sepay.vn): thêm đúng tài khoản ngân hàng đã liên kết với ví → *Tích hợp → Webhooks* →
      sự kiện *Có tiền vào*, dán URL webhook, kiểu chứng thực **API Key**, dán khóa.
   4. Người chuyển quét mã và giữ nguyên nội dung chuyển khoản (có mã `LTD…`) → giao dịch tự được ghi vào ví và màn hình QR báo *Đã nhận*.
@@ -406,6 +412,7 @@ flutter build web --release --no-web-resources-cdn --dart-define=API_URL=https:/
 | `OTP_MINUTES`, `OTP_RESEND_SECONDS` | Hiệu lực mã OTP (mặc định 5 phút) và thời gian chờ trước khi gửi lại (60 giây) |
 | `MAX_FAILED_LOGINS`, `LOGIN_LOCK_MINUTES` | Số lần sai mật khẩu liên tiếp trước khi tạm khóa đăng nhập (5) và thời gian khóa (15 phút) |
 | `RESET_CODE_MINUTES` | Hiệu lực mã quên mật khẩu (15 phút) |
+| `SEPAY_API_TOKEN`, `SEPAY_POLL_SECONDS` | API Token SePay để backend tự hỏi giao dịch mới và đối soát mã VietQR (không cần webhook), chu kỳ hỏi (15 giây). Bỏ trống = chỉ dùng webhook |
 | `PUBLIC_URL` | Địa chỉ công khai của backend (tên miền hoặc ngrok) để hiển thị đúng URL webhook SePay |
 | `PAYMENT_REQUEST_DAYS`, `WEBHOOK_RATE_LIMIT` | Hạn của yêu cầu nhận tiền VietQR (7 ngày), giới hạn số lần gọi webhook mỗi phút (120) |
 
@@ -507,7 +514,7 @@ cd frontend && flutter drive --driver=test_driver/integration_test.dart \
 | Bộ kiểm thử | Số lượng | Nội dung |
 |---|---|---|
 | AI service (`pytest`) | 64 | trích xuất thực thể, nhập nhanh, phân loại, dự báo, bất thường, ngân sách, hóa đơn & OCR, tìm kiếm, API, vòng lặp gọi công cụ với LLM giả lập (Anthropic & OpenAI-compatible) |
-| Backend (`node:test`) | 25 + 1 E2E | ràng buộc dữ liệu đăng ký, đăng nhập bằng OTP (sai mã, hết lượt, gửi lại, dùng một lần), khóa đăng nhập, phân quyền, CRUD, ràng buộc nghiệp vụ, đồng bộ, refresh token, định kỳ, liên kết ngân hàng, yêu cầu VietQR, webhook SePay (xác thực, chống trùng, khớp mã/số tài khoản, thu nợ), cổng AI |
+| Backend (`node:test`) | 26 + 1 E2E | ràng buộc dữ liệu đăng ký, đăng nhập bằng OTP (sai mã, hết lượt, gửi lại, dùng một lần), khóa đăng nhập, phân quyền, CRUD, ràng buộc nghiệp vụ, đồng bộ, refresh token, định kỳ, liên kết ngân hàng, yêu cầu VietQR, webhook SePay (xác thực, chống trùng, khớp mã/số tài khoản, thu nợ), đối soát qua SePay User API (SePay giả lập), cổng AI |
 | Frontend (`flutter test`) | 57 | sổ cái & quy tắc, ràng buộc dữ liệu, luồng đăng nhập + màn hình OTP, đồng bộ với backend giả lập, VietQR (cấu trúc EMVCo, CRC), màn hình nhận tiền, AI máy chủ ↔ dự phòng thiết bị, bộ phân tích hóa đơn, giao diện ở 320/390/430 px |
 | Demo đầu-cuối (`demo_test.dart`) | 16 bước | đăng ký → nhập nhanh → ngân sách → đồng bộ → trợ lý (đề xuất + xác nhận) → phân tích → tìm kiếm → **OCR thật trên thiết bị** (Apple Vision / ML Kit) |
 | Toàn bộ chức năng (`full_features_test.dart`) | 2 kịch bản | **Chức năng**: đủ 9 nhóm (tài khoản: đăng ký, xác thực email, đổi/đặt lại mật khẩu; ví; đủ 9 loại giao dịch và các ràng buộc; danh mục; đối tượng; ngân sách + sao chép; dashboard; thống kê; tìm kiếm), định kỳ, tỷ giá, xuất CSV/Excel, khóa PIN, đồng bộ **hai thiết bị**, AI qua backend, xóa tài khoản. **Giao diện**: mở lần lượt 26 màn hình + các tab, phát hiện mọi lỗi dựng giao diện |
@@ -519,7 +526,7 @@ Chạy lại ngày 02/11/2026 sau khi thêm OTP, VietQR/SePay và hỗ trợ Atl
 
 | Hạng mục | Kết quả |
 |---|---|
-| Backend: npm test (Node 22) | ✅ 25/25 |
+| Backend: npm test (Node 22) | ✅ 26/26 |
 | Frontend: analyze + test | ✅ không lỗi, 57/57 |
 | Ứng dụng trên **iPhone 15 Pro Max (iOS 17.5)** với backend dùng MongoDB Atlas | ✅ build và chạy |
 
@@ -568,7 +575,7 @@ backend (MongoDB 7 dạng service, `npm test`), frontend (`flutter analyze`, `fl
 | Backend báo `bad auth` / `Server selection timed out` (Atlas) | Sai user/mật khẩu (Database Access, nhớ mã hóa ký tự đặc biệt) hoặc IP chưa có trong Network Access |
 | Không nhận được email OTP | Kiểm tra thư mục Spam; `SMTP_PASS` phải là mật khẩu ứng dụng Gmail; khởi động lại backend sau khi sửa `.env`. Khi chưa cấu hình SMTP, mã hiện trên màn hình OTP |
 | "Tài khoản tạm khóa do nhập sai mật khẩu nhiều lần" | Đợi hết thời gian khóa (`LOGIN_LOCK_MINUTES`) hoặc dùng *Quên mật khẩu* |
-| SePay không ghi được giao dịch | Backend phải truy cập được từ Internet và `PUBLIC_URL` đúng; khóa trong SePay phải là khóa mới nhất; người chuyển phải giữ mã `LTD…` trong nội dung; tài khoản trên SePay phải trùng số tài khoản đã liên kết với ví |
+| SePay không ghi được giao dịch | Dùng API Token: kiểm tra `SEPAY_API_TOKEN` và log khởi động có dòng *Đối soát SePay qua User API*. Dùng webhook: backend phải truy cập được từ Internet và `PUBLIC_URL` đúng; khóa trong SePay phải là khóa mới nhất; người chuyển phải giữ mã `LTD…` trong nội dung; tài khoản trên SePay phải trùng số tài khoản đã liên kết với ví |
 | `flutter run` chỉ có Chrome/macOS | Chưa bật máy ảo: `open -a Simulator` (iOS) hoặc `flutter emulators --launch <tên>` (Android), rồi `flutter devices` |
 | `npm test` báo `bad option: --test-concurrency=1` | Đang dùng Node 18; chuyển sang Node 22 (ví dụ `nvm use 22`) |
 | App báo "Không kết nối được máy chủ" | Kiểm tra backend chạy (`/api/health`); máy ảo Android dùng `10.0.2.2`; điện thoại thật dùng IP LAN và cùng mạng Wi-Fi |
@@ -583,9 +590,12 @@ backend (MongoDB 7 dạng service, `npm test`), frontend (`flutter analyze`, `fl
 
 ## 15. Quy ước phát triển
 
-- **Frontend**: tổ chức theo tính năng (`features/<tên>/{data,presentation}`), import dạng `package:finance_app/...`,
-  lint `flutter_lints` + `always_use_package_imports`; quy tắc nghiệp vụ tập trung ở `FinanceProvider`.
-- **Backend**: route mỏng → service; mọi ràng buộc nghiệp vụ trong `services/ledger.js`; lỗi qua `ApiError`.
+- **Frontend**: Clean Architecture theo tính năng (`features/<tên>/{domain,data,presentation}`); `domain` là Dart thuần,
+  tầng dưới chỉ phụ thuộc interface (`FinanceStore`); import dạng `package:finance_app/...`, lint `flutter_lints`.
+- **Backend**: `routes → controllers → services → repositories`; quy tắc thuần trong `domain/`, kiểm tra đầu vào trong
+  `validators/`, gọi dịch vụ ngoài trong `integrations/`; lỗi qua `ApiError`.
+- Tên hàm, biến và file phải tự giải thích. Comment chỉ dùng để nói *tại sao* ở chỗ khó đoán, viết bằng lời dễ hiểu.
+- Màn hình Flutter không tự viết `try/catch`: dùng `attempt()` (báo lỗi bằng thông báo nhỏ) hoặc mixin `BusyState` (nút đang xử lý + dòng báo lỗi) trong `core/widgets/finance_ui.dart`. Backend chuyển lỗi về middleware `error.js`. `try/catch` chỉ còn ở tầng mạng, đồng bộ và đọc dữ liệu từ bên ngoài.
 - **AI service**: endpoint mỏng → service thuần Python có kiểm thử; mô hình huấn luyện tái lập được từ `ml/`.
 - Định dạng chung: [`.editorconfig`](.editorconfig); không commit `.env`, `build/`, `node_modules/`, `.venv/`.
 - Mỗi thay đổi cần chạy `make test` (hoặc để CI chạy) trước khi gộp.

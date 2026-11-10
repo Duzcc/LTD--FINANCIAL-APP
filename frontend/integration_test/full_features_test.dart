@@ -7,11 +7,12 @@ import 'package:integration_test/integration_test.dart';
 import 'package:finance_app/app/app.dart';
 import 'package:finance_app/app/main_screen.dart';
 import 'package:finance_app/core/network/api_client.dart';
-import 'package:finance_app/core/security/app_lock.dart';
-import 'package:finance_app/data/finance_provider.dart';
-import 'package:finance_app/data/models/finance_models.dart';
-import 'package:finance_app/features/ai/data/ai_repository.dart';
+import 'package:finance_app/features/security/data/services/app_lock.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
+import 'package:finance_app/features/ai/data/repositories/ai_repository.dart';
 import 'package:finance_app/features/ai/presentation/ai_screens.dart';
+import 'package:finance_app/features/ai/presentation/assistant_screen.dart';
 import 'package:finance_app/features/ai/presentation/receipt_scan_screen.dart';
 import 'package:finance_app/features/ai/presentation/smart_search_screen.dart';
 import 'package:finance_app/features/auth/presentation/auth_screen.dart';
@@ -20,7 +21,7 @@ import 'package:finance_app/features/goals/presentation/goals_screen.dart';
 import 'package:finance_app/features/ledger/presentation/ledger_screen.dart';
 import 'package:finance_app/features/recurring/presentation/recurring_screen.dart';
 import 'package:finance_app/features/security/presentation/lock_screen.dart';
-import 'package:finance_app/features/settings/data/excel_export.dart';
+import 'package:finance_app/features/settings/data/services/excel_export.dart';
 import 'package:finance_app/features/settings/presentation/others_screen.dart';
 import 'package:finance_app/features/settings/presentation/settings_screens.dart';
 import 'package:finance_app/features/statistics/presentation/statistics_screen.dart';
@@ -31,12 +32,6 @@ import 'package:finance_app/features/wallets/presentation/create_wallet_screen.d
 import 'package:finance_app/features/wallets/presentation/wallet_detail_screen.dart';
 import 'package:finance_app/features/wallets/presentation/wallets_screen.dart';
 
-/// Kiểm thử toàn bộ chức năng trên thiết bị thật với backend + AI service thật.
-///
-/// 1. "Chức năng": đi qua đủ 9 nhóm chức năng của báo cáo và các chức năng mở rộng bằng sổ cái
-///    của ứng dụng, đồng bộ lên máy chủ, mô phỏng thiết bị thứ hai đăng nhập cùng tài khoản.
-/// 2. "Giao diện": mở lần lượt mọi màn hình trên thiết bị, chụp ảnh; bất kỳ lỗi dựng giao diện
-///    nào (tràn bố cục, ngoại lệ) đều làm bài kiểm thử thất bại.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   final now = DateTime.now();
@@ -45,7 +40,6 @@ void main() {
   final email = 'full${now.millisecondsSinceEpoch % 1000000}@nhom3.vn';
   const pass1 = 'matkhau123', pass2 = 'matkhau456', pass3 = 'matkhau789';
 
-  // Đăng nhập/đăng ký hai bước: máy chủ dev trả mã OTP trong devCode.
   Future<bool> withOtp(FinanceProvider x, Future<OtpChallenge> step) async {
     final challenge = await step;
     expect(challenge.devCode, isNotNull, reason: 'máy chủ dev trả mã OTP');
@@ -59,7 +53,6 @@ void main() {
   testWidgets('Chức năng: 9 nhóm chức năng + mở rộng, đồng bộ hai thiết bị', (t) async {
     final p = FinanceProvider(storage: null, api: ApiClient());
 
-    // ---------------------------------------------------------------- a) Tài khoản
     expect(await p.checkServer(), isNull, reason: 'backend phải chạy');
     final signup = await p.register(name: 'Kiểm Thử', email: email, password: pass1);
     expect(p.signedIn, isFalse, reason: 'chưa nhập OTP thì chưa đăng nhập');
@@ -77,14 +70,12 @@ void main() {
     await other.resetPassword(email: email, code: reset!, newPassword: pass3);
     expect(other.signedIn, isTrue);
     await other.signOut();
-    // Đặt lại mật khẩu thu hồi mọi phiên cũ → thiết bị 1 đăng nhập lại bằng mật khẩu mới
     await p.syncNow();
     expect(p.syncError, isNotNull, reason: 'phiên cũ phải bị thu hồi sau khi đặt lại mật khẩu');
     await p.signOut(revoke: false);
     if (await withOtp(p, p.signIn(email: email, password: pass3))) await p.resolveLogin(useAccount: true);
     expect(p.signedIn, isTrue);
 
-    // ---------------------------------------------------------------- b) Ví
     p.saveWallet(const MoneyWallet(id: 'bank', name: 'Vietcombank', opening: 10000000));
     p.saveWallet(MoneyWallet(
         id: 'save', name: 'Tiết kiệm Laptop', savings: true, target: 20000000, startDate: month,
@@ -93,7 +84,6 @@ void main() {
     p.saveWallet(const MoneyWallet(id: 'usd', name: 'Ví USD', currency: 'USD', opening: 100));
     expect(p.wallets.map((w) => w.id), containsAll(['cash', 'bank', 'save', 'usd']));
 
-    // ---------------------------------------------------------------- d) Danh mục, e) Đối tượng
     p.saveCategory(const MoneyCategory('coffee', 'Cà phê', false, 3));
     p.saveCategory(const MoneyCategory('temp', 'Tạm thời', false, 5));
     p.deleteCategory('temp');
@@ -101,7 +91,6 @@ void main() {
     p.savePerson(const MoneyPerson('minh', 'Minh', 'Bạn bè & Đồng nghiệp'));
     p.savePerson(const MoneyPerson('lan', 'Lan', 'Bạn bè & Đồng nghiệp'));
 
-    // ---------------------------------------------------------------- c) Giao dịch (đủ 9 loại)
     var n = 0;
     String id() => 'e${n++}';
     void add(EntryKind k, double amount, String wallet,
@@ -128,20 +117,17 @@ void main() {
     expectRejected(() => p.deletePerson('minh'), 'không xóa đối tượng đang dùng');
     expectRejected(() => p.deleteWallet('save'), 'xóa ví có dữ liệu phải xác nhận xóa kèm');
 
-    // Số dư = ban đầu + giao dịch (tính tay để đối chiếu)
     expect(p.balance('bank'), 10000000 + 18000000 - 5000000 - 2000000 + 1000000 - 400000 - 10000);
     expect(p.balance('save'), 2000000);
     expect(p.balance('cash'), -45000 - 35000 - 500000 + 200000 + 20000);
     expect(p.debt(borrowed: false, personId: 'minh'), 300000, reason: 'Minh còn nợ');
     expect(p.debt(borrowed: true, personId: 'lan'), 600000, reason: 'còn nợ Lan');
 
-    // Sửa và xóa giao dịch
     final pho = p.entries.firstWhere((e) => e.note == 'Phở bò');
     p.saveEntry(MoneyEntry(id: pho.id, kind: pho.kind, amount: 50000, walletId: 'cash', date: pho.date,
         categoryId: 'food', note: 'Phở bò tái'));
     expect(p.entries.firstWhere((e) => e.id == pho.id).amount, 50000);
 
-    // ---------------------------------------------------------------- f) Ngân sách
     p.saveBudget(MoneyBudget(id: 'b_all', categoryId: null, month: month, amount: 8000000));
     p.saveBudget(MoneyBudget(id: 'b_food', categoryId: 'food', month: month, amount: 2000000));
     p.saveBudget(MoneyBudget(id: 'b_in', categoryId: null, month: month, amount: 20000000, income: true));
@@ -153,7 +139,6 @@ void main() {
     expect(p.copyBudgets(month, nextMonth), 3, reason: 'sao chép mục tiêu sang tháng sau');
     expect(p.copyBudgets(month, nextMonth), 0, reason: 'không sao chép trùng');
 
-    // ---------------------------------------------------------------- Giao dịch định kỳ
     p.saveRecurring(RecurringRule(
         id: 'r_cf', kind: EntryKind.expense, amount: 29000, walletId: 'cash',
         frequency: RepeatFrequency.daily, startDate: ago(3), categoryId: 'coffee', note: 'Cà phê sáng'));
@@ -161,8 +146,6 @@ void main() {
     expect(created, greaterThanOrEqualTo(3), reason: 'tự ghi các lần đến hạn');
     expect(p.runRecurring(), 0, reason: 'không ghi trùng');
 
-    // ---------------------------------------------------------------- g) Dashboard, h) Thống kê
-    // Tính theo khoảng thời gian để không phụ thuộc ngày chạy (đầu tháng, giao dịch hôm qua thuộc tháng trước)
     final tomorrow = DateTime(now.year, now.month, now.day + 1);
     final earned = p.sumBetween(ago(30), tomorrow, income: true);
     final spent = p.sumBetween(ago(30), tomorrow, income: false);
@@ -173,12 +156,10 @@ void main() {
     expect(p.sumBetween(ago(400), now.add(const Duration(days: 1)), income: false, categoryId: 'coffee'),
         35000 + 29000 * created);
 
-    // ---------------------------------------------------------------- i) Tìm kiếm & lọc
     final hits = p.entries.where((e) => e.note.toLowerCase().contains('phở')).toList();
     expect(hits, hasLength(1));
     expect(p.inMonth(month, walletId: 'save').every((e) => e.walletId == 'save' || e.destinationId == 'save'), isTrue);
 
-    // ---------------------------------------------------------------- Mở rộng: tỷ giá, xuất dữ liệu, khóa PIN
     p.setRate('USD', 25000);
     expect(p.convertedTotal('VND'), closeTo(p.totalBalance('VND') + 100 * 25000, 1));
     final csv = p.exportCsv();
@@ -195,7 +176,6 @@ void main() {
     }
     expect(lock.blockedUntil, isNotNull, reason: 'chặn sau 5 lần sai');
 
-    // ---------------------------------------------------------------- Đồng bộ + thiết bị thứ hai
     await p.syncNow();
     expect(p.syncError, isNull);
     expect(p.pendingChanges, 0);
@@ -212,7 +192,6 @@ void main() {
     await p.syncNow();
     expect(p.entries.any((e) => e.id == pho.id), isFalse, reason: 'xóa trên thiết bị 2 → thiết bị 1 cập nhật');
 
-    // ---------------------------------------------------------------- AI qua backend
     final ai = AiRepository(p);
     final (parsed, remote) = await ai.parse('cho Lan mượn 300k hôm qua');
     expect(remote, isTrue);
@@ -225,7 +204,6 @@ void main() {
     final (ids, _) = await ai.search('cà phê tháng này');
     expect(ids, isNotEmpty);
 
-    // ---------------------------------------------------------------- Xóa tài khoản
     await device2.signOut();
     await p.syncNow();
     expect(p.syncError, isNull, reason: 'đăng xuất thiết bị 2 không làm thiết bị 1 mất phiên');
@@ -238,7 +216,6 @@ void main() {
   });
 
   testWidgets('Giao diện: mở mọi màn hình không lỗi', (t) async {
-    // Dữ liệu mẫu ngoại tuyến đủ để mọi màn hình có nội dung
     final p = FinanceProvider(storage: null, api: ApiClient());
     p.saveWallet(const MoneyWallet(id: 'bank', name: 'Vietcombank', opening: 10000000));
     p.saveWallet(MoneyWallet(id: 'save', name: 'Tiết kiệm', savings: true, target: 20000000, deadline: DateTime(now.year + 1)));
@@ -271,7 +248,6 @@ void main() {
       await t.pumpAndSettle();
     }
 
-    // Các tab chính
     for (final tab in ['Sổ giao dịch', 'Ngân sách', 'Tài khoản', 'Tổng quan']) {
       await t.tap(find.text(tab).last);
       await t.pumpAndSettle();
@@ -315,13 +291,11 @@ void main() {
       await visit(e.key, e.value);
     }
 
-    // Nhập nhanh (bottom sheet)
     await t.tap(find.byKey(const ValueKey('quick-entry-button')));
     await t.pumpAndSettle();
     await t.enterText(find.byKey(const ValueKey('quick-entry')), 'cho Minh mượn 200k');
     await t.pumpAndSettle();
     expect(find.text('Cho vay'), findsWidgets);
     expect(t.takeException(), isNull);
-    // FinanceApp tự giải phóng FinanceProvider khi cây widget bị gỡ.
   });
 }

@@ -1,6 +1,5 @@
 # Lệnh tắt cho cả 3 phần. Chạy `make help` để xem danh sách.
-PHONY_EXTRA = build-app
-.PHONY: help setup dev-backend dev-ai dev-app test test-app test-backend test-ai train up down
+.PHONY: help setup dev-backend dev-ai dev-app test test-app test-backend test-ai build-app train up down
 
 help:
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | awk -F':.*?## ' '{printf "  %-14s %s\n", $$1, $$2}'

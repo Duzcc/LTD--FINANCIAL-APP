@@ -1,10 +1,3 @@
-// Chép toàn bộ dữ liệu từ MongoDB nhúng (npm run dev:mem, dữ liệu ở backend/.data) sang MongoDB thật
-// (MongoDB Atlas hoặc máy chủ riêng) theo MONGODB_URI trong .env.
-//
-//   npm run db:migrate                     # nguồn mặc định: mongodb://127.0.0.1:27018/finance_app
-//   SOURCE_URI=mongodb://... npm run db:migrate
-//
-// Chạy lại nhiều lần vẫn an toàn: bản ghi được ghi đè theo _id, không tạo bản trùng.
 const { MongoClient } = require('mongodb');
 const mongoose = require('mongoose');
 const config = require('../src/config');
@@ -41,7 +34,6 @@ async function main() {
     total += docs.length;
     console.log(`  ${name.padEnd(16)} ${docs.length}`);
   }
-  // Tạo đủ chỉ mục (duy nhất, TTL…) theo mô hình hiện tại
   await Promise.all(Object.values(mongoose.models).map((m) => m.syncIndexes()));
   console.log(`Xong: đã chép ${total} bản ghi trong ${collections.length} bảng và tạo chỉ mục.`);
   await source.close();

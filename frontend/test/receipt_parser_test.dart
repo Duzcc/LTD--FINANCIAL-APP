@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:finance_app/core/ocr/text_recognizer.dart';
-import 'package:finance_app/features/ai/on_device/receipt_parser.dart';
+import 'package:finance_app/features/ai/data/datasources/text_recognizer.dart';
+import 'package:finance_app/features/ai/domain/services/receipt_parser.dart';
+import 'package:finance_app/features/finance/domain/entities/entry_kind.dart';
 
 const sample = '''CỬA HÀNG TIỆN LỢI CIRCLE K
 Địa chỉ: 12 Lê Lợi, Q1
@@ -16,6 +17,13 @@ Tiền khách đưa 100.000
 Tiền thối lại 54.000''';
 
 void main() {
+  test('Phân loại hóa đơn thu hay chi', () {
+    expect(parseReceipt(sample).kind, EntryKind.expense);
+    expect(parseReceipt('SHOPEE\nHoàn tiền đơn hàng\nSố tiền 250.000').kind, EntryKind.income);
+    expect(parseReceipt('Bạn đã nhận 500.000đ từ NGUYEN VAN A').kind, EntryKind.income);
+    expect(parseReceipt('PHIẾU LƯƠNG THÁNG 10\nThực lĩnh 12.000.000').kind, EntryKind.income);
+  });
+
   test('Đọc hóa đơn chuẩn: tổng, ngày, cửa hàng, dòng hàng, kiểm tra chéo', () {
     final r = parseReceipt(sample);
     expect(r.total, 46000);
@@ -54,7 +62,6 @@ void main() {
   });
 
   test('Dựng dòng từ khối OCR của ảnh nghiêng', () {
-    // Ảnh nghiêng ~3°: số tiền bên phải cao hơn nhãn bên trái nhưng vẫn cùng dòng.
     const a = -0.05;
     final rows = groupRows(const [
       OcrLine('Cảm ơn quý khách! Hẹn gặp lại', 40, 20, 520, 24, angle: a),

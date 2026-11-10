@@ -1,4 +1,3 @@
-"""Kiểm thử API đầu-cuối, bao gồm vòng lặp gọi công cụ với LLM giả lập."""
 import json
 
 import httpx
@@ -60,7 +59,18 @@ def test_search_endpoint(client):
 def test_receipt_text_endpoint(client):
     from tests.test_analytics import RECEIPT
     r = client.post("/v1/receipts/parse-text", json={"text": RECEIPT, "categories": [c.model_dump() for c in CATEGORIES]})
-    assert r.json()["total"] == 46_000
+    body = r.json()
+    assert body["total"] == 46_000
+    assert body["items"][0]["quantity"] == 2 and body["items"][0]["unitPrice"] == 6_000
+    assert all(i["categoryId"] for i in body["items"])
+
+
+def test_receipt_text_endpoint_detects_income(client):
+    text = "PHIẾU LƯƠNG THÁNG 10\nLương cơ bản 12.000.000\nThực lĩnh 12.000.000"
+    r = client.post("/v1/receipts/parse-text", json={"text": text, "categories": [c.model_dump() for c in CATEGORIES]})
+    body = r.json()
+    assert body["kind"] == "income"
+    assert body["categoryId"] in (None, "salary", "bonus")
 
 
 def test_receipt_scan_without_engines(client):
@@ -79,6 +89,16 @@ def test_chat_rules(client):
     assert body["actions"][0]["data"]["amount"] == 50_000
 
 
+def test_chat_rules_allowance_and_search(client):
+    snap = snapshot_json() | {"budgets": [{"categoryId": None, "amount": 9_000_000}]}
+    r = client.post("/v1/chat", json={"snapshot": snap, "messages": [{"role": "user", "content": "hôm nay mình được chi bao nhiêu?"}]})
+    body = r.json()
+    assert "/ngày" in body["reply"] and body["toolsUsed"] == ["get_spending_allowance"]
+    r = client.post("/v1/chat", json={"snapshot": snapshot_json(), "messages": [{"role": "user", "content": "tìm giao dịch cà phê"}]})
+    action = r.json()["actions"][0]
+    assert action["type"] == "show_transactions" and action["data"]["ids"]
+
+
 def test_service_key(client, monkeypatch):
     monkeypatch.setattr(get_settings(), "service_api_key", "secret")
     assert client.post("/v1/parse", json={"text": "phở 45k"}).status_code == 401
@@ -88,7 +108,6 @@ def test_service_key(client, monkeypatch):
 
 @pytest.mark.anyio
 async def test_anthropic_tool_loop(monkeypatch):
-    """LLM giả: lần 1 gọi forecast_month, lần 2 trả lời dựa trên kết quả công cụ."""
     calls = []
 
     def handler(request: httpx.Request) -> httpx.Response:

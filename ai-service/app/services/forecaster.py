@@ -1,17 +1,3 @@
-"""Dự báo chi tiêu.
-
-1. Cuối tháng hiện tại (theo ngày):
-   - Hồ sơ theo thứ trong tuần: trung bình cắt tỉa (trimmed mean) chi tiêu từng thứ trong 8 tuần gần nhất.
-   - Hệ số mức (level) của tháng này = thực chi / kỳ vọng theo hồ sơ, co về 1 khi mới đầu tháng.
-   - Mô hình Holt (làm trơn hàm mũ kép) trên tổng chi theo tuần khi có ≥ 8 tuần, lấy trung bình hai cách.
-   - Tách khoản lớn (> 4 × trung vị): khoản định kỳ (tiền nhà, học phí — lặp lại hằng tháng) được cộng
-     nếu chưa tới ngày; khoản bất chợt được cộng theo tần suất kỳ vọng 90 ngày.
-   - Khoảng dự báo 80% từ độ lệch chuẩn phần dư theo ngày (theo √số ngày còn lại).
-   Kiểm định lùi (ml/evaluate_forecaster.py): MAPE 19,2% so với 47,7% của cách chia đều (run-rate).
-2. Tháng tới (theo tháng): Holt-Winters cộng tính mùa vụ 12 tháng khi có ≥ 24 tháng,
-   Holt tuyến tính khi có ≥ 4 tháng, ngược lại trung bình.
-Tham số làm trơn được chọn bằng tìm kiếm lưới cực tiểu sai số dự báo một bước (SSE).
-"""
 from __future__ import annotations
 
 import calendar
@@ -24,9 +10,7 @@ import numpy as np
 from app.schemas.common import EXPENSE_KINDS, Transaction
 
 
-# ---------------------------------------------------------------- mô hình làm trơn hàm mũ
 def holt_forecast(y: np.ndarray, horizon: int) -> tuple[np.ndarray, float]:
-    """Holt tuyến tính (level + trend). Trả về (dự báo, sai số chuẩn một bước)."""
     best = (np.inf, None)
     for a, b in product((0.1, 0.2, 0.3, 0.5, 0.7, 0.9), (0.01, 0.05, 0.1, 0.2, 0.3)):
         level, trend, sse = y[0], (y[1] - y[0]) if len(y) > 1 else 0.0, 0.0
@@ -44,7 +28,6 @@ def holt_forecast(y: np.ndarray, horizon: int) -> tuple[np.ndarray, float]:
 
 
 def holt_winters_forecast(y: np.ndarray, period: int, horizon: int) -> tuple[np.ndarray, float]:
-    """Holt-Winters cộng tính (level + trend + mùa vụ)."""
     best = (np.inf, None)
     init_season = y[:period] - y[:period].mean()
     for a, b, g in product((0.1, 0.3, 0.5, 0.8), (0.01, 0.1, 0.2), (0.05, 0.2, 0.4)):
@@ -68,7 +51,6 @@ def holt_winters_forecast(y: np.ndarray, period: int, horizon: int) -> tuple[np.
     return out, sigma
 
 
-# ---------------------------------------------------------------- tiện ích
 def _trimmed_mean(values: list[float], cut: float = 0.15) -> float:
     if not values:
         return 0.0
@@ -104,11 +86,6 @@ class MonthForecast:
 
 
 def _large_bills(transactions: list[Transaction], today: date, cap: float) -> tuple[float, float]:
-    """Khoản lớn (> cap): tách thành định kỳ (tiền nhà, học phí...) và bất chợt.
-
-    Trả về (khoản định kỳ dự kiến còn lại trong tháng, kỳ vọng khoản bất chợt mỗi ngày).
-    Định kỳ = xuất hiện ở ≥ 2 trong 3 tháng trước, lệch ngày ≤ 3 và số tiền lệch ≤ 25%.
-    """
     month_start = today.replace(day=1)
     big = [t for t in transactions if not t.excluded and t.kind in EXPENSE_KINDS and t.amount > cap]
     prev_months = []
@@ -118,7 +95,7 @@ def _large_bills(transactions: list[Transaction], today: date, cap: float) -> tu
         if m == 0:
             y, m = y - 1, 12
         prev_months.append((y, m))
-    def in_month(t, ym):  # noqa: E306
+    def in_month(t, ym):
         return (t.date.year, t.date.month) == ym
     recurring_left = 0.0
     recurring_ids: set[str] = set()
@@ -153,7 +130,6 @@ def forecast_month(transactions: list[Transaction], now: datetime) -> MonthForec
     daily = daily_expense(transactions)
     spent = sum(v for d, v in daily.items() if month_start <= d <= today)
 
-    # Ngưỡng "khoản lớn": 4 × trung vị các khoản chi trong 90 ngày (ít nhất 300.000đ)
     recent_amounts = [t.amount for t in transactions if t.kind in EXPENSE_KINDS and not t.excluded
                       and t.date.date() >= today - timedelta(days=90)]
     cap = max(300_000.0, 4 * float(np.median(recent_amounts))) if recent_amounts else float("inf")
@@ -165,7 +141,6 @@ def forecast_month(transactions: list[Transaction], now: datetime) -> MonthForec
         regular[d] = regular.get(d, 0.0) + min(t.amount, cap)
     recurring_left, excess_per_day = _large_bills(transactions, today, cap) if recent_amounts else (0.0, 0.0)
 
-    # Hồ sơ theo thứ trong tuần (56 ngày gần nhất) trên chi tiêu thường xuyên
     history_days = [today - timedelta(days=i) for i in range(1, 57)]
     by_wd: dict[int, list[float]] = {i: [] for i in range(7)}
     first_record = min(daily) if daily else today
@@ -181,7 +156,7 @@ def forecast_month(transactions: list[Transaction], now: datetime) -> MonthForec
     remaining_days = [today + timedelta(days=i) for i in range(1, days_left + 1)]
     if have_history and expected_so_far > 0:
         raw_level = regular_so_far / expected_so_far
-        shrink = min(1.0, today.day / 21)  # đầu tháng tin vào lịch sử nhiều hơn
+        shrink = min(1.0, today.day / 21)
         level = 1 + shrink * (raw_level - 1)
         profile_rest = level * sum(profile[d.weekday()] for d in remaining_days)
         residuals = [regular.get(d, 0.0) - profile[d.weekday()] for d in history_days if d >= first_record]
@@ -193,7 +168,6 @@ def forecast_month(transactions: list[Transaction], now: datetime) -> MonthForec
         sigma_day = float(np.std([regular.get(d, 0.0) for d in elapsed])) if elapsed else 0.0
         method = "run_rate"
 
-    # Holt trên tổng chi thường xuyên theo tuần (nếu đủ dữ liệu) -> trung bình tổ hợp
     weeks = []
     end = today
     while len(weeks) < 26:
@@ -214,7 +188,6 @@ def forecast_month(transactions: list[Transaction], now: datetime) -> MonthForec
     projected = spent + rest
     margin = 1.2816 * sigma_day * np.sqrt(max(days_left, 0)) + excess_per_day * days_left
 
-    # Theo danh mục: phân bổ phần còn lại theo tỷ trọng 90 ngày gần nhất
     cat_spent: dict[str, float] = {}
     cat_hist: dict[str, float] = {}
     since = today - timedelta(days=90)
@@ -232,7 +205,6 @@ def forecast_month(transactions: list[Transaction], now: datetime) -> MonthForec
         for c in set(cat_spent) | set(cat_hist)
     }
 
-    # Tháng tới theo chuỗi tổng chi hằng tháng
     monthly: list[float] = []
     y, m = today.year, today.month
     for _ in range(36):

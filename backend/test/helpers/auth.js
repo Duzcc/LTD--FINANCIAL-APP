@@ -1,4 +1,3 @@
-// Đăng ký / đăng nhập qua OTP email (chế độ test trả mã trong devCode).
 const request = require('supertest');
 
 async function verify(app, step) {

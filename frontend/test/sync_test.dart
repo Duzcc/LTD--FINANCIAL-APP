@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'helpers/fake_backend.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:finance_app/data/models/finance_models.dart';
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 import 'package:finance_app/core/network/api_client.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 
@@ -57,7 +57,6 @@ void main() {
     final ops = server.batches.last['ops'] as List;
     expect(ops.map((o) => '${o['entity']}:${o['id']}'),
         ['wallets:bank', 'entries:e1']);
-    // Thời điểm gửi lên luôn kèm múi giờ để máy chủ không hiểu sai ngày.
     expect((ops[1]['data'] as Map)['date'], endsWith('Z'));
 
     p.deleteEntry('e1');
@@ -68,7 +67,6 @@ void main() {
         ['delete entries', 'delete wallets']);
     expect(p.wallets.map((w) => w.id), ['cash']);
 
-    // Phiên được lưu và khôi phục sau khi mở lại ứng dụng.
     await p.flush();
     final again = FinanceProvider(
         storage: storage, api: ApiClient(client: server.client))
@@ -114,7 +112,7 @@ void main() {
     final server = FakeBackend();
     final p = FinanceProvider(api: ApiClient(client: server.client));
     await signInWithOtp(p);
-    p.session = p.session!.withToken('expired');
+    p.session = p.session!.withToken('expired', refresh: 'revoked');
     p.preferences(name: 'Bình');
     await p.syncNow();
     expect(p.syncError, contains('hết hạn'));

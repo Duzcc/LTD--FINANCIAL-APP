@@ -4,8 +4,6 @@ import 'package:speech_to_text/speech_to_text.dart';
 
 import 'package:finance_app/core/widgets/finance_ui.dart';
 
-/// Nút micro: đọc giọng nói tiếng Việt thành văn bản (nhận dạng của hệ điều hành,
-/// chạy trên thiết bị khi được hỗ trợ). Gọi [onText] liên tục khi đang nghe.
 class VoiceInputButton extends StatefulWidget {
   const VoiceInputButton({super.key, required this.onText, this.onDone});
   final ValueChanged<String> onText;
@@ -25,16 +23,13 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
       setState(() => listening = false);
       return;
     }
-    try {
-      _ready ??= await _speech.initialize(onStatus: (s) {
-        if ((s == 'done' || s == 'notListening') && mounted && listening) {
-          setState(() => listening = false);
-          widget.onDone?.call();
-        }
-      });
-    } catch (_) {
-      _ready = false;
-    }
+    // Máy không hỗ trợ nhận giọng nói sẽ báo lỗi ngay khi khởi động, coi như chưa sẵn sàng.
+    _ready ??= await _speech.initialize(onStatus: (s) {
+      if ((s == 'done' || s == 'notListening') && mounted && listening) {
+        setState(() => listening = false);
+        widget.onDone?.call();
+      }
+    }).onError((_, __) => false);
     if (!mounted) return;
     if (_ready != true) {
       message(context, 'Thiết bị chưa cho phép hoặc không hỗ trợ nhận dạng giọng nói.');

@@ -1,7 +1,3 @@
-"""Huấn luyện, đánh giá và lưu các mô hình của AI service.
-
-    python -m ml.train            # sinh dữ liệu (nếu chưa có), huấn luyện, ghi artifacts/
-"""
 from __future__ import annotations
 
 import json
@@ -48,7 +44,6 @@ def train_one(name: str, data_file: str, eval_file: str) -> dict:
                                   "errors": [{"text": t, "label": a, "pred": str(b)}
                                              for t, a, b in zip(ex, ey, ep, strict=False) if a != b]}
     errors = [{"text": t, "label": y, "pred": str(p)} for t, y, p in zip(hx, hy, hpred, strict=False) if y != p]
-    # Mô hình cuối cùng huấn luyện trên toàn bộ dữ liệu tổng hợp.
     model.fit(texts, labels)
     joblib.dump(model, ARTIFACTS / f"{name}.joblib", compress=3)
     return {
@@ -69,7 +64,7 @@ def train_one(name: str, data_file: str, eval_file: str) -> dict:
 
 
 def main(argv: list[str] | None = None) -> None:
-    del argv  # chưa có tham số dòng lệnh
+    del argv
     if not (DATA / "generated" / "categories.jsonl").exists():
         from .data import generate_dataset
         generate_dataset.main([])

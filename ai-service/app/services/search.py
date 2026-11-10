@@ -1,9 +1,3 @@
-"""Tìm kiếm giao dịch bằng ngôn ngữ tự nhiên.
-
-"tiền cafe tháng trước trên 50k" -> lọc thời gian + số tiền + xếp hạng ngữ nghĩa.
-Xếp hạng: độ giống cosine trên đặc trưng TF-IDF (từ + ký tự) của mô hình danh mục,
-mở rộng truy vấn bằng từ đồng nghĩa và cộng điểm khi danh mục dự đoán của truy vấn trùng danh mục giao dịch.
-"""
 from __future__ import annotations
 
 import calendar
@@ -128,7 +122,6 @@ def search(query: str, transactions: list[Transaction], categories: list[Categor
     q = l2(cz.features.transform([expanded]))
     sims = (mat @ q.T).toarray().ravel()
 
-    # Danh mục người dùng gõ trực tiếp ("ăn uống tháng này")
     named = {c.id for c in categories if fold(c.name) in flt.text}
     preds, _ = cz.predict(expanded, categories)
     predicted = preds[0].category_id if preds and preds[0].probability > 0.5 else None
@@ -138,7 +131,7 @@ def search(query: str, transactions: list[Transaction], categories: list[Categor
         if t.categoryId in named:
             score += 0.6
         elif predicted and t.categoryId == predicted and score >= 0.05:
-            score += 0.25  # chỉ cộng khi bản thân ghi chú đã có liên quan
+            score += 0.25
         if score >= 0.12:
             scored.append((t, round(min(1.0, score), 3)))
     scored.sort(key=lambda x: (-x[1], -x[0].date.timestamp()))

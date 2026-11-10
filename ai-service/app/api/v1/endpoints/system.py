@@ -1,4 +1,3 @@
-"""Thông tin hệ thống và mô hình."""
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends

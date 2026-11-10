@@ -3,15 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:finance_app/core/widgets/entry_tile.dart';
+import 'package:finance_app/core/widgets/brand_logo.dart';
+import 'package:finance_app/features/transactions/presentation/widgets/entry_tile.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
-import 'package:finance_app/data/finance_provider.dart';
-import 'package:finance_app/data/models/finance_models.dart';
-import 'package:finance_app/features/ai/data/ai_models.dart';
-import 'package:finance_app/features/ai/data/ai_repository.dart';
-import 'package:finance_app/features/ai/on_device/insights.dart';
-import 'package:finance_app/features/ai/on_device/local_assistant.dart';
-import 'package:finance_app/features/ai/on_device/quick_parser.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
+import 'package:finance_app/features/ai/domain/entities/ai_models.dart';
+import 'package:finance_app/features/ai/data/repositories/ai_repository.dart';
+import 'package:finance_app/features/ai/domain/services/insights.dart';
+import 'package:finance_app/features/ai/domain/services/quick_parser.dart';
+import 'package:finance_app/features/ai/presentation/assistant_screen.dart';
 import 'package:finance_app/features/ai/presentation/receipt_scan_screen.dart';
 import 'package:finance_app/features/ai/presentation/smart_search_screen.dart';
 import 'package:finance_app/features/ai/presentation/voice_input.dart';
@@ -19,7 +20,6 @@ import 'package:finance_app/features/ledger/presentation/ledger_screen.dart';
 import 'package:finance_app/features/recurring/presentation/recurring_screen.dart';
 import 'package:finance_app/features/transactions/presentation/add_transaction_screen.dart';
 
-/// Mở biểu mẫu giao dịch đã điền sẵn từ kết quả AI (người dùng luôn xác nhận).
 Future<void> openParsedEntry(BuildContext context, ParsedEntry r, {String? photo}) async {
   final p = context.read<FinanceProvider>();
   var personId = r.personId;
@@ -47,8 +47,6 @@ Future<void> openParsedEntry(BuildContext context, ParsedEntry r, {String? photo
           initialPhoto: photo)));
 }
 
-/// Nhập nhanh bằng một câu tự nhiên (gõ hoặc nói). Kết quả hiện ngay bằng mô hình
-/// trên thiết bị, sau đó được tinh chỉnh bằng mô hình máy chủ khi đăng nhập.
 Future<void> showQuickEntry(BuildContext context) => showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -120,8 +118,8 @@ class _QuickEntrySheetState extends State<QuickEntrySheet> {
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                const Icon(Icons.auto_awesome, color: AppColors.primaryGreen),
-                const SizedBox(width: 8),
+                const BrandLogo.ai(size: 28),
+                const SizedBox(width: 10),
                 const Expanded(
                     child: Text('Nhập nhanh bằng AI',
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
@@ -228,8 +226,6 @@ class _QuickEntrySheetState extends State<QuickEntrySheet> {
       ]));
 }
 
-/// Phân tích thông minh: ưu tiên mô hình máy chủ (dự báo có khoảng tin cậy,
-/// phát hiện bất thường, gợi ý ngân sách); luôn kèm phân tích trên thiết bị.
 class InsightsScreen extends StatefulWidget {
   const InsightsScreen({super.key});
   @override
@@ -265,7 +261,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
             b.month.year == month.year &&
             b.month.month == month.month)
         .firstOrNull;
-    try {
+    attempt(context, () {
       p.saveBudget(MoneyBudget(
           id: existing?.id ?? p.newId(),
           categoryId: s.categoryId,
@@ -273,9 +269,7 @@ class _InsightsScreenState extends State<InsightsScreen> {
           amount: s.amount,
           currency: p.currency));
       message(context, 'Đã đặt ngân sách ${p.category(s.categoryId)?.name}: ${money(s.amount, p.currency)}');
-    } on ArgumentError catch (e) {
-      message(context, e.message);
-    }
+    });
   }
 
   @override
@@ -299,7 +293,6 @@ class _InsightsScreenState extends State<InsightsScreen> {
             builder: (context, snap) {
               final server = snap.data;
               final f = server?.forecast;
-              // Các điểm đáng chú ý dùng cùng dự báo với thẻ phía trên
               final items = FinanceInsights(p, server: f).all();
               return RefreshIndicator(
                   onRefresh: () async {
@@ -436,186 +429,5 @@ class InsightTile extends StatelessWidget {
                     : isSubscription
                         ? () => openPage(context, const RecurringScreen())
                         : null)));
-  }
-}
-
-class ChatMessage {
-  const ChatMessage(this.fromUser, this.text, {this.source, this.actions = const []});
-  final bool fromUser;
-  final String text;
-  final String? source;
-  final List<AssistantAction> actions;
-}
-
-/// Trợ lý tài chính: mô hình ngôn ngữ ở máy chủ gọi công cụ trên dữ liệu thật
-/// (khi đăng nhập), ngược lại dùng trợ lý chạy trên thiết bị. Trợ lý chỉ
-/// *đề xuất* ghi giao dịch / đặt ngân sách — người dùng bấm xác nhận.
-class AssistantScreen extends StatefulWidget {
-  const AssistantScreen({super.key});
-  @override
-  State<AssistantScreen> createState() => _AssistantScreenState();
-}
-
-class _AssistantScreenState extends State<AssistantScreen> {
-  final input = TextEditingController();
-  final scroll = ScrollController();
-  final messages = <ChatMessage>[
-    const ChatMessage(false,
-        'Xin chào! Mình là trợ lý tài chính. Bạn có thể hỏi về chi tiêu, ngân sách, công nợ, dự báo, giao dịch bất thường, hoặc nhờ mình ghi giúp một khoản chi.',
-        source: 'Trợ lý')
-  ];
-  final done = <AssistantAction>{};
-  bool busy = false;
-  static const _sources = {
-    'ai-service': 'AI máy chủ',
-    'llm': 'AI máy chủ (LLM)',
-    'rules': 'AI máy chủ',
-    'device': 'AI trên thiết bị',
-  };
-
-  @override
-  void dispose() {
-    input.dispose();
-    scroll.dispose();
-    super.dispose();
-  }
-
-  Future<void> send(String text) async {
-    final q = text.trim();
-    if (q.isEmpty || busy) return;
-    final p = context.read<FinanceProvider>();
-    setState(() {
-      messages.add(ChatMessage(true, q));
-      busy = true;
-      input.clear();
-    });
-    final history = [
-      for (final m in messages.skip(1).toList().reversed.take(10).toList().reversed)
-        {'role': m.fromUser ? 'user' : 'assistant', 'content': m.text}
-    ];
-    final r = await AiRepository(p).chat(history);
-    if (!mounted) return;
-    setState(() {
-      messages.add(ChatMessage(false, r.reply, source: _sources[r.source] ?? 'AI máy chủ', actions: r.actions));
-      busy = false;
-    });
-    await Future<void>.delayed(const Duration(milliseconds: 50));
-    if (scroll.hasClients) {
-      scroll.animateTo(scroll.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
-    }
-  }
-
-  Future<void> run(AssistantAction a) async {
-    final p = context.read<FinanceProvider>();
-    final d = a.data;
-    if (a.type == 'create_transaction') {
-      await openParsedEntry(
-          context,
-          ParsedEntry(
-              kind: kindFromName(d['kind'] as String?),
-              amount: (d['amount'] as num?)?.toDouble(),
-              date: DateTime.tryParse('${d['date']}')?.toLocal() ?? DateTime.now(),
-              note: '${d['note'] ?? ''}',
-              categoryId: p.category(d['categoryId'] as String?) == null ? null : d['categoryId'] as String?,
-              personId: d['personId'] as String?,
-              newPersonName: d['newPersonName'] as String?,
-              walletId: p.findWallet(d['walletId'] as String?) == null ? null : d['walletId'] as String?));
-      if (!mounted) return;
-    } else if (a.type == 'set_budget') {
-      final month = DateTime.tryParse('${d['month']}') ?? DateTime.now();
-      final m = DateTime(month.year, month.month);
-      final existing = p.budgets
-          .where((b) => b.categoryId == d['categoryId'] && b.walletId == null && b.currency == p.currency && b.month == m)
-          .firstOrNull;
-      try {
-        p.saveBudget(MoneyBudget(
-            id: existing?.id ?? p.newId(),
-            categoryId: d['categoryId'] as String?,
-            month: m,
-            amount: (d['amount'] as num).toDouble(),
-            currency: p.currency));
-        message(context, 'Đã đặt ngân sách.');
-      } on ArgumentError catch (e) {
-        message(context, e.message);
-        return;
-      }
-    }
-    setState(() => done.add(a));
-  }
-
-  Widget _actionCard(FinanceProvider p, AssistantAction a) {
-    final d = a.data;
-    final amount = (d['amount'] as num?)?.toDouble() ?? 0;
-    final title = a.type == 'set_budget'
-        ? 'Đặt ngân sách ${p.category(d['categoryId'] as String?)?.name ?? ''}: ${money(amount, p.currency)}'
-        : '${kindFromName(d['kind'] as String?).label} ${money(amount, p.currency)}'
-            '${p.category(d['categoryId'] as String?) != null ? ' • ${p.category(d['categoryId'] as String?)!.name}' : ''}';
-    final isDone = done.contains(a);
-    return Container(
-        margin: const EdgeInsets.only(top: 8),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-            color: AppColors.primaryGreenSurface, borderRadius: BorderRadius.circular(12)),
-        child: Row(children: [
-          const Icon(Icons.task_alt, size: 18, color: AppColors.primaryGreen),
-          const SizedBox(width: 8),
-          Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13))),
-          TextButton(onPressed: isDone ? null : () => run(a), child: Text(isDone ? 'Đã xong' : 'Xác nhận')),
-        ]));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.watch<FinanceProvider>();
-    return FinancePage(
-        title: 'Trợ lý AI',
-        bottom: Row(children: [
-          Expanded(
-              child: TextField(
-                  key: const ValueKey('assistant-input'),
-                  controller: input,
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: send,
-                  decoration: InputDecoration(
-                      hintText: 'Hỏi về tài chính của bạn…',
-                      suffixIcon: VoiceInputButton(
-                          onText: (v) => input.text = v, onDone: () => send(input.text))))),
-          const SizedBox(width: 8),
-          IconButton.filled(
-              tooltip: 'Gửi', onPressed: busy ? null : () => send(input.text), icon: const Icon(Icons.send)),
-        ]),
-        child: ListView(controller: scroll, padding: const EdgeInsets.all(16), children: [
-          for (final m in messages)
-            Align(
-                alignment: m.fromUser ? Alignment.centerRight : Alignment.centerLeft,
-                child: Container(
-                    constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * .85),
-                    margin: const EdgeInsets.only(bottom: 10),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                        color: m.fromUser ? AppColors.primaryGreen : Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: m.fromUser ? null : Border.all(color: AppColors.divider)),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(m.text,
-                          style: TextStyle(height: 1.45, color: m.fromUser ? Colors.white : AppColors.textPrimary)),
-                      for (final a in m.actions) _actionCard(p, a),
-                      if (m.source != null) ...[
-                        const SizedBox(height: 4),
-                        Text(m.source!, style: const TextStyle(fontSize: 10, color: AppColors.textGrey)),
-                      ],
-                    ]))),
-          if (busy) const Padding(padding: EdgeInsets.all(8), child: LinearProgressIndicator()),
-          if (messages.length <= 1)
-            Wrap(spacing: 6, runSpacing: 6, children: [
-              for (final s in [...LocalAssistant.suggestions, 'Có giao dịch nào bất thường không?', 'Gợi ý ngân sách cho mình'])
-                ActionChip(label: Text(s, style: const TextStyle(fontSize: 12)), onPressed: () => send(s)),
-            ]),
-          const SizedBox(height: 8),
-          const Text(
-              'Khi đăng nhập, câu hỏi được gửi tới máy chủ của bạn; trợ lý chỉ đọc số liệu cần thiết qua công cụ, không gửi mật khẩu hay thông tin đăng nhập.',
-              style: TextStyle(fontSize: 11, color: AppColors.textGrey)),
-        ]));
   }
 }

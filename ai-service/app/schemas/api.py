@@ -1,4 +1,3 @@
-"""Hợp đồng dữ liệu (request/response) của API v1. JSON dùng camelCase giống backend và ứng dụng."""
 from __future__ import annotations
 
 from datetime import datetime
@@ -15,7 +14,6 @@ class CamelModel(BaseModel):
     model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
 
 
-# ---------------------------------------------------------------- danh mục
 class CategorizeRequest(CamelModel):
     text: str = Field(min_length=1, max_length=500)
     categories: list[Category] = Field(min_length=1, max_length=500)
@@ -35,7 +33,6 @@ class CategorizeResponse(CamelModel):
     model_version: str
 
 
-# ---------------------------------------------------------------- nhập nhanh
 class ParseRequest(CamelModel):
     text: str = Field(min_length=1, max_length=500)
     now: datetime | None = None
@@ -62,7 +59,6 @@ class ParseResponse(CamelModel):
     alternatives: list[dict[str, Any]]
 
 
-# ---------------------------------------------------------------- phân tích
 class SnapshotRequest(CamelModel):
     snapshot: FinanceSnapshot
 
@@ -124,7 +120,6 @@ class BudgetResponse(CamelModel):
     plan: dict[str, Any] | None
 
 
-# ---------------------------------------------------------------- hóa đơn
 class ReceiptTextRequest(CamelModel):
     text: str = Field(min_length=1, max_length=20000)
     categories: list[Category] = Field(default_factory=list, max_length=500)
@@ -133,6 +128,9 @@ class ReceiptTextRequest(CamelModel):
 class ReceiptLine(CamelModel):
     name: str
     amount: float
+    quantity: float | None = None
+    unit_price: float | None = None
+    category_id: str | None = None
 
 
 class ReceiptResponse(CamelModel):
@@ -142,14 +140,13 @@ class ReceiptResponse(CamelModel):
     items: list[ReceiptLine]
     note: str
     category_id: str | None = None
+    kind: Literal["expense", "income"] = "expense"
     source: str
     confidence: float = 0.0
     checks: list[str] = Field(default_factory=list, description="Các bằng chứng xác nhận tổng tiền")
     raw_text: str = ""
 
 
-
-# ---------------------------------------------------------------- tìm kiếm
 class SearchRequest(SnapshotRequest):
     query: str = Field(min_length=1, max_length=200)
     limit: int = Field(default=30, ge=1, le=200)
@@ -165,7 +162,6 @@ class SearchResponse(CamelModel):
     hits: list[SearchHit]
 
 
-# ---------------------------------------------------------------- trợ lý
 class ChatMessage(CamelModel):
     role: Literal["user", "assistant"]
     content: str = Field(min_length=1, max_length=4000)
@@ -183,7 +179,6 @@ class ChatResponse(CamelModel):
     fallback_reason: str | None = None
 
 
-# ---------------------------------------------------------------- hệ thống
 class HealthResponse(CamelModel):
     status: str
     version: str

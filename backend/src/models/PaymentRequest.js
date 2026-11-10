@@ -1,22 +1,21 @@
 const { Schema, model } = require('mongoose');
 
-// Yêu cầu nhận tiền bằng VietQR. Mã đối soát (code) nằm trong nội dung chuyển khoản;
-// khi SePay báo có tiền vào chứa mã này, backend tự ghi giao dịch và đánh dấu đã thanh toán.
 const paymentRequestSchema = new Schema({
   user: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-  code: { type: String, required: true, unique: true }, // ví dụ LTDK7Q2MX
+  code: { type: String, required: true, unique: true },
   walletId: { type: String, required: true },
-  kind: { type: String, enum: ['income', 'collect'], default: 'income' }, // thu nhập hoặc thu nợ
-  amount: { type: Number, default: null, min: 0 }, // null = người chuyển tự nhập số tiền
+  kind: { type: String, enum: ['income', 'collect'], default: 'income' },
+  amount: { type: Number, default: null, min: 0 },
   categoryId: { type: String, default: null },
   personId: { type: String, default: null },
   note: { type: String, default: '', maxlength: 100 },
   status: { type: String, enum: ['pending', 'paid', 'cancelled'], default: 'pending' },
-  paidAmount: { type: Number, default: null },
+  paidAmount: { type: Number, default: 0 },
   paidAt: { type: Date, default: null },
-  entryId: { type: String, default: null }, // giao dịch đã ghi
+  entryId: { type: String, default: null },
   expiresAt: { type: Date, required: true },
 }, { timestamps: true });
+paymentRequestSchema.index({ status: 1, expiresAt: 1, createdAt: 1 });
 paymentRequestSchema.set('toJSON', {
   versionKey: false,
   transform: (_d, r) => ({

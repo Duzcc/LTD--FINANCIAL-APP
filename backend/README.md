@@ -54,6 +54,7 @@ Mặc định: máy ảo Android dùng `http://10.0.2.2:3000`; iOS Simulator, ma
 | `AI_PROVIDER`, `AI_API_KEY`, `AI_MODEL`, `AI_BASE_URL`, `AI_MAX_TOKENS` | LLM trực tiếp — chỉ dùng làm dự phòng cho `/api/ai/chat` khi AI service không chạy |
 | `CORS_ORIGINS` | Danh sách origin của frontend được phép gọi API, phân tách bằng dấu phẩy (`*` = tất cả) |
 | `MONGODB_URI`, `MONGODB_DB` | Chuỗi kết nối MongoDB (máy riêng hoặc Atlas `mongodb+srv://…`) và tên db (mặc định `finance_app`). Chuyển dữ liệu từ MongoDB nhúng (`dev:mem`) sang: chạy `npm run dev:mem` ở một terminal, rồi `npm run db:migrate` |
+| `SEPAY_API_TOKEN`, `SEPAY_POLL_SECONDS` | API Token SePay: backend tự hỏi `GET my.sepay.vn/userapi/transactions/list` khi có mã QR đang chờ để đối soát, không cần webhook |
 | `PUBLIC_URL` | Địa chỉ công khai của backend (tên miền hoặc ngrok) để hiện URL webhook SePay đúng |
 | `OTP_MINUTES`, `OTP_RESEND_SECONDS`, `MAX_FAILED_LOGINS`, `LOGIN_LOCK_MINUTES` | Hiệu lực OTP (5 phút), chờ gửi lại (60 giây), số lần sai mật khẩu trước khi khóa (5), thời gian khóa (15 phút) |
 | `SMTP_*`, `MAIL_FROM` | Gửi email mã OTP đăng nhập/đăng ký và mã quên mật khẩu. Nếu bỏ trống ở chế độ dev, API trả mã trong trường `devCode` để demo |
@@ -62,7 +63,7 @@ Mặc định: máy ảo Android dùng `http://10.0.2.2:3000`; iOS Simulator, ma
 ## Danh sách API
 
 Đặc tả đầy đủ: [`docs/openapi.yaml`](docs/openapi.yaml) (cũng phục vụ tại `GET /api/openapi.yaml`, mở bằng Swagger Editor/Postman).
-Backend dựng *snapshot* dữ liệu (không có email/mật khẩu, đã quy đổi tiền tệ) rồi gửi sang AI service — xem `src/services/aiSnapshot.js`, `src/clients/aiServiceClient.js`.
+Backend dựng *snapshot* dữ liệu (không có email/mật khẩu, đã quy đổi tiền tệ) rồi gửi sang AI service — xem `src/domain/snapshot.js`, `src/integrations/ai-service.client.js`.
 
 
 Mọi API, trừ nhóm `/api/auth/register|login|verify-otp|resend-otp|refresh|forgot-password|reset-password` và `/api/health`, đều cần header `Authorization: Bearer <token>`. Lỗi trả về dạng `{ "error": { "code", "message" } }` với mã HTTP 400, 401, 404, 409, 429 hoặc 500.
@@ -131,15 +132,20 @@ Mỗi bản ghi có `_id` kiểu ObjectId làm khóa chính và `clientId` (mã 
 
 ```
 src/
-  app.js, server.js, config.js
-  models/        User, Wallet, Category, Person, Transaction, Budget, Recurring, RefreshToken,
-                 OtpChallenge, PaymentRequest, BankEvent
-  middleware/    auth (JWT), error, async
-  routes/        auth (OTP, ràng buộc tài khoản), resources (CRUD chung), reports, sync, ai (cổng tới AI service),
-                 bank (VietQR + webhook SePay)
-  services/      ledger (nghiệp vụ & ràng buộc), store, mailer (OTP, quên mật khẩu), banks (mã BIN NAPAS),
-                 aiSnapshot, ai (LLM dự phòng), defaults, constants
-  clients/       aiServiceClient (gọi AI service: khóa dịch vụ, timeout, chuẩn hóa lỗi 503)
+  app.js, server.js, dev-memory.js
+  config/         biến môi trường
+  routes/         khai báo đường dẫn + middleware, gọi controller
+  controllers/    đọc request, trả response (không chứa nghiệp vụ)
+  services/       nghiệp vụ: auth, session (JWT + refresh token), otp, ledger (CRUD sổ cái), report, sync,
+                  ai, bank, sepay (đối soát webhook + User API), mail
+  repositories/   truy cập MongoDB qua Mongoose: user, session, otp, ledger, payment-request, bank-event
+  domain/         quy tắc thuần: ledger (số dư, nợ, ràng buộc), snapshot gửi AI, financial-context, banks, constants
+  validators/     kiểm tra đầu vào: auth, bank, ai
+  integrations/   ai-service.client, llm.client (Anthropic/OpenAI), sepay.client
+  middleware/     auth (JWT), error, rate-limit, async-handler
+  models/         User, Wallet, Category, Person, Transaction, Budget, Recurring, RefreshToken,
+                  OtpChallenge, PaymentRequest, BankEvent
+  utils/          errors (ApiError), crypto, time
 docs/openapi.yaml  Đặc tả OpenAPI 3
 scripts/migrate-db.js  Chuyển dữ liệu từ MongoDB nhúng sang MongoDB thật (npm run db:migrate)
 test/            Kiểm thử tích hợp (node:test + supertest, cần Node 22): api, extra, bank, ai (AI service giả lập + E2E)

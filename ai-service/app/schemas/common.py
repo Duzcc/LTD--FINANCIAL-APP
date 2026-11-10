@@ -1,4 +1,3 @@
-"""Kiểu dữ liệu dùng chung giữa các API."""
 from __future__ import annotations
 
 from datetime import datetime
@@ -32,7 +31,6 @@ class Wallet(BaseModel):
 
 
 class LabeledText(BaseModel):
-    """Ví dụ trong lịch sử người dùng: ghi chú và danh mục họ đã chọn."""
     text: str = Field(max_length=500)
     categoryId: str
 

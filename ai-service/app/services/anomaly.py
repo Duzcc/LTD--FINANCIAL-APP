@@ -1,13 +1,3 @@
-"""Phát hiện giao dịch bất thường.
-
-Ba lớp tín hiệu, mỗi giao dịch nhận điểm 0..1 và lý do dễ hiểu:
-1. Số tiền lớn bất thường so với chính danh mục đó: z-score bền vững
-   z = 0.6745·(x − median) / MAD trên log(số tiền) (ít bị ảnh hưởng bởi ngoại lai).
-2. Isolation Forest (scikit-learn) trên đặc trưng [log số tiền, giờ, thứ, mã danh mục]
-   khi người dùng có ≥ 40 khoản chi — bắt các tổ hợp lạ (ví dụ chi lớn lúc 3h sáng).
-3. Trùng lặp: cùng số tiền, cùng danh mục/ghi chú trong vòng 10 phút (nhập hai lần).
-Ngoài ra so sánh chi tiêu từng danh mục trong 30 ngày với trung bình 3 tháng trước (tăng đột biến).
-"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -62,7 +52,6 @@ def detect(transactions: list[Transaction], now: datetime, lookback_days: int = 
         if reason not in a.reasons:
             a.reasons.append(reason)
 
-    # 1) Theo danh mục
     by_cat: dict[str, list[Transaction]] = {}
     for t in expenses:
         by_cat.setdefault(t.categoryId or "_", []).append(t)
@@ -80,13 +69,12 @@ def detect(transactions: list[Transaction], now: datetime, lookback_days: int = 
                 add(t, 0.5 + min(0.5, (z - 3.5) / 7),
                     f"Cao gấp {ratio:.1f} lần mức thường chi cho {names.get(cid, 'danh mục này')}", "amount")
 
-    # 2) Isolation Forest
     if len(expenses) >= 40:
         cat_index = {c: i for i, c in enumerate(sorted(by_cat))}
         X = np.array([[np.log1p(t.amount), t.date.hour + t.date.minute / 60, t.date.weekday(),
                        cat_index[t.categoryId or "_"]] for t in expenses])
         forest = IsolationForest(n_estimators=200, contamination=0.03, random_state=0).fit(X)
-        scores = -forest.score_samples(X)  # cao = bất thường
+        scores = -forest.score_samples(X)
         threshold = np.quantile(scores, 0.97)
         big = float(np.quantile([t.amount for t in expenses], 0.75))
         for t, s in zip(expenses, scores, strict=False):
@@ -97,7 +85,6 @@ def detect(transactions: list[Transaction], now: datetime, lookback_days: int = 
                     reason = f"Khoản chi vào lúc {hour}h sáng, khác thói quen"
                 add(t, float(min(1.0, s)), reason, "pattern")
 
-    # 3) Trùng lặp
     for i, t in enumerate(expenses):
         if t.date < since:
             continue
@@ -108,7 +95,6 @@ def detect(transactions: list[Transaction], now: datetime, lookback_days: int = 
                 add(t, 0.8, "Có thể bị nhập trùng (cùng số tiền trong vòng 10 phút)", "duplicate")
                 break
 
-    # Danh mục tăng đột biến
     spikes: list[CategorySpike] = []
     for cid, items in by_cat.items():
         recent = sum(t.amount for t in items if t.date >= since)

@@ -1,4 +1,3 @@
-"""Đọc hóa đơn từ văn bản OCR hoặc ảnh."""
 from __future__ import annotations
 
 import json
@@ -18,15 +17,21 @@ router = APIRouter(prefix="/receipts", tags=["receipts"])
 MAX_IMAGE = 6 * 1024 * 1024
 
 
+def _suggest(text: str, categories: list[Category], income: bool) -> str | None:
+    if not categories or not text.strip():
+        return None
+    preds, _ = get_categorizer().predict(text, categories, income=income, top_k=1)
+    return preds[0].category_id if preds and preds[0].probability >= 0.35 else None
+
+
 def _to_response(r: receipt.ReceiptResult, categories: list[Category]) -> ReceiptResponse:
-    category_id = None
-    expense = [c for c in categories if not c.income]
-    if expense and (r.note or r.merchant):
-        preds, _ = get_categorizer().predict(r.note or r.merchant or "", expense, income=False, top_k=1)
-        if preds and preds[0].probability >= 0.35:
-            category_id = preds[0].category_id
+    income = r.kind == "income"
+    matching = [c for c in categories if c.income == income]
+    category_id = _suggest(r.note or r.merchant or "", matching, income)
+    items = [ReceiptLine(name=i.name, amount=i.amount, quantity=i.quantity, unit_price=i.unit_price,
+                         category_id=_suggest(i.name, matching, income) or category_id) for i in r.items]
     return ReceiptResponse(merchant=r.merchant, total=r.total, date=r.date, note=r.note, source=r.source,
-                           items=[ReceiptLine(name=i.name, amount=i.amount) for i in r.items], category_id=category_id,
+                           items=items, category_id=category_id, kind=r.kind,
                            confidence=r.confidence, checks=r.checks, raw_text=r.raw_text[:5000])
 
 
@@ -50,11 +55,11 @@ async def scan(image: UploadFile = File(...), categories: str = Form("[]"),
     media = image.content_type or "image/jpeg"
     if media not in {"image/jpeg", "image/png", "image/webp", "image/heic"}:
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "Chỉ hỗ trợ ảnh JPEG/PNG/WebP.")
+    # Danh sách danh mục chỉ để gợi ý; gửi sai thì vẫn đọc hóa đơn bình thường.
     try:
         cats = [Category(**c) for c in json.loads(categories)]
     except (ValueError, TypeError):
         cats = []
-    # 1) OCR cục bộ (miễn phí, riêng tư). Đủ tin cậy thì dùng luôn.
     ocr_result = None
     ocr = await run_in_threadpool(receipt.ocr_image, data)
     if ocr:
@@ -63,8 +68,8 @@ async def scan(image: UploadFile = File(...), categories: str = Form("[]"),
         ocr_result.source = engine
         if ocr_result.total and ocr_result.confidence >= 0.8:
             return _to_response(ocr_result, cats)
-    # 2) Không chắc chắn: hỏi mô hình thị giác (nếu cấu hình)
     if assistant.provider is not None:
+        # AI đọc ảnh lỗi thì dùng kết quả đọc chữ đã có ở trên.
         try:
             text = await assistant.provider.complete_vision(receipt.RECEIPT_PROMPT, receipt.b64(data), media)
             r = receipt.from_llm_json(text)

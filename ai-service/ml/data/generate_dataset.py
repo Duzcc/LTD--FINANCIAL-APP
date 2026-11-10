@@ -1,10 +1,3 @@
-"""Sinh bộ dữ liệu giao dịch tiếng Việt có nhãn (tự xây dựng) cho huấn luyện.
-
-Kỹ thuật tăng cường dữ liệu mô phỏng cách người dùng ghi chép thật:
-bỏ dấu, viết tắt, viết thường/hoa, sai chính tả nhẹ, thêm số tiền, thời gian, người đi cùng.
-
-    python -m ml.data.generate_dataset --out ml/data/generated --seed 42
-"""
 from __future__ import annotations
 
 import argparse
@@ -36,7 +29,7 @@ def augment(text: str, rnd: random.Random) -> str:
             t = t.replace(full, rnd.choice(shorts))
     r = rnd.random()
     if r < 0.3:
-        t = fold(t)  # gõ không dấu
+        t = fold(t)
     elif r < 0.4:
         t = t.lower()
     elif r < 0.45:

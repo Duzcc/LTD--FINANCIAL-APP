@@ -1,5 +1,5 @@
 {
-  "trained_at": "2026-10-29T05:02:52+00:00",
+  "trained_at": "2026-11-02T03:36:11+00:00",
   "sklearn": "1.9.1",
   "numpy": "2.5.4",
   "python": "3.14.3",
@@ -145,7 +145,7 @@
         ]
       }
     },
-    "train_seconds": 9.0
+    "train_seconds": 10.7
   },
   "intent": {
     "model": "intent",
@@ -245,6 +245,6 @@
     },
     "handwritten_errors": [],
     "extra_eval": {},
-    "train_seconds": 3.5
+    "train_seconds": 3.6
   }
 }

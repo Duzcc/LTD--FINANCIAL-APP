@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:finance_app/data/models/finance_models.dart';
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/core/utils/dates.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/transactions/presentation/select_category_screen.dart';
 import 'package:finance_app/features/transactions/presentation/select_person_screen.dart';
+import 'package:finance_app/features/finance/presentation/entity_icons.dart';
 
-/// Danh sách giao dịch định kỳ (tiền nhà, lương, gói cước, nạp tiết kiệm…).
 class RecurringScreen extends StatelessWidget {
   const RecurringScreen({super.key});
   @override
@@ -109,7 +110,7 @@ class _RecurringEditorState extends State<RecurringEditor> {
       personId = r?.personId;
   late RepeatFrequency frequency = r?.frequency ?? RepeatFrequency.monthly;
   late int interval = r?.interval ?? 1;
-  late DateTime start = r?.startDate ?? DateUtilsDate.day(DateTime.now());
+  late DateTime start = r?.startDate ?? dateOnly(DateTime.now());
   late DateTime? end = r?.endDate;
   late bool active = r?.active ?? true;
 
@@ -135,7 +136,7 @@ class _RecurringEditorState extends State<RecurringEditor> {
         r!.startDate != start ||
         r!.frequency != frequency ||
         r!.interval != interval;
-    try {
+    attempt(context, () {
       var rule = RecurringRule(
           id: r?.id ?? p.newId(),
           kind: kind,
@@ -151,7 +152,6 @@ class _RecurringEditorState extends State<RecurringEditor> {
           endDate: end,
           nextDate: r?.nextDate,
           active: active);
-      // Sửa lịch của quy tắc đã chạy: chỉ áp dụng cho các lần đến hạn sau hôm nay.
       if (r != null && changedSchedule) {
         rule = rule.copyWith(nextDate: rule.nextAfter(DateTime.now()));
       }
@@ -163,9 +163,7 @@ class _RecurringEditorState extends State<RecurringEditor> {
               ? 'Đã lưu và tạo $created giao dịch đến hạn.'
               : 'Đã lưu giao dịch định kỳ.');
       Navigator.pop(context);
-    } catch (e) {
-      message(context, e);
-    }
+    });
   }
 
   @override

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:finance_app/data/models/finance_models.dart';
-import 'package:finance_app/data/finance_provider.dart';
+import 'package:finance_app/core/utils/dates.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
+import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/wallets/presentation/currency_selection_screen.dart';
-import 'package:finance_app/core/banking/vietqr.dart';
+import 'package:finance_app/features/banking/domain/vietqr.dart';
 import 'package:finance_app/core/validation/validators.dart';
 
 class CreateWalletScreen extends StatefulWidget {
@@ -37,7 +38,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
   late final bankHolder =
       TextEditingController(text: widget.wallet?.bankHolder ?? '');
   late DateTime? startDate = widget.wallet?.startDate ??
-      (widget.wallet == null ? DateUtilsDate.day(DateTime.now()) : null);
+      (widget.wallet == null ? dateOnly(DateTime.now()) : null);
   @override
   void dispose() {
     name.dispose();
@@ -58,7 +59,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
     if (!form.currentState!.validate()) return;
     final p = context.read<FinanceProvider>();
     final bank = linkBank && currency == 'VND';
-    try {
+    attempt(context, () {
       p.saveWallet(MoneyWallet(
           id: widget.wallet?.id ?? p.newId(),
           name: name.text.trim(),
@@ -76,9 +77,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
               ? bankHolder.text.trim().replaceAll(RegExp(r'\s+'), ' ')
               : null));
       Navigator.pop(context);
-    } catch (e) {
-      message(context, e);
-    }
+    });
   }
 
   @override
@@ -280,7 +279,6 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                             counterText: '',
                             prefixIcon: Icon(Icons.badge_outlined)),
                         onChanged: (v) {
-                          // Tự chuyển thành IN HOA không dấu như ngân hàng hiển thị
                           final fixed = holderName(v);
                           if (fixed != v) {
                             bankHolder.value = TextEditingValue(
@@ -317,13 +315,11 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                             confirm: 'Xóa tất cả',
                             danger: true);
                     if (!ok || !context.mounted) return;
-                    try {
+                    attempt(context, () {
                       p.deleteWallet(id, cascade: refs > 0);
                       message(context, 'Đã xóa ví.');
                       Navigator.pop(context, 'deleted');
-                    } catch (e) {
-                      message(context, e);
-                    }
+                    });
                   })
             ],
             const SizedBox(height: 24),

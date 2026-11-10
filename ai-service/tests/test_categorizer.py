@@ -11,7 +11,7 @@ def top(text, history=None, income=False):
 def test_global_model():
     assert top("bún bò huế")[0] == "food"
     assert top("đổ xăng xe máy")[0] == "transport"
-    assert top("tiền điện tháng 10")[0] == "life"  # hóa đơn điện nước thuộc Sinh hoạt
+    assert top("tiền điện tháng 10")[0] == "life"
     assert top("tiền thuê nhà")[0] == "house"
     assert top("mua thuốc cảm")[0] == "health"
     assert top("lương tháng 10", income=True)[0] == "salary"

@@ -1,8 +1,7 @@
 const { Schema, model } = require('mongoose');
 const { ownedPlugin } = require('./plugin');
-const { KINDS } = require('../services/constants');
+const { KINDS } = require('../domain/constants');
 
-// Giao dịch định kỳ (mở rộng): app tự sinh giao dịch khi đến hạn.
 const recurringSchema = new Schema({
   kind: { type: String, required: true, enum: Object.keys(KINDS) },
   amount: { type: Number, required: true, min: 0 },
