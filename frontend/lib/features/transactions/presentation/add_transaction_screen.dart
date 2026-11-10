@@ -285,6 +285,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     padding: EdgeInsets.all(14),
                     child: Text('Lưu giao dịch'))),
             child: Form(
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 key: form,
                 onChanged: () => setState(() {}),
                 child: ListView(
@@ -632,6 +633,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                       child: Image.file(File(photo!),
                                           width: 64,
                                           height: 64,
+                                          cacheWidth: (64 * MediaQuery.devicePixelRatioOf(context)).round(),
                                           fit: BoxFit.cover,
                                           errorBuilder: (_, __, ___) => const SizedBox.square(
                                               dimension: 64,

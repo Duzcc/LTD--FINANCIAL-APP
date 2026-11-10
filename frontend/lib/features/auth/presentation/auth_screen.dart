@@ -4,7 +4,7 @@ import 'package:finance_app/core/widgets/brand_logo.dart';
 import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 import 'package:finance_app/core/network/api_client.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
-import 'package:finance_app/app/main_screen.dart';
+import 'package:finance_app/app/app_routes.dart';
 import 'package:finance_app/core/validation/validators.dart';
 import 'package:finance_app/features/auth/presentation/forgot_password_screen.dart';
 import 'package:finance_app/features/auth/presentation/otp_screen.dart';
@@ -42,8 +42,7 @@ Future<void> finishSignIn(BuildContext context, bool needsDecision,
   if (fromSettings) {
     Navigator.of(context).popUntil((r) => r.isFirst);
   } else {
-    Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const MainScreen()), (_) => false);
+    Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.home, (_) => false);
   }
 }
 
@@ -158,6 +157,7 @@ class _AuthScreenState extends State<AuthScreen> with BusyState {
                 child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 480),
                     child: Form(
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
                         key: form,
                         child: ListView(
                             padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
@@ -195,6 +195,7 @@ class _AuthScreenState extends State<AuthScreen> with BusyState {
                               if (registering) ...[
                                 TextFormField(
                                     controller: name,
+                                    textInputAction: TextInputAction.next,
                                     textCapitalization:
                                         TextCapitalization.words,
                                     maxLength: 50,
@@ -209,6 +210,7 @@ class _AuthScreenState extends State<AuthScreen> with BusyState {
                                   key: const ValueKey('auth-email'),
                                   controller: email,
                                   keyboardType: TextInputType.emailAddress,
+                                  textInputAction: TextInputAction.next,
                                   autocorrect: false,
                                   maxLength: 254,
                                   autofillHints: const [AutofillHints.email],
@@ -224,6 +226,9 @@ class _AuthScreenState extends State<AuthScreen> with BusyState {
                                   key: const ValueKey('auth-password'),
                                   controller: password,
                                   obscureText: !showPassword,
+                                  textInputAction: registering
+                                      ? TextInputAction.next
+                                      : TextInputAction.done,
                                   maxLength: 72,
                                   decoration: InputDecoration(
                                       labelText: 'Mật khẩu',
@@ -250,6 +255,8 @@ class _AuthScreenState extends State<AuthScreen> with BusyState {
                                 TextFormField(
                                     controller: confirm,
                                     obscureText: !showPassword,
+                                    textInputAction: TextInputAction.done,
+                                    onFieldSubmitted: (_) => submit(),
                                     decoration: const InputDecoration(
                                         labelText: 'Nhập lại mật khẩu',
                                         prefixIcon: Icon(Icons.lock_outline)),
@@ -336,11 +343,8 @@ class _AuthScreenState extends State<AuthScreen> with BusyState {
                                           name: offlineName.text.isEmpty
                                               ? 'Bạn'
                                               : offlineName.text);
-                                      Navigator.pushReplacement(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (_) =>
-                                                  const MainScreen()));
+                                      Navigator.pushReplacementNamed(
+                                          context, AppRoutes.home);
                                     },
                                     child: const Padding(
                                         padding: EdgeInsets.all(14),

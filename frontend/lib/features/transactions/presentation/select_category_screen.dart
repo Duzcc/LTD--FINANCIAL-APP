@@ -34,6 +34,7 @@ class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
                     content: SizedBox(
                         width: 320,
                         child: Form(
+                            autovalidateMode: AutovalidateMode.onUserInteraction,
                             key: key,
                             child: SingleChildScrollView(
                                 child: Column(

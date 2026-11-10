@@ -176,6 +176,7 @@ class _RecurringEditorState extends State<RecurringEditor> {
             onPressed: save,
             child: const Padding(padding: EdgeInsets.all(14), child: Text('Lưu'))),
         child: Form(
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             key: form,
             child: ListView(padding: const EdgeInsets.all(16), children: [
               Wrap(spacing: 6, runSpacing: 6, children: [

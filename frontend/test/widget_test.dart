@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:finance_app/features/wallets/presentation/wallets_screen.dart';
+import 'package:finance_app/app/splash_screen.dart';
 import 'package:finance_app/app/app.dart';
 import 'package:finance_app/core/theme/app_theme.dart';
 import 'package:finance_app/features/finance/domain/entities/entities.dart';
@@ -22,6 +24,7 @@ import 'package:finance_app/features/security/data/services/app_lock.dart';
 void main() {
   testWidgets('Local onboarding opens the connected app', (tester) async {
     await tester.pumpWidget(const FinanceApp());
+    await tester.pumpAndSettle();
     expect(find.text('Đăng nhập'), findsWidgets);
     await tester.scrollUntilVisible(find.text('Bắt đầu sử dụng'), 200,
         scrollable: find.byType(Scrollable).first);
@@ -46,6 +49,7 @@ void main() {
       addTearDown(tester.view.resetViewInsets);
       final p = FinanceProvider();
       await tester.pumpWidget(FinanceApp(finance: p, returning: true));
+      await tester.pumpAndSettle();
       for (final label in [
         'Sổ giao dịch',
         'Trợ lý AI',
@@ -161,6 +165,7 @@ void main() {
   testWidgets('Quick entry and assistant flows work end to end', (tester) async {
     final p = FinanceProvider();
     await tester.pumpWidget(FinanceApp(finance: p, returning: true));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('quick-entry-button')));
     await tester.pumpAndSettle();
     await tester.enterText(
@@ -190,5 +195,29 @@ void main() {
     expect(find.textContaining('70.000'), findsWidgets);
     expect(find.text('AI trên thiết bị'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
+  });
+
+  testWidgets('Splash vào thẳng màn chính; Drawer chuyển tab và mở trang quản lý',
+      (tester) async {
+    await tester.pumpWidget(FinanceApp(finance: FinanceProvider(), returning: true));
+    expect(find.byType(SplashScreen), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.byType(MainScreen), findsOneWidget);
+    expect(find.byType(SplashScreen), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('open-drawer')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('drawer-tab-1')));
+    await tester.pumpAndSettle();
+    expect(find.byType(Drawer), findsNothing);
+    final tabs = find.descendant(
+        of: find.byType(MainScreen), matching: find.byType(IndexedStack));
+    expect(tester.widget<IndexedStack>(tabs.first).index, 1);
+
+    await tester.dragFrom(const Offset(5, 300), const Offset(300, 0));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ví của tôi'));
+    await tester.pumpAndSettle();
+    expect(find.byType(WalletsScreen), findsOneWidget);
   });
 }

@@ -147,6 +147,7 @@ class _ReceiveQrScreenState extends State<ReceiveQrScreen> {
 
   Widget _form(FinanceProvider p, MoneyWallet w) {
     return Form(
+        autovalidateMode: AutovalidateMode.onUserInteraction,
         key: form,
         child: ListView(padding: const EdgeInsets.all(16), children: [
           Panel(

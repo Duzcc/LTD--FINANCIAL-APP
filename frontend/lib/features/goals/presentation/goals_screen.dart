@@ -330,6 +330,7 @@ class _BudgetEditorState extends State<BudgetEditor> {
     return FinancePage(
         title: widget.budget == null ? 'Tạo mục tiêu' : 'Chỉnh sửa mục tiêu',
         child: Form(
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             key: form,
             child: ListView(padding: const EdgeInsets.all(16), children: [
               Text(

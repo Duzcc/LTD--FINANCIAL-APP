@@ -8,6 +8,7 @@ import 'package:finance_app/features/transactions/presentation/add_transaction_s
 import 'package:finance_app/features/goals/presentation/goals_screen.dart';
 import 'package:finance_app/features/ai/presentation/assistant_screen.dart';
 import 'package:finance_app/features/settings/presentation/others_screen.dart';
+import 'package:finance_app/app/app_drawer.dart';
 import 'package:finance_app/app/main_bottom_nav.dart';
 
 class MainScreen extends StatefulWidget {
@@ -41,20 +42,26 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   }
   @override
   Widget build(BuildContext context) {
-    final p = context.watch<FinanceProvider>();
+    final storageError = context.select<FinanceProvider, String?>((p) => p.storageError);
     return Scaffold(
+        drawer: AppDrawer(
+            selected: index,
+            onSelect: (i) {
+              Navigator.pop(context);
+              setState(() => index = i);
+            }),
         body: Center(
             child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 600),
                 child: Column(children: [
-                  if (p.storageError != null)
+                  if (storageError != null)
                     SafeArea(
                         bottom: false,
                         child: MaterialBanner(
-                            content: Text(p.storageError!),
+                            content: Text(storageError),
                             actions: [
                               TextButton(
-                                  onPressed: p.retrySave,
+                                  onPressed: context.read<FinanceProvider>().retrySave,
                                   child: const Text('Thử lưu lại'))
                             ])),
                   Expanded(

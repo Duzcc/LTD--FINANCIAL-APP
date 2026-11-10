@@ -16,6 +16,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     final p = FinanceProvider(api: ApiClient(client: FakeBackend().client));
     await tester.pumpWidget(FinanceApp(finance: p));
+    await tester.pumpAndSettle();
     expect(find.byType(AuthScreen), findsOneWidget);
     return p;
   }

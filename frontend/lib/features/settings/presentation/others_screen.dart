@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:finance_app/app/app_routes.dart';
 import 'package:finance_app/features/finance/presentation/finance_provider.dart';
 import 'package:finance_app/core/validation/validators.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
@@ -328,8 +329,7 @@ Future<void> signOutFlow(BuildContext context, {bool everywhere = false}) async 
   if (!ok || !context.mounted) return;
   await p.signOut(everywhere: everywhere);
   if (!context.mounted) return;
-  Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const AuthScreen()), (_) => false);
+  Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.login, (_) => false);
 }
 
 Future<void> deleteAccountFlow(BuildContext context) async {
@@ -347,8 +347,7 @@ Future<void> deleteAccountFlow(BuildContext context) async {
   await attempt(context, () async {
     await p.deleteAccount(password);
     if (!context.mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const AuthScreen()), (_) => false);
+    Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.login, (_) => false);
   });
 }
 

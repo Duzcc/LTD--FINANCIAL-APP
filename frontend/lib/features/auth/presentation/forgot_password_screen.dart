@@ -60,6 +60,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with BusySt
   Widget build(BuildContext context) => FinancePage(
       title: 'Quên mật khẩu',
       child: Form(
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           key: form,
           child: ListView(padding: const EdgeInsets.all(20), children: [
             Text(
@@ -173,6 +174,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> with BusySt
   Widget build(BuildContext context) => FinancePage(
       title: 'Đổi mật khẩu',
       child: Form(
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           key: form,
           child: ListView(padding: const EdgeInsets.all(20), children: [
             TextFormField(

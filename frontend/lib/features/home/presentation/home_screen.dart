@@ -33,8 +33,13 @@ class HomeScreen extends StatelessWidget {
             bottom: false,
             child: Column(children: [
               Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 12, 8),
+                  padding: const EdgeInsets.fromLTRB(4, 16, 12, 8),
                   child: Row(children: [
+                    IconButton(
+                        key: const ValueKey('open-drawer'),
+                        tooltip: 'Menu',
+                        onPressed: () => Scaffold.of(context).openDrawer(),
+                        icon: const Icon(Icons.menu)),
                     Expanded(
                         child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,

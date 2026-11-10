@@ -100,6 +100,7 @@ class _OtpScreenState extends State<OtpScreen> with BusyState {
     return FinancePage(
         title: challenge.isRegister ? 'Xác thực email' : 'Xác thực đăng nhập',
         child: Form(
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             key: form,
             child: ListView(padding: const EdgeInsets.all(20), children: [
               const Icon(Icons.mark_email_read_outlined,

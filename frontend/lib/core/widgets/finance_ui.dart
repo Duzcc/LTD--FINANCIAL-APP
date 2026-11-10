@@ -316,6 +316,7 @@ Future<String?> editText(BuildContext context, String title,
       builder: (ctx) => AlertDialog(
               title: Text(title),
               content: Form(
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
                   key: key,
                   child: TextFormField(
                       controller: controller,

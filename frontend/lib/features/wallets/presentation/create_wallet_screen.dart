@@ -88,6 +88,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
           child: const Padding(
               padding: EdgeInsets.all(14), child: Text('Lưu ví'))),
       child: Form(
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           key: form,
           child: ListView(padding: const EdgeInsets.all(16), children: [
             Row(children: [
