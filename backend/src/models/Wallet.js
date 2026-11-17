@@ -10,6 +10,8 @@ const walletSchema = new Schema({
   startDate: { type: Date, default: null },
   deadline: { type: Date, default: null },
   excluded: { type: Boolean, default: false },
+  notify: { type: Boolean, default: false },
+  symbol: { type: Number, default: null, min: 0 },
   bankBin: { type: String, default: null },
   bankAccount: { type: String, default: null },
   bankHolder: { type: String, default: null },

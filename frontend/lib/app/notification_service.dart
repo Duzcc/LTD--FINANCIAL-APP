@@ -4,6 +4,7 @@ import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:finance_app/features/finance/domain/entities/entities.dart';
 import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/core/widgets/finance_ui.dart';
 
 class NotificationService {
   NotificationService._();
@@ -11,7 +12,7 @@ class NotificationService {
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _ready = false;
 
-  static const _dailyBase = 100, _debtBase = 1000, _customBase = 2000;
+  static const _dailyBase = 100, _debtBase = 1000, _customBase = 2000, _walletBase = 5000;
   static const _details = NotificationDetails(
       android: AndroidNotificationDetails('reminders', 'Nhắc nhở',
           channelDescription: 'Nhắc ghi chép thu chi và hạn trả nợ',
@@ -60,10 +61,34 @@ class NotificationService {
 
   tz.TZDateTime _at(DateTime local) => tz.TZDateTime.from(local, tz.local);
 
+  Future<void> walletActivity(List<(MoneyWallet, MoneyEntry)> activity) async {
+    if (kIsWeb) return;
+    await init();
+    final byWallet = <MoneyWallet, List<MoneyEntry>>{};
+    for (final (w, e) in activity) {
+      byWallet.putIfAbsent(w, () => []).add(e);
+    }
+    for (final MapEntry(key: w, value: entries) in byWallet.entries) {
+      final e = entries.first;
+      final incoming = e.kind.sign > 0 || (e.kind == EntryKind.transfer && e.destinationId == w.id);
+      await _plugin.show(
+          id: _walletBase + w.id.hashCode % 1000,
+          title: 'Ví ${w.name}',
+          body: entries.length == 1
+              ? '${e.kind.label} ${incoming ? '+' : '-'}${money(e.amount, w.currency)}'
+                  '${e.note.isEmpty ? '' : ' • ${e.note}'}'
+              : '${entries.length} giao dịch mới',
+          notificationDetails: _details);
+    }
+  }
+
   Future<void> apply(FinanceProvider p) async {
     if (kIsWeb) return;
     await init();
-    await _plugin.cancelAll();
+    // Chỉ hủy lịch hẹn; thông báo giao dịch của ví đang hiện vẫn được giữ.
+    for (final pending in await _plugin.pendingNotificationRequests()) {
+      await _plugin.cancel(id: pending.id);
+    }
     final now = DateTime.now();
     if (p.remindersEnabled) {
       for (final (i, minutes) in p.reminderMinutes.indexed) {

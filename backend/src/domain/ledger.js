@@ -1,4 +1,4 @@
-const { KINDS, isDebt, isIncome, isExpense, CURRENCIES, CATEGORY_SYMBOLS } = require('./constants');
+const { KINDS, isDebt, isIncome, isExpense, CURRENCIES, CATEGORY_SYMBOLS, WALLET_SYMBOLS } = require('./constants');
 const { badRequest, conflict } = require('../utils/errors');
 const { bankByBin } = require('./banks');
 
@@ -57,6 +57,8 @@ function validateWallet(state, input, id) {
     startDate: date(input.startDate, 'Ngày bắt đầu'),
     deadline: date(input.deadline, 'Ngày kết thúc'),
     excluded: bool(input.excluded),
+    notify: bool(input.notify),
+    symbol: input.symbol === undefined || input.symbol === null ? null : num(input.symbol, 'Biểu tượng'),
     bankBin: optStr(input.bankBin),
     bankAccount: optStr(input.bankAccount),
     bankHolder: optStr(input.bankHolder),
@@ -65,7 +67,10 @@ function validateWallet(state, input, id) {
   validateBankLink(w);
   if (!CURRENCIES.includes(w.currency)) throw badRequest('Đơn vị tiền tệ không được hỗ trợ.');
   if (w.opening < 0 || w.target < 0) throw badRequest('Số tiền không được âm.');
-  if (!w.savings) { w.target = 0; w.startDate = null; w.deadline = null; }
+  if (w.symbol !== null && !(Number.isInteger(w.symbol) && w.symbol >= 0 && w.symbol < WALLET_SYMBOLS)) {
+    throw badRequest('Biểu tượng ví không hợp lệ.');
+  }
+  if (!w.savings) { w.target = 0; w.startDate = null; w.deadline = null; w.notify = false; }
   if (w.startDate && w.deadline && dayStart(w.deadline) < dayStart(w.startDate)) {
     throw badRequest('Ngày kết thúc phải sau ngày bắt đầu.');
   }

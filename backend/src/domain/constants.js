@@ -14,6 +14,7 @@ const isDebt = (k) => DEBT_KINDS.includes(k);
 const isIncome = (k) => k === 'income' || k === 'interestIncome';
 const isExpense = (k) => k === 'expense' || k === 'interestExpense';
 const CURRENCIES = ['VND', 'USD', 'EUR', 'GBP', 'JPY', 'CNY'];
+const WALLET_SYMBOLS = 12;
 const CATEGORY_SYMBOLS = 24;
 
-module.exports = { KINDS, DEBT_KINDS, isDebt, isIncome, isExpense, CURRENCIES, CATEGORY_SYMBOLS };
+module.exports = { KINDS, DEBT_KINDS, isDebt, isIncome, isExpense, CURRENCIES, CATEGORY_SYMBOLS, WALLET_SYMBOLS };

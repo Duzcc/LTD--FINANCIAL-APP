@@ -28,6 +28,7 @@ Future<void> main() async {
         'Không mở được bộ nhớ thiết bị. Dữ liệu hiện chỉ lưu trong phiên sử dụng này.';
   }
   finance.onScheduleChanged = NotificationService.instance.apply;
+  finance.onWalletActivity = NotificationService.instance.walletActivity;
   finance.runRecurring();
   runApp(FinanceApp(
       finance: finance,

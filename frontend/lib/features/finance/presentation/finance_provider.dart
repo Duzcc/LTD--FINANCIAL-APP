@@ -88,6 +88,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
   List<SpendingReminder> _reminders = [];
   List<SpendingReminder> get reminders => UnmodifiableListView(_reminders);
   void Function(FinanceProvider p)? onScheduleChanged;
+  void Function(List<(MoneyWallet, MoneyEntry)> activity)? onWalletActivity;
   String? recurringError;
   String? storageError;
   @override
@@ -95,6 +96,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
 
   late String serverUrl;
   AccountSession? session;
+  @override
   bool syncing = false;
   String? syncError;
   DateTime? lastSync;
@@ -127,6 +129,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
   bool get signedIn => session != null;
   @override
   String? get accountId => session?.userId;
+  @override
   int get pendingChanges => _changes.length + (_profileDirty ? 1 : 0);
   bool get needsLoginDecision => _pendingSnapshot != null;
 
@@ -229,7 +232,8 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
         'lastSync': lastSync?.toUtc().toIso8601String(),
       };
 
-  void _changed({bool sync = true}) {
+  // dataChanged: false khi chỉ trạng thái đồng bộ thay đổi, để bộ nhớ đệm phân tích và mô hình danh mục không bị tính lại.
+  void _changed({bool sync = true, bool dataChanged = true}) {
     if (_corruptStorage) {
       _notify();
       return;
@@ -248,8 +252,10 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
         if (!_disposed) onScheduleChanged?.call(this);
       });
     }
-    _modelCache = null;
-    dataRevision++;
+    if (dataChanged) {
+      _modelCache = null;
+      dataRevision++;
+    }
     _notify();
   }
 
@@ -378,6 +384,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
   int runRecurring({DateTime? now}) {
     final until = now ?? DateTime.now();
     var created = 0;
+    final fresh = <MoneyEntry>[];
     for (var i = 0; i < _recurring.length; i++) {
       var rule = _recurring[i];
       if (!rule.active) continue;
@@ -402,6 +409,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
           // Một lần lặp không hợp lệ (ví dụ ví đã hết tiền) thì tạm dừng quy tắc đó và báo cho người dùng.
           try {
             saveEntry(occurrence);
+            fresh.add(occurrence);
             created++;
           } on ArgumentError catch (e) {
             recurringError =
@@ -424,6 +432,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
       }
     }
     if (created > 0 || recurringError != null) _changed();
+    _reportActivity(fresh);
     return created;
   }
 
@@ -624,7 +633,19 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
     await syncNow();
   }
 
+  // Chỉ báo giao dịch đến từ nơi khác (thiết bị khác, ngân hàng); lần đồng bộ đầu tiên không báo để tránh dồn thông báo.
+  void _reportActivity(Iterable<MoneyEntry> fresh) {
+    final activity = [
+      for (final e in fresh)
+        for (final id in {e.walletId, if (e.destinationId != null) e.destinationId!})
+          if (findWallet(id) case final w? when w.notify) (w, e)
+    ];
+    if (activity.isNotEmpty) onWalletActivity?.call(activity);
+  }
+
   void _applySnapshot(AccountSnapshot s) {
+    final firstSync = lastSync == null;
+    final known = {for (final e in _entries) e.id};
     final photos = {
       for (final e in _entries)
         if (e.photo != null) e.id: e.photo!
@@ -651,6 +672,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
     lastSync = DateTime.now();
     syncError = null;
     _changed(sync: false);
+    if (!firstSync) _reportActivity(_entries.where((e) => !known.contains(e.id)));
     runRecurring();
   }
 
@@ -675,7 +697,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
       syncError = e.isUnauthorized ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng xuất và đăng nhập lại.' : e.message;
     } finally {
       syncing = false;
-      _changed(sync: false);
+      _changed(sync: false, dataChanged: false);
     }
   }
 

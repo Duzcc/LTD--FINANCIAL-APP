@@ -32,6 +32,24 @@ extension CategoryIcon on MoneyCategory {
   IconData get icon => categoryIcons[symbol.clamp(0, categoryIcons.length - 1)];
 }
 
+const walletIcons = [
+  Icons.account_balance_wallet_outlined,
+  Icons.payments_outlined,
+  Icons.credit_card,
+  Icons.account_balance_outlined,
+  Icons.savings_outlined,
+  Icons.diamond_outlined,
+  Icons.flight_outlined,
+  Icons.home_outlined,
+  Icons.directions_car_outlined,
+  Icons.school_outlined,
+  Icons.medical_services_outlined,
+  Icons.card_giftcard_outlined,
+];
+
 extension WalletIcon on MoneyWallet {
-  IconData get icon => savings ? Icons.savings_outlined : Icons.account_balance_wallet_outlined;
+  IconData get icon => switch (symbol) {
+        final int i when i >= 0 && i < walletIcons.length => walletIcons[i],
+        _ => savings ? Icons.savings_outlined : Icons.account_balance_wallet_outlined,
+      };
 }

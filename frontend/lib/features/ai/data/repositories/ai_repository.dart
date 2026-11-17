@@ -71,6 +71,7 @@ class AiRepository {
     final j = await p.aiRequest('GET', '/insights').orNullOnApiError();
     if (j == null) {
       _retryAt = DateTime.now().add(_retryDelay);
+      _retryKey = _sessionKey;
       return null;
     }
     final r = ServerInsights.fromJson(j);
@@ -85,22 +86,27 @@ class AiRepository {
   static String? _cacheKey;
   static Future<ServerInsights?>? _inflight;
   static DateTime? _retryAt;
+  static String? _retryKey;
   static const _retryDelay = Duration(minutes: 1);
 
   static final insightsVersion = ValueNotifier<int>(0);
 
+  String get _sessionKey => '${identityHashCode(p)}|${p.accountId}';
+
   String get _dataKey {
     final now = DateTime.now();
-    return '${p.accountId}|${p.dataRevision}|${now.year}-${now.month}-${now.day}';
+    return '$_sessionKey|${p.dataRevision}|${now.year}-${now.month}-${now.day}';
   }
 
   ServerInsights? get cachedInsights => remoteAvailable && _cacheKey == _dataKey ? _cache : null;
 
+  // Chỉ hỏi phân tích khi thay đổi đã lên máy chủ: nhiều thay đổi liền nhau chỉ tạo một lần gọi, sau lần đồng bộ cuối.
   void refreshInsightsIfStale() {
-    final retryAt = _retryAt;
     if (!remoteAvailable || cachedInsights != null || _inflight != null) return;
-    if (retryAt != null && DateTime.now().isBefore(retryAt)) return;
-    _inflight = Future(insights).whenComplete(() => _inflight = null);
+    if (p.syncing || p.pendingChanges > 0) return;
+    final retryAt = _retryAt;
+    if (_retryKey == _sessionKey && retryAt != null && DateTime.now().isBefore(retryAt)) return;
+    _inflight = insights().whenComplete(() => _inflight = null);
   }
 
   Future<ReceiptResult> readReceipt(String imagePath) async {

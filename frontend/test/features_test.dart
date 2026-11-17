@@ -47,6 +47,35 @@ void main() {
       p.dispose();
     });
 
+    test('Ví bật thông báo được báo khi định kỳ tự tạo giao dịch, ví khác thì không', () {
+      final p = FinanceProvider();
+      final reported = <(MoneyWallet, MoneyEntry)>[];
+      p.onWalletActivity = reported.addAll;
+      p.saveWallet(const MoneyWallet(id: 'cash', name: 'Tiền mặt', opening: 1000000));
+      p.saveWallet(const MoneyWallet(id: 'pig', name: 'Heo đất', savings: true, notify: true, symbol: 4));
+      p.saveRecurring(RecurringRule(
+          id: 'save',
+          kind: EntryKind.transfer,
+          amount: 100000,
+          walletId: 'cash',
+          destinationId: 'pig',
+          note: 'Nuôi heo',
+          frequency: RepeatFrequency.monthly,
+          startDate: DateTime(2026, 10, 1, 9)));
+      p.saveRecurring(RecurringRule(
+          id: 'coffee',
+          kind: EntryKind.expense,
+          amount: 30000,
+          walletId: 'cash',
+          categoryId: 'food',
+          frequency: RepeatFrequency.monthly,
+          startDate: DateTime(2026, 10, 1, 9)));
+      p.runRecurring(now: DateTime(2026, 10, 2));
+      expect(reported.map((r) => (r.$1.id, r.$2.recurringId)), [('pig', 'save')]);
+      expect(p.findWallet('pig')!.symbol, 4);
+      p.dispose();
+    });
+
     test('Tự nạp tiết kiệm hằng tuần và dừng ở ngày kết thúc', () {
       final p = FinanceProvider();
       p.saveWallet(const MoneyWallet(id: 'cash', name: 'Tiền mặt', opening: 300000));

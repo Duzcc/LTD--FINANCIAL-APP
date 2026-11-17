@@ -8,6 +8,8 @@ class MoneyWallet {
       this.currency = 'VND',
       this.savings = false,
       this.excluded = false,
+      this.notify = false,
+      this.symbol,
       this.target = 0,
       this.startDate,
       this.deadline,
@@ -16,7 +18,8 @@ class MoneyWallet {
       this.bankHolder});
   final String id, name, currency;
   final double opening, target;
-  final bool savings, excluded;
+  final bool savings, excluded, notify;
+  final int? symbol;
   final DateTime? startDate, deadline;
 
   final String? bankBin, bankAccount, bankHolder;
@@ -28,6 +31,8 @@ class MoneyWallet {
         'currency': currency,
         'savings': savings,
         'excluded': excluded,
+        'notify': notify,
+        'symbol': symbol,
         'target': target,
         'startDate': isoUtc(startDate),
         'deadline': isoUtc(deadline),
@@ -42,6 +47,8 @@ class MoneyWallet {
       currency: j['currency'] ?? 'VND',
       savings: j['savings'] == true,
       excluded: j['excluded'] == true,
+      notify: j['notify'] == true,
+      symbol: (j['symbol'] as num?)?.toInt(),
       target: parseNumber(j['target']),
       startDate: parseLocalDate(j['startDate']),
       deadline: parseLocalDate(j['deadline']),

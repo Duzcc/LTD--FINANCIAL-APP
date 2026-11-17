@@ -137,6 +137,28 @@ void main() {
     p.dispose();
   });
 
+  test('Nhiều thay đổi liền nhau chỉ gọi phân tích một lần; đồng bộ xong vẫn giữ kết quả', () async {
+    final (p, server) = await signedIn();
+    final repo = AiRepository(p);
+    server.ai['/api/ai/insights'] = (_) =>
+        {'forecast': {'spent': 1, 'projected': 2, 'lower': 1, 'upper': 3, 'daysLeft': 1, 'method': 'x'}};
+    for (var i = 0; i < 3; i++) {
+      p.saveEntry(MoneyEntry(
+          id: 'burst$i', kind: EntryKind.expense, amount: 1000, walletId: 'cash', categoryId: 'food', date: DateTime.now()));
+      repo.refreshInsightsIfStale();
+    }
+    expect(server.aiCalls.where((c) => c.endsWith('/insights')), isEmpty, reason: 'chưa đẩy lên máy chủ thì chưa hỏi');
+    await p.syncNow(pull: false);
+    repo.refreshInsightsIfStale();
+    repo.refreshInsightsIfStale();
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    expect(server.aiCalls.where((c) => c.endsWith('/insights')).length, 1);
+    expect(repo.cachedInsights, isNotNull);
+    await p.syncNow(pull: false);
+    expect(repo.cachedInsights, isNotNull, reason: 'đồng bộ không đổi dữ liệu thì kết quả vẫn mới');
+    p.dispose();
+  });
+
   test('Đọc hóa đơn từ văn bản', () async {
     final (p, server) = await signedIn();
     server.ai['/api/ai/receipts/text'] = (b) => {

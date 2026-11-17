@@ -94,7 +94,11 @@ test('Ví: thêm, trùng tên, sửa, số dư tính từ giao dịch, xóa có 
   assert.equal(r.status, 400);
   r = await auth(api().post('/api/wallets')).send({ id: 'save', name: 'Heo đất', savings: true, target: 5000000, startDate: '2026-10-01', deadline: '2026-09-01' });
   assert.equal(r.status, 400, 'ngày kết thúc trước ngày bắt đầu');
-  r = await auth(api().put('/api/wallets/save')).send({ name: 'Heo đất', savings: true, target: 5000000, startDate: '2026-10-01', deadline: '2027-10-01' });
+  r = await auth(api().put('/api/wallets/save')).send({ name: 'Heo đất', savings: true, target: 5000000, startDate: '2026-10-01', deadline: '2027-10-01', symbol: 5, notify: true });
+  assert.equal(r.body.symbol, 5);
+  assert.equal(r.body.notify, true);
+  const badSymbol = await auth(api().put('/api/wallets/save')).send({ name: 'Heo đất', savings: true, symbol: 99 });
+  assert.equal(badSymbol.status, 400);
   assert.equal(r.status, 201);
   r = await auth(api().post('/api/transactions')).send({ id: 't1', kind: 'expense', amount: 50000, walletId: 'bank', categoryId: 'food', date: '2026-10-05T08:00:00Z' });
   assert.equal(r.status, 201);
