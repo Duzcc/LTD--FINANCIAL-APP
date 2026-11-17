@@ -29,9 +29,14 @@ await check('Backend & AI service sống', async () => {
 await check('AI service từ chối gọi trực tiếp không có khóa', async () => {
   const r = await call('POST', '/v1/parse', { text: 'phở 45k' }, { base: AI, auth: false }); expect(r.status === 401, `status ${r.status}`); return '401';
 });
-await check('Đăng ký', async () => {
+await check('Đăng ký + xác thực OTP', async () => {
   const r = await call('POST', '/auth/register', { name: 'Kiểm Tra', email, password: 'matkhau123' }, { auth: false });
-  expect(r.status === 201, JSON.stringify(r.data)); token = r.data.token; refresh = r.data.refreshToken; return email;
+  expect(r.status === 201 || r.status === 200, JSON.stringify(r.data));
+  expect(r.data.devCode, 'máy chủ không trả devCode — hãy chạy backend với SMTP tắt (SMTP_HOST= npm run dev:mem)');
+  const wrong = await call('POST', '/auth/verify-otp', { otpToken: r.data.otpToken, code: r.data.devCode === '000000' ? '111111' : '000000' }, { auth: false });
+  expect(wrong.status === 400 || wrong.status === 401, `mã sai vẫn qua: ${wrong.status}`);
+  const v = await call('POST', '/auth/verify-otp', { otpToken: r.data.otpToken, code: r.data.devCode }, { auth: false });
+  expect(v.status === 200 && v.data.token, JSON.stringify(v.data)); token = v.data.token; refresh = v.data.refreshToken; return email;
 });
 await check('Đăng nhập sai mật khẩu bị chặn', async () => {
   const r = await call('POST', '/auth/login', { email, password: 'sai' }, { auth: false }); expect(r.status === 401, r.status); return '401';

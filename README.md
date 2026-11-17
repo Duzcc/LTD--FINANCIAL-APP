@@ -506,6 +506,8 @@ cd frontend && flutter drive --driver=test_driver/integration_test.dart \
   --target=integration_test/demo_test.dart -d <id thiết bị>     # ảnh chụp lưu ở build/demo/ (iOS)
 cd frontend && flutter drive --driver=test_driver/integration_test.dart \
   --target=integration_test/full_features_test.dart -d <id thiết bị>   # đủ 9 nhóm chức năng + mọi màn hình
+cd frontend && flutter drive --driver=test_driver/integration_test.dart \
+  --target=integration_test/report_flows_test.dart -d <id thiết bị>    # các luồng trong báo cáo, thao tác trên giao diện
 # macOS: tool/chay_kiem_thu_thiet_bi.sh <id thiết bị> <tệp kiểm thử>
 ```
 
@@ -514,33 +516,27 @@ cd frontend && flutter drive --driver=test_driver/integration_test.dart \
 | Bộ kiểm thử | Số lượng | Nội dung |
 |---|---|---|
 | AI service (`pytest`) | 64 | trích xuất thực thể, nhập nhanh, phân loại, dự báo, bất thường, ngân sách, hóa đơn & OCR, tìm kiếm, API, vòng lặp gọi công cụ với LLM giả lập (Anthropic & OpenAI-compatible) |
-| Backend (`node:test`) | 26 + 1 E2E | ràng buộc dữ liệu đăng ký, đăng nhập bằng OTP (sai mã, hết lượt, gửi lại, dùng một lần), khóa đăng nhập, phân quyền, CRUD, ràng buộc nghiệp vụ, đồng bộ, refresh token, định kỳ, liên kết ngân hàng, yêu cầu VietQR, webhook SePay (xác thực, chống trùng, khớp mã/số tài khoản, thu nợ), đối soát qua SePay User API (SePay giả lập), cổng AI |
-| Frontend (`flutter test`) | 57 | sổ cái & quy tắc, ràng buộc dữ liệu, luồng đăng nhập + màn hình OTP, đồng bộ với backend giả lập, VietQR (cấu trúc EMVCo, CRC), màn hình nhận tiền, AI máy chủ ↔ dự phòng thiết bị, bộ phân tích hóa đơn, giao diện ở 320/390/430 px |
+| Backend (`node:test`) | 34 + 1 E2E | ràng buộc dữ liệu đăng ký, đăng nhập bằng OTP (sai mã, hết lượt, gửi lại, dùng một lần), khóa đăng nhập, phân quyền, CRUD, ràng buộc nghiệp vụ, đồng bộ, refresh token, định kỳ, liên kết ngân hàng, yêu cầu VietQR, webhook SePay (xác thực, chống trùng, khớp mã/số tài khoản, thu nợ), đối soát qua SePay User API (SePay giả lập), cổng AI |
+| Frontend (`flutter test`) | 82 | sổ cái & quy tắc, ràng buộc dữ liệu, luồng đăng nhập + màn hình OTP, đồng bộ với backend giả lập, VietQR (cấu trúc EMVCo, CRC), màn hình nhận tiền, AI máy chủ ↔ dự phòng thiết bị, bộ phân tích hóa đơn, giao diện ở 320/390/430 px |
 | Demo đầu-cuối (`demo_test.dart`) | 16 bước | đăng ký → nhập nhanh → ngân sách → đồng bộ → trợ lý (đề xuất + xác nhận) → phân tích → tìm kiếm → **OCR thật trên thiết bị** (Apple Vision / ML Kit) |
 | Toàn bộ chức năng (`full_features_test.dart`) | 2 kịch bản | **Chức năng**: đủ 9 nhóm (tài khoản: đăng ký, xác thực email, đổi/đặt lại mật khẩu; ví; đủ 9 loại giao dịch và các ràng buộc; danh mục; đối tượng; ngân sách + sao chép; dashboard; thống kê; tìm kiếm), định kỳ, tỷ giá, xuất CSV/Excel, khóa PIN, đồng bộ **hai thiết bị**, AI qua backend, xóa tài khoản. **Giao diện**: mở lần lượt 26 màn hình + các tab, phát hiện mọi lỗi dựng giao diện |
+| Luồng trong báo cáo (`report_flows_test.dart`) | 1 kịch bản | đi lại bằng thao tác chạm/nhập các luồng ở mục 2.4.4–2.5 của báo cáo: Test flow 1 (thêm/sửa/xóa ví, ví tiết kiệm, chọn biểu tượng, bật thông báo, trùng tên), Test flow 2 (danh mục chi/thu), Test flow 3 (thêm/sửa/xóa giao dịch, nút cộng nhanh, số dư sau mỗi bước, hỏi trước khi bỏ dữ liệu, tìm kiếm), vay/nợ (cho vay, thu vượt bị chặn, tất toán), ngân sách (lỗi tại ô, mục tiêu tháng và theo danh mục, vượt hạn mức), Tổng quan (ẩn số dư, Xem báo cáo); cuối cùng đối chiếu dữ liệu trên máy chủ bằng thiết bị thứ hai |
 | Kiểm tra hệ thống ([`tool/kiem_tra_he_thong.mjs`](tool/kiem_tra_he_thong.mjs)) | 32 | gọi HTTP như ứng dụng thật qua cả 3 phần, kể cả quét ảnh hóa đơn trên máy chủ |
 
 ### 12.3. Kết quả gần nhất
 
-Chạy lại ngày 02/11/2026 sau khi thêm OTP, VietQR/SePay và hỗ trợ Atlas:
+Chạy ngày 17/11/2026 (backend thử nghiệm tắt SMTP để nhận mã OTP thử nghiệm: `PORT=3001 SMTP_HOST= npm run dev:mem`):
 
 | Hạng mục | Kết quả |
 |---|---|
-| Backend: npm test (Node 22) | ✅ 26/26 |
-| Frontend: analyze + test | ✅ không lỗi, 57/57 |
-| Ứng dụng trên **iPhone 15 Pro Max (iOS 17.5)** với backend dùng MongoDB Atlas | ✅ build và chạy |
+| Frontend: analyze + test | ✅ không lỗi, 82/82 |
+| Backend: npm test | ✅ 34/34 |
+| Kiểm tra hệ thống qua HTTP (kể cả OCR ảnh hóa đơn trên máy chủ) | ✅ 32/32 |
+| Luồng trong báo cáo trên **iPhone 15 Pro Max (iOS 17.5)** và **Android 15 (máy ảo Pixel 7)** | ✅ |
+| Toàn bộ chức năng (`full_features_test`) trên iOS và Android | ✅ |
+| Demo 16 bước + OCR thật (Apple Vision / ML Kit) trên iOS và Android | ✅ |
 
-Kết quả của phiên bản trước (chưa chạy lại cho bản này; `full_features_test.dart` đã được cập nhật cho luồng OTP):
-
-| Hạng mục | Kết quả |
-|---|---|
-| AI service: ruff + pytest | ✅ sạch, 64/64 |
-| Backend: E2E với AI service thật | ✅ đạt |
-| Build bản phát hành | ✅ APK Android (release) · iOS (release) · Web |
-| Demo 16 bước + toàn bộ chức năng trên **iPhone 15 Pro Max (iOS 17.5)** | ✅ |
-| Demo 16 bước + toàn bộ chức năng trên **Android 15 (máy ảo Pixel 7)** | ✅ |
-| Bản Web chạy trong Chromium (đăng ký ngoại tuyến, lưu giao dịch, tải lại trang) | ✅ |
-| Kiểm tra hệ thống qua HTTP | ✅ 32/32 |
+Ghi chú: ảnh chụp trong `build/demo/` khi chạy trên iOS hiện chỉ chụp được màn khởi động; các bài kiểm tra dựa trên dữ liệu và widget nên không bị ảnh hưởng.
 
 ### 12.4. CI
 
