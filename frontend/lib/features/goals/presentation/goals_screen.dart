@@ -20,13 +20,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
     final text = await editText(
         context, income ? 'Mục tiêu thu nhập tháng' : 'Mục tiêu chi tiêu tháng',
         initial: current == null ? '' : formatAmountInput(current.amount),
-        numeric: true);
+        numeric: true,
+        validator: validatePositiveAmount);
     if (text == null || !mounted) return;
-    final amount = parseAmount(text);
-    if (amount == null || amount <= 0) {
-      message(context, 'Nhập số tiền mục tiêu lớn hơn 0.');
-      return;
-    }
+    final amount = parseAmount(text)!;
     attempt(context, () {
       p.saveBudget(MoneyBudget(
           id: current?.id ?? p.newId(),
@@ -53,6 +50,11 @@ class _GoalsScreenState extends State<GoalsScreen> {
     final overall = p.overallBudget(month, income: income);
     final actual = p.total(month, income: income);
     final categoryTarget = budgets.fold(0.0, (s, b) => s + b.amount);
+    final budgeted = {for (final b in budgets) b.categoryId};
+    final unset = [
+      for (final c in p.categories)
+        if (c.income == income && !budgeted.contains(c.id)) c
+    ];
     final days = DateTime(month.year, month.month + 1, 0).day;
     final isCurrent = month.year == now.year && month.month == now.month;
     final daysLeft = isCurrent ? days - now.day + 1 : 0;
@@ -165,7 +167,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
           const Text('Chạm vào từng danh mục để chỉnh mục tiêu riêng.',
               style: TextStyle(fontSize: 12)),
           const SizedBox(height: 10),
-          for (final b in budgets) _BudgetTile(budget: b, month: month, income: income),
+          for (final b in budgets)
+            _BudgetTile(key: ValueKey(b.id), budget: b, month: month, income: income),
           if (budgets.isEmpty)
             EmptyView(
                 title: 'Chưa có mục tiêu theo danh mục',
@@ -175,6 +178,16 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 action: 'Tạo mục tiêu',
                 onTap: () => openPage(
                     context, BudgetEditor(month: month, income: income))),
+          if (unset.isNotEmpty) ...[
+            const SectionTitle('Chưa đặt mục tiêu'),
+            for (final c in unset)
+              _UnsetCategoryTile(
+                  key: ValueKey('unset-${c.id}'),
+                  category: c,
+                  spent: p.total(month, income: income, categoryId: c.id, unit: p.currency),
+                  onTap: () => openPage(context,
+                      BudgetEditor(month: month, income: income, initialCategoryId: c.id))),
+          ],
           if (budgets.isEmpty && overall == null && prevHas)
             Center(
                 child: TextButton.icon(
@@ -213,7 +226,7 @@ class _Legend extends StatelessWidget {
 
 class _BudgetTile extends StatelessWidget {
   const _BudgetTile(
-      {required this.budget, required this.month, required this.income});
+      {super.key, required this.budget, required this.month, required this.income});
   final MoneyBudget budget;
   final DateTime month;
   final bool income;
@@ -295,10 +308,15 @@ class _BudgetTile extends StatelessWidget {
 
 class BudgetEditor extends StatefulWidget {
   const BudgetEditor(
-      {super.key, required this.month, required this.income, this.budget});
+      {super.key,
+      required this.month,
+      required this.income,
+      this.budget,
+      this.initialCategoryId});
   final DateTime month;
   final bool income;
   final MoneyBudget? budget;
+  final String? initialCategoryId;
   @override
   State<BudgetEditor> createState() => _BudgetEditorState();
 }
@@ -307,7 +325,7 @@ class _BudgetEditorState extends State<BudgetEditor> {
   final form = GlobalKey<FormState>();
   late final amount =
       TextEditingController(text: formatAmountInput(widget.budget?.amount ?? 0));
-  late String? categoryId = widget.budget?.categoryId;
+  late String? categoryId = widget.budget?.categoryId ?? widget.initialCategoryId;
   late String walletId = widget.budget?.walletId ?? '';
   @override
   void dispose() {
@@ -407,5 +425,27 @@ class _BudgetEditorState extends State<BudgetEditor> {
                     },
                     child: const Text('Xóa mục tiêu')),
             ])));
+  }
+}
+
+class _UnsetCategoryTile extends StatelessWidget {
+  const _UnsetCategoryTile(
+      {super.key, required this.category, required this.spent, required this.onTap});
+  final MoneyCategory category;
+  final double spent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final unit = context.select<FinanceProvider, String>((p) => p.currency);
+    return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: ListTile(
+            leading: RoundIcon(category.icon),
+            title: Text(category.name),
+            subtitle: Text(spent > 0 ? 'Đã dùng ${money(spent, unit)} • chạm để đặt mục tiêu' : 'Chạm để đặt mục tiêu',
+                style: const TextStyle(fontSize: 12)),
+            trailing: const Icon(Icons.add_circle_outline),
+            onTap: onTap));
   }
 }

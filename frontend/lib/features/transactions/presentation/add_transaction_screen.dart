@@ -362,12 +362,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                             border: InputBorder.none,
                             enabledBorder: InputBorder.none,
                             filled: false),
-                        validator: (v) {
-                          final n = parseAmount(v ?? '');
-                          return n == null || !n.isFinite || n <= 0
-                              ? 'Nhập số tiền lớn hơn 0'
-                              : null;
-                        },
+                        validator: validatePositiveAmount,
                       )),
                       const SizedBox(height: 8),
                       Wrap(spacing: 6, children: [

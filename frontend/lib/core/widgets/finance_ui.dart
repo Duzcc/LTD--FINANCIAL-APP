@@ -86,6 +86,11 @@ double? parseAmount(String text) {
   return double.tryParse(t);
 }
 
+String? validatePositiveAmount(String? v) {
+  final n = parseAmount(v ?? '');
+  return n == null || !n.isFinite || n <= 0 ? 'Nhập số tiền lớn hơn 0' : null;
+}
+
 String formatAmountInput(num value) {
   if (value == 0) return '';
   final whole = value.truncate();
