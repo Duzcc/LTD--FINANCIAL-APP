@@ -86,9 +86,9 @@ class _ReceiveQrScreenState extends State<ReceiveQrScreen> {
         return;
       }
       // Mất mạng vẫn cho hiện mã QR để nhận tiền, chỉ là không tự ghi giao dịch được.
-      if (offline) offlineReason = 'Không kết nối được máy chủ nên chưa thể tự ghi giao dịch khi tiền về.';
+      if (offline) offlineReason = 'Mất kết nối mạng nên chưa thể tự ghi giao dịch khi tiền về.';
     } else {
-      offlineReason = 'Bạn đang dùng ngoại tuyến: hãy tự ghi giao dịch sau khi nhận tiền. Đăng nhập và kết nối SePay để ghi tự động.';
+      offlineReason = 'Bạn chưa đăng nhập: hãy tự ghi giao dịch sau khi nhận tiền. Đăng nhập và kết nối SePay để ghi tự động.';
     }
     if (!mounted) return;
     final made = created;

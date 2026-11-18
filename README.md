@@ -307,8 +307,8 @@ Tạo máy ảo Android từ dòng lệnh (macOS Apple Silicon): `tool/tao_may_a
 | iOS Simulator, macOS, Web | `http://localhost:3000` |
 | Điện thoại thật | IP LAN của máy tính, ví dụ `http://192.168.1.10:3000` |
 
-Có thể đổi địa chỉ ngay trong app: màn **Đăng nhập → Máy chủ → Kiểm tra → Lưu**.
-Không có backend vẫn dùng được: chọn **Dùng ngoại tuyến**.
+Địa chỉ backend được chọn lúc build, người dùng không phải nhập: `flutter run --dart-define=API_URL=http://192.168.1.10:3000/api`.
+Không có backend vẫn dùng được: ở màn Đăng nhập nhập tên rồi chọn **Bắt đầu sử dụng** (dữ liệu lưu trên máy, đăng nhập sau để sao lưu).
 
 ### 7.3. Dùng MongoDB Atlas
 
@@ -431,7 +431,7 @@ flutter build web --release --no-web-resources-cdn --dart-define=API_URL=https:/
 
 ## 9. Hướng dẫn sử dụng nhanh
 
-1. **Đăng ký / đăng nhập** bằng email → nhập **mã OTP 6 số** gửi về email (hoặc *Dùng ngoại tuyến*).
+1. **Đăng ký / đăng nhập** bằng email → nhập **mã OTP 6 số** gửi về email (hoặc nhập tên và chọn *Bắt đầu sử dụng* để dùng không cần tài khoản).
    Lần đầu có sẵn ví *Tiền mặt* và các danh mục mặc định.
 2. **Thêm ví** ngân hàng hoặc ví tiết kiệm có mục tiêu ở tab *Tài khoản → Ví*.
 3. **Ghi giao dịch**: nút ➕ (biểu mẫu đầy đủ) hoặc biểu tượng ✨ *Nhập nhanh bằng AI*:
@@ -517,7 +517,7 @@ cd frontend && flutter drive --driver=test_driver/integration_test.dart \
 |---|---|---|
 | AI service (`pytest`) | 64 | trích xuất thực thể, nhập nhanh, phân loại, dự báo, bất thường, ngân sách, hóa đơn & OCR, tìm kiếm, API, vòng lặp gọi công cụ với LLM giả lập (Anthropic & OpenAI-compatible) |
 | Backend (`node:test`) | 34 + 1 E2E | ràng buộc dữ liệu đăng ký, đăng nhập bằng OTP (sai mã, hết lượt, gửi lại, dùng một lần), khóa đăng nhập, phân quyền, CRUD, ràng buộc nghiệp vụ, đồng bộ, refresh token, định kỳ, liên kết ngân hàng, yêu cầu VietQR, webhook SePay (xác thực, chống trùng, khớp mã/số tài khoản, thu nợ), đối soát qua SePay User API (SePay giả lập), cổng AI |
-| Frontend (`flutter test`) | 82 | sổ cái & quy tắc, ràng buộc dữ liệu, luồng đăng nhập + màn hình OTP, đồng bộ với backend giả lập, VietQR (cấu trúc EMVCo, CRC), màn hình nhận tiền, AI máy chủ ↔ dự phòng thiết bị, bộ phân tích hóa đơn, giao diện ở 320/390/430 px |
+| Frontend (`flutter test`) | 82 | sổ cái & quy tắc, ràng buộc dữ liệu, luồng đăng nhập + màn hình OTP, đồng bộ với backend giả lập, VietQR (cấu trúc EMVCo, CRC), màn hình nhận tiền, AI phía máy chủ ↔ dự phòng trên thiết bị, bộ phân tích hóa đơn, giao diện ở 320/390/430 px |
 | Demo đầu-cuối (`demo_test.dart`) | 16 bước | đăng ký → nhập nhanh → ngân sách → đồng bộ → trợ lý (đề xuất + xác nhận) → phân tích → tìm kiếm → **OCR thật trên thiết bị** (Apple Vision / ML Kit) |
 | Toàn bộ chức năng (`full_features_test.dart`) | 2 kịch bản | **Chức năng**: đủ 9 nhóm (tài khoản: đăng ký, xác thực email, đổi/đặt lại mật khẩu; ví; đủ 9 loại giao dịch và các ràng buộc; danh mục; đối tượng; ngân sách + sao chép; dashboard; thống kê; tìm kiếm), định kỳ, tỷ giá, xuất CSV/Excel, khóa PIN, đồng bộ **hai thiết bị**, AI qua backend, xóa tài khoản. **Giao diện**: mở lần lượt 26 màn hình + các tab, phát hiện mọi lỗi dựng giao diện |
 | Luồng trong báo cáo (`report_flows_test.dart`) | 1 kịch bản | đi lại bằng thao tác chạm/nhập các luồng ở mục 2.4.4–2.5 của báo cáo: Test flow 1 (thêm/sửa/xóa ví, ví tiết kiệm, chọn biểu tượng, bật thông báo, trùng tên), Test flow 2 (danh mục chi/thu), Test flow 3 (thêm/sửa/xóa giao dịch, nút cộng nhanh, số dư sau mỗi bước, hỏi trước khi bỏ dữ liệu, tìm kiếm), vay/nợ (cho vay, thu vượt bị chặn, tất toán), ngân sách (lỗi tại ô, mục tiêu tháng và theo danh mục, vượt hạn mức), Tổng quan (ẩn số dư, Xem báo cáo); cuối cùng đối chiếu dữ liệu trên máy chủ bằng thiết bị thứ hai |

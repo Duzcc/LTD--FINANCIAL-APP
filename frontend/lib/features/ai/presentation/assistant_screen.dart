@@ -21,10 +21,10 @@ import 'package:finance_app/features/ai/presentation/widgets/receipt_review_card
 import 'package:finance_app/features/ai/presentation/widgets/reminders_sheet.dart';
 
 class ChatMessage {
-  const ChatMessage(this.fromUser, this.text, {this.source, this.actions = const [], this.imagePath, this.receipt});
+  const ChatMessage(this.fromUser, this.text, {this.actions = const [], this.imagePath, this.receipt});
   final bool fromUser;
   final String text;
-  final String? source, imagePath;
+  final String? imagePath;
   final List<AssistantAction> actions;
   final ReceiptResult? receipt;
 }
@@ -43,12 +43,6 @@ class _AssistantScreenState extends State<AssistantScreen> {
   final done = <AssistantAction>{};
   final savedReceipts = <ChatMessage>{};
   bool busy = false;
-  static const _sources = {
-    'ai-service': 'AI máy chủ',
-    'llm': 'AI máy chủ (LLM)',
-    'rules': 'AI máy chủ',
-    'device': 'AI trên thiết bị',
-  };
   static const _starters = [
     'Hôm nay tôi được chi bao nhiêu?',
     'Tháng này tôi đã chi bao nhiêu?',
@@ -97,7 +91,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
     final reply = await r.chat(history);
     if (!mounted) return;
     setState(() => busy = false);
-    _add(ChatMessage(false, reply.reply, source: _sources[reply.source] ?? 'AI máy chủ', actions: reply.actions));
+    _add(ChatMessage(false, reply.reply, actions: reply.actions));
   }
 
   Future<void> attachReceipt() async {
@@ -133,9 +127,9 @@ class _AssistantScreenState extends State<AssistantScreen> {
     setState(() => busy = false);
     final read = result;
     if (read != null) {
-      _add(ChatMessage(false, _receiptSummary(read), source: read.source, receipt: read, imagePath: path));
+      _add(ChatMessage(false, _receiptSummary(read), receipt: read, imagePath: path));
     } else {
-      _add(ChatMessage(false, '${errorText(failure!)} Bạn có thể chụp lại hoặc nhập tay.', source: 'Trợ lý'));
+      _add(ChatMessage(false, '${errorText(failure!)} Bạn có thể chụp lại hoặc nhập tay.'));
     }
   }
 
@@ -165,7 +159,6 @@ class _AssistantScreenState extends State<AssistantScreen> {
           'Đã ghi ${entries.length} ${income ? 'khoản thu' : 'khoản chi'} vào $names, tổng ${money(entries.fold(0.0, (s, e) => s + e.amount), p.currency)}.',
           ...warnings,
         ].join('\n'),
-        source: 'Trợ lý',
         actions: [
           AssistantAction('show_transactions', {
             'ids': [for (final e in entries) e.id]
@@ -308,10 +301,6 @@ class _AssistantScreenState extends State<AssistantScreen> {
                               style: TextStyle(height: 1.45, color: m.fromUser ? Colors.white : AppColors.textPrimary)),
                           for (final a in m.actions)
                             if (a.type == 'show_transactions') _transactions(p, a) else _actionCard(p, a),
-                          if (m.source != null) ...[
-                            const SizedBox(height: 4),
-                            Text(m.source!, style: const TextStyle(fontSize: 10, color: AppColors.textGrey)),
-                          ],
                         ]))),
               if (m.receipt != null) ...[
                 const SizedBox(height: 8),
@@ -328,7 +317,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
   Widget build(BuildContext context) {
     final p = context.watch<FinanceProvider>();
     final greeting =
-        ChatMessage(false, SpendingCoach(p, reminders: p.reminders).greeting(p.displayName), source: 'Trợ lý');
+        ChatMessage(false, SpendingCoach(p, reminders: p.reminders).greeting(p.displayName));
     return FinancePage(
         title: 'Trợ lý AI',
         actions: [
@@ -400,8 +389,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
             ]),
             const SizedBox(height: 12),
             const Text(
-                'Khi đăng nhập, câu hỏi được gửi tới máy chủ của bạn; trợ lý chỉ đọc số liệu cần thiết, '
-                'không gửi mật khẩu hay thông tin đăng nhập. Ảnh hóa đơn được nhận dạng chữ ngay trên điện thoại.',
+                'Trợ lý chỉ đọc số liệu chi tiêu cần thiết để trả lời, không đọc mật khẩu hay thông tin đăng nhập. '
+                'Ảnh hóa đơn được nhận dạng chữ ngay trên điện thoại.',
                 style: TextStyle(fontSize: 11, color: AppColors.textGrey)),
           ],
         ]));

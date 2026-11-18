@@ -49,7 +49,7 @@ class _ReceiptScanScreenState extends State<ReceiptScanScreen> with BusyState {
     if (r == null) {
       setState(() {
         if (failure is ApiException && failure.code == 'AI_NOT_SUPPORTED') {
-          error = 'Máy chủ chưa bật đọc ảnh hóa đơn. Bạn có thể dán nội dung hóa đơn bên dưới.';
+          error = 'Chưa đọc được ảnh hóa đơn. Bạn có thể dán nội dung hóa đơn bên dưới.';
         }
         showPaste = true;
       });
@@ -75,7 +75,7 @@ class _ReceiptScanScreenState extends State<ReceiptScanScreen> with BusyState {
     final text = pasted.text;
     await _run(() async {
       final remote = r.remoteAvailable ? await r.receiptFromText(text).orNullOnApiError() : null;
-      return remote?.withSource('AI máy chủ', text: text) ?? r.parseLocally(text);
+      return remote?.withSource('Trợ lý AI', text: text) ?? r.parseLocally(text);
     });
   }
 
@@ -234,8 +234,6 @@ class _ReceiptScanScreenState extends State<ReceiptScanScreen> with BusyState {
                 Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Text('Danh mục gợi ý: ${p.category(r.categoryId)!.name}')),
-              const SizedBox(height: 4),
-              Text('Nguồn: ${r.source}', style: const TextStyle(fontSize: 11, color: AppColors.textGrey)),
               if (r.rawText.isNotEmpty)
                 TextButton(
                     onPressed: () => setState(() => showText = !showText),

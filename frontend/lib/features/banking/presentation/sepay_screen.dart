@@ -58,7 +58,7 @@ class _SepayScreenState extends State<SepayScreen> with BusyState {
     if (!await confirmAction(context,
         title: 'Tắt webhook SePay?',
         content: status?.pollingEnabled == true
-            ? 'Máy chủ vẫn đối soát tiền về qua API SePay, chỉ chậm hơn vài giây.'
+            ? 'Tiền về vẫn được tự ghi nhận, chỉ chậm hơn vài giây.'
             : 'Tiền chuyển vào sẽ không còn được tự ghi thành giao dịch.',
         confirm: 'Tắt webhook',
         danger: true)) {
@@ -105,7 +105,7 @@ class _SepayScreenState extends State<SepayScreen> with BusyState {
               const SizedBox(height: 8),
               if (!p.signedIn)
                 const Text(
-                    'Cần đăng nhập tài khoản để máy chủ nhận thông báo tiền về từ SePay. Khi dùng ngoại tuyến bạn vẫn tạo được mã VietQR để nhận tiền.',
+                    'Đăng nhập để tự ghi giao dịch khi có tiền chuyển đến. Khi chưa đăng nhập bạn vẫn tạo được mã VietQR để nhận tiền.',
                     style: TextStyle(height: 1.5))
               else if (busy && s == null)
                 const Center(child: CircularProgressIndicator())
@@ -120,7 +120,7 @@ class _SepayScreenState extends State<SepayScreen> with BusyState {
                         const SizedBox(width: 12),
                         Expanded(
                             child: Text(
-                                'Đang bật đối soát qua API SePay: máy chủ kiểm tra tiền về mỗi ${s.pollSeconds} giây khi có mã QR đang chờ. Không cần cấu hình webhook.',
+                                'Đã bật tự ghi nhận tiền về: khi có mã QR đang chờ, app kiểm tra mỗi ${s.pollSeconds} giây. Không cần cài thêm webhook.',
                                 style: const TextStyle(height: 1.4))),
                       ])),
                   const SizedBox(height: 12),
@@ -178,7 +178,7 @@ class _SepayScreenState extends State<SepayScreen> with BusyState {
                         '1. Đăng ký tại my.sepay.vn và thêm tài khoản ngân hàng của bạn (giống số tài khoản đã liên kết với ví).\n'
                         '2. Vào Tích hợp → Webhooks → Thêm webhook: sự kiện "Có tiền vào", dán URL webhook ở trên.\n'
                         '3. Kiểu chứng thực: API Key, dán API Key ở trên.\n'
-                        '4. Máy chủ phải truy cập được từ Internet (tên miền thật, hoặc ngrok/cloudflared khi chạy trên máy).\n\n'
+                        '\n'
                         'Khi khách quét mã VietQR của bạn và giữ nguyên nội dung chuyển khoản (có mã LTD…), giao dịch sẽ tự ghi vào ví.',
                         style: TextStyle(height: 1.5))),
                 if (requests.isNotEmpty) ...[

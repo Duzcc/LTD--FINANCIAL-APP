@@ -116,13 +116,13 @@ class AiRepository {
       final engine = recognized!.engine;
       if (remoteAvailable) {
         final r = await receiptFromText(text).orNullOnApiError();
-        if (r?.total != null) return categorize(r!.withSource('$engine + AI máy chủ', text: text));
+        if (r?.total != null) return categorize(r!.withSource('$engine + Trợ lý AI', text: text));
       }
       return parseLocally(text, source: '$engine (trên thiết bị)');
     }
     if (!remoteAvailable) {
       throw const ApiException(0, 'OCR_UNAVAILABLE',
-          'Thiết bị không nhận dạng được chữ trong ảnh. Hãy chụp rõ hơn hoặc đăng nhập để dùng AI máy chủ.');
+          'Không nhận dạng được chữ trong ảnh. Hãy chụp rõ hơn hoặc đăng nhập để Trợ lý AI đọc giúp.');
     }
     final bytes = await File(imagePath).readAsBytes();
     final type = imagePath.toLowerCase().endsWith('.png') ? 'image/png' : 'image/jpeg';

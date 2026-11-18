@@ -166,7 +166,7 @@ void main() {
     final nav = Navigator.of(t.element(find.byType(MainScreen, skipOffstage: false)));
 
     nav.push(MaterialPageRoute<void>(builder: (_) => const InsightsScreen()));
-    await waitFor(t, find.textContaining(RegExp('Khoảng 80%|trên thiết bị')), seconds: 30);
+    await waitFor(t, find.textContaining(RegExp('Khoảng 80%|Dự báo')), seconds: 30);
     await shot(t, '14_phan_tich_ai');
     nav.pop();
     await settle(t);

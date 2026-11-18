@@ -45,7 +45,7 @@ class AppDrawer extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
-                    Text(email ?? 'Đang dùng ngoại tuyến',
+                    Text(email ?? 'Chưa đăng nhập',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(color: AppColors.textSecondary)),

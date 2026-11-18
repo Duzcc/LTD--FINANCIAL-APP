@@ -62,10 +62,10 @@ class ApiClient {
           await _client.send(request).timeout(timeout));
     } on TimeoutException {
       throw const ApiException(0, 'TIMEOUT',
-          'Máy chủ phản hồi quá lâu. Vui lòng kiểm tra kết nối và thử lại.');
+          'Kết nối quá chậm. Vui lòng kiểm tra mạng và thử lại.');
     } on Exception {
       throw const ApiException(0, 'NETWORK',
-          'Không kết nối được máy chủ. Kiểm tra mạng và địa chỉ máy chủ.');
+          'Không có kết nối mạng. Vui lòng kiểm tra và thử lại.');
     }
     Map<String, dynamic> data = {};
     if (response.bodyBytes.isNotEmpty) {
@@ -76,7 +76,7 @@ class ApiClient {
         // Nhận về trang HTML thay vì JSON: thường do nhập sai địa chỉ máy chủ.
         if (response.statusCode < 400) {
           throw const ApiException(
-              0, 'BAD_RESPONSE', 'Địa chỉ máy chủ không đúng API của ứng dụng.');
+              0, 'BAD_RESPONSE', 'Dịch vụ tạm thời không khả dụng. Vui lòng thử lại sau.');
         }
       }
     }
@@ -87,7 +87,7 @@ class ApiClient {
           error is Map ? '${error['code']}' : 'HTTP_${response.statusCode}',
           error is Map
               ? '${error['message']}'
-              : 'Máy chủ trả về lỗi ${response.statusCode}.',
+              : 'Có lỗi xảy ra (mã ${response.statusCode}). Vui lòng thử lại sau.',
           data);
     }
     return data;

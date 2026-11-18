@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:finance_app/app/app_routes.dart';
@@ -132,9 +133,6 @@ class OthersScreen extends StatelessWidget {
                 ] else
                   _row(context, Icons.login, 'Đăng nhập / Đăng ký',
                       () => openPage(context, const AuthScreen(fromSettings: true))),
-                const Divider(indent: 60),
-                _row(context, Icons.dns_outlined, 'Máy chủ API • ${p.signedIn ? p.session!.baseUrl : p.serverUrl}',
-                    p.signedIn ? () => message(context, 'Đăng xuất để đổi máy chủ.') : () => editServer(context)),
               ])),
           const SizedBox(height: 24),
           const Center(
@@ -204,21 +202,21 @@ class AccountCard extends StatelessWidget {
     final String status;
     final Color statusColor;
     if (!p.signedIn) {
-      status = 'Dùng ngoại tuyến • dữ liệu chỉ lưu trên thiết bị';
+      status = 'Dữ liệu đang lưu trên điện thoại này';
       statusColor = AppColors.textSecondary;
     } else if (p.syncing) {
-      status = 'Đang đồng bộ…';
+      status = 'Đang sao lưu…';
       statusColor = AppColors.textSecondary;
     } else if (p.syncError != null) {
       status = p.syncError!;
       statusColor = AppColors.accentRed;
     } else if (p.pendingChanges > 0) {
-      status = '${p.pendingChanges} thay đổi đang chờ đồng bộ';
+      status = '${p.pendingChanges} thay đổi chưa sao lưu';
       statusColor = AppColors.accentYellow;
     } else {
       status = p.lastSync == null
-          ? 'Chưa đồng bộ'
-          : 'Đã đồng bộ lúc ${TimeOfDay.fromDateTime(p.lastSync!).format(context)} ${dayLabel(p.lastSync!)}';
+          ? 'Chưa sao lưu'
+          : 'Đã sao lưu lúc ${TimeOfDay.fromDateTime(p.lastSync!).format(context)} ${dayLabel(p.lastSync!)}';
       statusColor = AppColors.primaryGreen;
     }
     return Panel(
@@ -239,7 +237,7 @@ class AccountCard extends StatelessWidget {
                   Text(p.displayName,
                       style: const TextStyle(
                           fontWeight: FontWeight.w700, fontSize: 16)),
-                  Text(p.signedIn ? p.session!.email : 'Hồ sơ trên thiết bị',
+                  Text(p.signedIn ? p.session!.email : 'Chưa đăng nhập',
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                 ])),
             IconButton(
@@ -273,7 +271,7 @@ class AccountCard extends StatelessWidget {
                   : TextButton.icon(
                       onPressed: () => p.syncNow(),
                       icon: const Icon(Icons.sync, size: 18),
-                      label: const Text('Đồng bộ'))
+                      label: const Text('Sao lưu'))
             else
               TextButton(
                   onPressed: () =>
@@ -300,15 +298,15 @@ class AccountCard extends StatelessWidget {
                 child: TextButton(
                     onPressed: () async {
                       if (await confirmAction(context,
-                          title: 'Bỏ thay đổi chưa đồng bộ?',
+                          title: 'Bỏ các thay đổi chưa sao lưu?',
                           content:
-                              'Các thay đổi chưa gửi được sẽ bị bỏ và dữ liệu trên máy được thay bằng dữ liệu của tài khoản.',
-                          confirm: 'Tải lại từ máy chủ',
+                              'Các thay đổi chưa sao lưu sẽ bị bỏ và dữ liệu trên điện thoại được thay bằng dữ liệu của tài khoản.',
+                          confirm: 'Khôi phục',
                           danger: true)) {
                         await p.discardLocalChanges();
                       }
                     },
-                    child: const Text('Tải lại dữ liệu từ máy chủ'))),
+                    child: const Text('Khôi phục dữ liệu từ tài khoản'))),
         ]));
   }
 }
@@ -321,8 +319,8 @@ Future<void> signOutFlow(BuildContext context, {bool everywhere = false}) async 
   final ok = await confirmAction(context,
       title: everywhere ? 'Đăng xuất khỏi mọi thiết bị?' : 'Đăng xuất?',
       content: (pending > 0
-              ? 'Còn $pending thay đổi chưa đồng bộ được và sẽ bị mất khi đăng xuất. Dữ liệu trên thiết bị sẽ được xóa.'
-              : 'Dữ liệu đã được lưu trên tài khoản. Dữ liệu trên thiết bị này sẽ được xóa.') +
+              ? 'Còn $pending thay đổi chưa sao lưu được và sẽ bị mất khi đăng xuất. Dữ liệu trên điện thoại này sẽ được xóa.'
+              : 'Dữ liệu đã được sao lưu vào tài khoản. Dữ liệu trên điện thoại này sẽ được xóa.') +
           (everywhere ? ' Mọi thiết bị khác đang đăng nhập tài khoản này cũng sẽ bị đăng xuất.' : ''),
       confirm: 'Đăng xuất',
       danger: pending > 0);
@@ -340,7 +338,7 @@ Future<void> deleteAccountFlow(BuildContext context) async {
   final ok = await confirmAction(context,
       title: 'Xóa vĩnh viễn tài khoản?',
       content:
-          'Toàn bộ ví, giao dịch, danh mục, đối tượng và ngân sách trên máy chủ sẽ bị xóa và không thể khôi phục.',
+          'Toàn bộ ví, giao dịch, danh mục, đối tượng và ngân sách của tài khoản sẽ bị xóa và không thể khôi phục.',
       confirm: 'Xóa tài khoản',
       danger: true);
   if (!ok || !context.mounted) return;
@@ -358,9 +356,9 @@ Future<void> verifyEmailFlow(BuildContext context) async {
   if (!sent || !context.mounted) return;
   message(
       context,
-      dev == null
-          ? 'Mã 6 số đã được gửi tới ${p.session?.email}.'
-          : 'Máy chủ thử nghiệm chưa cấu hình email. Mã: $dev');
+      dev != null && kDebugMode
+          ? 'Mã xác thực: $dev'
+          : 'Mã 6 số đã được gửi tới ${p.session?.email}.');
   final code = await editText(context, 'Nhập mã xác thực email');
   if (code == null || !context.mounted) return;
   await attempt(context, () async {

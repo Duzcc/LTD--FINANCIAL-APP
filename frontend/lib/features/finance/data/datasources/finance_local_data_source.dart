@@ -6,7 +6,6 @@ class FinanceLocalDataSource {
   final SharedPreferences? _storage;
 
   static const dataKey = 'finance_data_v1';
-  static const serverKey = 'finance_server_url';
 
   bool get persistent => _storage != null;
 
@@ -19,9 +18,4 @@ class FinanceLocalDataSource {
       await _storage?.setString(dataKey, jsonEncode(data)) ?? true;
 
   Future<void> clear() async => _storage?.remove(dataKey);
-
-  String? readServerUrl() => _storage?.getString(serverKey);
-
-  Future<void> writeServerUrl(String url) async =>
-      _storage?.setString(serverKey, url);
 }

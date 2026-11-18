@@ -299,9 +299,6 @@ class _ReceiptReviewCardState extends State<ReceiptReviewCard> {
               const SizedBox(width: 8),
               TextButton(onPressed: () => _editManually(p), child: const Text('Sửa tay')),
             ]),
-          Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text('Nguồn: ${r.source}', style: const TextStyle(fontSize: 10, color: AppColors.textGrey))),
         ]));
   }
 }

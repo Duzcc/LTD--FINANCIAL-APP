@@ -193,7 +193,6 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pumpAndSettle();
     expect(find.textContaining('70.000'), findsWidgets);
-    expect(find.text('AI trên thiết bị'), findsOneWidget);
     await tester.pumpWidget(const SizedBox.shrink());
   });
 

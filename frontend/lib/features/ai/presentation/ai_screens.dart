@@ -199,8 +199,7 @@ class _QuickEntrySheetState extends State<QuickEntrySheet> {
                       const SizedBox(height: 4),
                       Text(
                           'Độ tin cậy ${(r.confidence * 100).round()}% • '
-                          '${_refining ? 'đang hỏi AI máy chủ…' : fromServer ? 'AI máy chủ' : 'AI trên thiết bị'}'
-                          ' • kiểm tra lại trước khi lưu',
+                          '${_refining ? 'đang phân tích thêm…' : 'kiểm tra lại trước khi lưu'}',
                           style: const TextStyle(fontSize: 11)),
                     ])),
                 const SizedBox(height: 12),
@@ -337,10 +336,10 @@ class _InsightsScreenState extends State<InsightsScreen> {
                     const SizedBox(height: 8),
                     Text(
                         snap.connectionState == ConnectionState.waiting
-                            ? 'Đang lấy phân tích từ AI máy chủ…'
+                            ? 'Đang phân tích chi tiêu…'
                             : f != null
-                                ? 'Mô hình máy chủ: hồ sơ chi theo thứ trong tuần + Holt, tách khoản định kỳ (sai số kiểm định ~19%).'
-                                : 'Phân tích chạy trên thiết bị (đăng nhập để dùng mô hình máy chủ chính xác hơn).',
+                                ? 'Dự báo dựa trên thói quen chi tiêu theo từng ngày trong tuần và các khoản định kỳ của bạn.'
+                                : 'Dự báo ước tính từ chi tiêu tháng này. Đăng nhập để có dự báo chi tiết hơn.',
                         style: const TextStyle(fontSize: 12)),
                     if (server != null && (server.anomalies.isNotEmpty || server.spikes.isNotEmpty)) ...[
                       const SectionTitle('Giao dịch bất thường'),

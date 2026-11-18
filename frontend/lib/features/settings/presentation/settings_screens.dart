@@ -174,7 +174,7 @@ class SecurityScreen extends StatelessWidget {
               ])),
           const SizedBox(height: 12),
           const Text(
-              'Mã PIN chỉ được lưu trên thiết bị dưới dạng băm SHA-256 có muối. Nếu quên mã, hãy cài lại ứng dụng và đăng nhập để tải dữ liệu từ tài khoản.',
+              'Mã PIN được mã hóa và chỉ lưu trên điện thoại này. Nếu quên mã, hãy cài lại ứng dụng và đăng nhập để khôi phục dữ liệu từ tài khoản.',
               style: TextStyle(fontSize: 12, height: 1.5)),
         ]));
   }

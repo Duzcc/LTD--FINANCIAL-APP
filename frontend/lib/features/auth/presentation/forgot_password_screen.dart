@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -42,9 +43,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with BusySt
     if (!mounted) return;
     setState(() {
       codeSent = true;
-      hint = dev == null
-          ? 'Nếu email đã đăng ký, mã gồm 6 chữ số đã được gửi tới hộp thư. Mã có hiệu lực 15 phút.'
-          : 'Máy chủ đang ở chế độ thử nghiệm (chưa cấu hình email). Mã khôi phục: $dev';
+      hint = dev != null && kDebugMode
+          ? 'Mã khôi phục của bạn: $dev'
+          : 'Nếu email đã đăng ký, mã gồm 6 chữ số đã được gửi tới hộp thư. Mã có hiệu lực 15 phút.';
     });
   }
 

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -119,12 +120,12 @@ class _OtpScreenState extends State<OtpScreen> with BusyState {
                   ]),
                   textAlign: TextAlign.center,
                   style: const TextStyle(height: 1.5)),
-              if (challenge.devCode != null) ...[
+              if (kDebugMode && challenge.devCode != null) ...[
                 const SizedBox(height: 12),
                 Panel(
                     color: AppColors.primaryGreenSurface,
                     child: Text(
-                        'Máy chủ đang ở chế độ thử nghiệm (chưa cấu hình email). Mã OTP: ${challenge.devCode}',
+                        'Mã OTP của bạn: ${challenge.devCode}',
                         style: const TextStyle(height: 1.5))),
               ],
               const SizedBox(height: 20),

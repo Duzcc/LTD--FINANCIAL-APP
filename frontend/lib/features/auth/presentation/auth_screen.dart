@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:finance_app/core/widgets/brand_logo.dart';
 import 'package:finance_app/features/finance/presentation/finance_provider.dart';
-import 'package:finance_app/core/network/api_client.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/app/app_routes.dart';
 import 'package:finance_app/core/validation/validators.dart';
@@ -44,64 +43,6 @@ Future<void> finishSignIn(BuildContext context, bool needsDecision,
   } else {
     Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.home, (_) => false);
   }
-}
-
-Future<void> editServer(BuildContext context) async {
-  final p = context.read<FinanceProvider>();
-  final controller = TextEditingController(text: p.serverUrl);
-  String? status;
-  bool checking = false;
-  final saved = await showDialog<String>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-          builder: (ctx, setDialog) => AlertDialog(
-                  title: const Text('Máy chủ API'),
-                  content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        TextField(
-                            controller: controller,
-                            keyboardType: TextInputType.url,
-                            autocorrect: false,
-                            decoration: const InputDecoration(
-                                labelText: 'Địa chỉ backend',
-                                hintText: 'https://api.ten-mien.vn')),
-                        const SizedBox(height: 8),
-                        Text(
-                            'Mặc định: ${ApiClient.defaultBaseUrl}. Máy ảo Android dùng 10.0.2.2 để gọi máy tính.',
-                            style: const TextStyle(fontSize: 12)),
-                        if (status != null) ...[
-                          const SizedBox(height: 10),
-                          Text(status!,
-                              style: TextStyle(
-                                  color: status == 'Kết nối thành công'
-                                      ? AppColors.primaryGreen
-                                      : AppColors.accentRed)),
-                        ]
-                      ]),
-                  actions: [
-                    TextButton(
-                        onPressed: checking
-                            ? null
-                            : () async {
-                                setDialog(() => checking = true);
-                                final error = await p.checkServer(
-                                    ApiClient.normalize(controller.text));
-                                if (!ctx.mounted) return;
-                                setDialog(() {
-                                  checking = false;
-                                  status = error ?? 'Kết nối thành công';
-                                });
-                              },
-                        child: Text(checking ? 'Đang kiểm tra…' : 'Kiểm tra')),
-                    FilledButton(
-                        onPressed: () => Navigator.pop(ctx, controller.text),
-                        child: const Text('Lưu')),
-                  ])));
-  await Future<void>.delayed(const Duration(milliseconds: 300));
-  controller.dispose();
-  if (saved != null) p.setServerUrl(saved);
 }
 
 class AuthScreen extends StatefulWidget {
@@ -296,18 +237,6 @@ class _AuthScreenState extends State<AuthScreen> with BusyState {
                                                 fromSettings:
                                                     widget.fromSettings)),
                                         child: const Text('Quên mật khẩu?'))),
-                              ListTile(
-                                  contentPadding: EdgeInsets.zero,
-                                  tileColor: Colors.transparent,
-                                  leading: const Icon(Icons.dns_outlined),
-                                  title: const Text('Máy chủ',
-                                      style: TextStyle(fontSize: 13)),
-                                  subtitle: Text(p.serverUrl,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis),
-                                  trailing: const Icon(Icons.edit_outlined,
-                                      size: 18),
-                                  onTap: () => editServer(context)),
                               if (!widget.fromSettings) ...[
                                 const SizedBox(height: 8),
                                 const Row(children: [
@@ -351,7 +280,7 @@ class _AuthScreenState extends State<AuthScreen> with BusyState {
                                         child: Text('Bắt đầu sử dụng'))),
                                 const SizedBox(height: 10),
                                 const Text(
-                                    'Dùng ngoại tuyến: dữ liệu chỉ lưu trên thiết bị. Bạn có thể đăng nhập sau trong mục Tài khoản để sao lưu và đồng bộ.',
+                                    'Không cần tài khoản: dữ liệu được lưu trên điện thoại này. Bạn có thể đăng nhập sau trong mục Tài khoản để sao lưu và dùng trên nhiều thiết bị.',
                                     textAlign: TextAlign.center,
                                     style: TextStyle(fontSize: 12, height: 1.5)),
                               ],

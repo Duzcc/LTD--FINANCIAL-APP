@@ -38,7 +38,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(QrImageView), findsOneWidget);
     expect(find.text('0123456789'), findsOneWidget);
-    expect(find.textContaining('ngoại tuyến'), findsOneWidget);
+    expect(find.textContaining('chưa đăng nhập'), findsOneWidget);
   });
 
   testWidgets('Thu nợ: không cho vượt số còn phải thu', (tester) async {

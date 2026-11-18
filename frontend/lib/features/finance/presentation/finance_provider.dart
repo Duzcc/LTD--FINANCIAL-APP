@@ -37,7 +37,6 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
     _auth = AuthRemoteDataSource(_client);
     _sync = SyncRemoteDataSource(_client);
     _resetData();
-    serverUrl = _local.readServerUrl() ?? ApiClient.defaultBaseUrl;
   }
 
   final FinanceLocalDataSource _local;
@@ -94,7 +93,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
   @override
   int dataRevision = 0;
 
-  late String serverUrl;
+  String get serverUrl => ApiClient.defaultBaseUrl;
   AccountSession? session;
   @override
   bool syncing = false;
@@ -499,15 +498,9 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
 
   String exportCsv() => ledgerCsv(this);
 
-  void setServerUrl(String url) {
-    serverUrl = ApiClient.normalize(url);
-    _local.writeServerUrl(serverUrl);
-    _notify();
-  }
-
-  Future<String?> checkServer([String? url]) => api
-      .send('GET', url ?? serverUrl, '/health')
-      .then<String?>((r) => r['status'] == 'ok' ? null : 'Máy chủ không phản hồi đúng.')
+  Future<String?> checkServer() => api
+      .send('GET', serverUrl, '/health')
+      .then<String?>((r) => r['status'] == 'ok' ? null : 'Không kết nối được, vui lòng thử lại sau.')
       .onError<ApiException>((e, _) => e.message);
 
   Future<OtpChallenge> signIn({required String email, required String password}) =>
@@ -551,12 +544,12 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
   @override
   Future<Map<String, dynamic>> aiRequest(String method, String path, {Object? body, bool pushFirst = true}) =>
       _signedInRequest(method, '/ai$path',
-          body: body, pushFirst: pushFirst, offlineMessage: 'Cần đăng nhập để dùng AI máy chủ.');
+          body: body, pushFirst: pushFirst, offlineMessage: 'Đăng nhập để dùng đầy đủ tính năng Trợ lý AI.');
 
   @override
   Future<Map<String, dynamic>> bankRequest(String method, String path, {Object? body}) =>
       _signedInRequest(method, '/bank$path',
-          body: body, pushFirst: true, offlineMessage: 'Cần đăng nhập để đối soát chuyển khoản tự động.');
+          body: body, pushFirst: true, offlineMessage: 'Đăng nhập để tự động ghi nhận chuyển khoản.');
 
   Future<bool> _startSession(Map<String, dynamic> r) async {
     final user = r['user'] as Map<String, dynamic>;
@@ -744,7 +737,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
       final applied = e.body?['applied'];
       if (applied is! int) rethrow;
       _changes.acknowledge(ops.take(applied), versions);
-      throw ApiException(e.status, e.code, 'Chưa đồng bộ được một thay đổi: ${e.message}');
+      throw ApiException(e.status, e.code, 'Chưa lưu được một thay đổi: ${e.message}');
     }
   }
 

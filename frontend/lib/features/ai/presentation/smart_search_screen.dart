@@ -57,7 +57,7 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
     final used = {for (final k in filters.keys) _filterLabels[k] ?? k};
     return (
       [for (final id in ids) if (byId[id] != null) byId[id]!],
-      'AI máy chủ${used.isEmpty ? '' : ' • hiểu theo ${used.join(', ')}'}'
+      used.isEmpty ? 'Trợ lý AI' : 'Lọc theo ${used.join(', ')}'
     );
   }
 
@@ -69,7 +69,7 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
       return words.every(hay.contains);
     }).toList()
       ..sort((a, b) => b.date.compareTo(a.date));
-    return (found, 'Tìm theo từ khóa trên thiết bị');
+    return (found, 'Tìm theo từ khóa');
   }
 
   @override
