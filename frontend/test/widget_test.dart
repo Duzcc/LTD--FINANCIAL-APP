@@ -22,7 +22,7 @@ import 'package:finance_app/features/settings/presentation/others_screen.dart';
 import 'package:finance_app/features/security/data/services/app_lock.dart';
 
 void main() {
-  testWidgets('Local onboarding opens the connected app', (tester) async {
+  testWidgets('Bắt đầu không cần tài khoản thì vào thẳng màn chính', (tester) async {
     await tester.pumpWidget(const FinanceApp());
     await tester.pumpAndSettle();
     expect(find.text('Đăng nhập'), findsWidgets);
@@ -34,7 +34,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
   for (final width in [320.0, 390.0, 430.0]) {
-    testWidgets('Phone navigation and transaction save at $width px',
+    testWidgets('Chuyển tab và lưu giao dịch trên màn rộng $width px',
         (tester) async {
       tester.view.physicalSize = Size(width, width == 430 ? 932 : 740);
       if (width == 430) {
@@ -85,7 +85,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
-  testWidgets('Editors and reports fit narrow phones with enlarged text',
+  testWidgets('Màn nhập liệu và báo cáo vừa màn hẹp khi phóng to chữ',
       (tester) async {
     tester.view.physicalSize = const Size(320, 740);
     tester.view.devicePixelRatio = 1;
@@ -140,7 +140,7 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     p.dispose();
   });
-  testWidgets('Transfer above the source balance is blocked without a save anyway prompt', (tester) async {
+  testWidgets('Chuyển tiền vượt số dư bị chặn, không có nút vẫn lưu', (tester) async {
     final p = FinanceProvider();
     p.saveWallet(const MoneyWallet(id: 'cash', name: 'Tiền mặt', opening: 500000));
     p.saveWallet(const MoneyWallet(id: 'save', name: 'Tiết kiệm', savings: true));
@@ -162,7 +162,7 @@ void main() {
     expect(p.balance('cash'), 0);
   });
 
-  testWidgets('Quick entry and assistant flows work end to end', (tester) async {
+  testWidgets('Nhập nhanh và trợ lý chạy trọn luồng', (tester) async {
     final p = FinanceProvider();
     await tester.pumpWidget(FinanceApp(finance: p, returning: true));
     await tester.pumpAndSettle();

@@ -23,7 +23,7 @@ void main() {
         excluded: excluded,
         personId: person,
       );
-  test('Create, edit, move and delete an entry recomputes balances and budget',
+  test('Thêm, sửa, chuyển ví và xóa giao dịch thì số dư và ngân sách được tính lại',
       () async {
     final p = FinanceProvider();
     p.saveWallet(
@@ -50,7 +50,7 @@ void main() {
     await p.flush();
     p.dispose();
   });
-  test('Transfer changes both wallets and is excluded from income and expense',
+  test('Chuyển tiền thay đổi cả hai ví và không tính vào thu chi',
       () async {
     final p = FinanceProvider();
     p.saveWallet(
@@ -74,7 +74,7 @@ void main() {
     await p.flush();
     p.dispose();
   });
-  test('Debt principals and interest have different report behavior', () async {
+  test('Gốc và lãi khoản vay được tính khác nhau trong báo cáo', () async {
     final p = FinanceProvider();
     p.savePerson(const MoneyPerson('a', 'An', 'Bạn bè'));
     p.saveEntry(entry('b', EntryKind.borrow, 1000, person: 'a'));
@@ -92,7 +92,7 @@ void main() {
     await p.flush();
     p.dispose();
   });
-  test('Months, currencies and report exclusions do not mix', () async {
+  test('Không lẫn dữ liệu giữa các tháng, loại tiền và ví loại khỏi báo cáo', () async {
     final p = FinanceProvider();
     p.saveWallet(const MoneyWallet(
         id: 'usd', name: 'USD', currency: 'USD', opening: 100));
@@ -117,7 +117,7 @@ void main() {
     await p.flush();
     p.dispose();
   });
-  test('Data survives reload including edits, preferences and deletions',
+  test('Dữ liệu còn nguyên sau khi mở lại app, kể cả chỉnh sửa, cài đặt và xóa',
       () async {
     SharedPreferences.setMockInitialValues({});
     final storage = await SharedPreferences.getInstance();
@@ -145,7 +145,7 @@ void main() {
     p.dispose();
     restored.dispose();
   });
-  test('Transfer and savings top-up cannot exceed the source wallet balance',
+  test('Chuyển tiền và nạp tiết kiệm không vượt số dư ví nguồn',
       () async {
     final p = FinanceProvider();
     p.saveWallet(
@@ -183,7 +183,7 @@ void main() {
     await p.flush();
     p.dispose();
   });
-  test('Wallet rules: duplicate names, savings dates and cascade delete',
+  test('Quy tắc ví: trùng tên, ngày tiết kiệm và xóa kèm giao dịch',
       () async {
     final p = FinanceProvider();
     p.saveWallet(const MoneyWallet(id: 'bank', name: 'Ngân hàng'));
@@ -211,7 +211,7 @@ void main() {
     await p.flush();
     p.dispose();
   });
-  test('Repayments cannot exceed the outstanding debt per person', () async {
+  test('Số tiền trả nợ không vượt số còn nợ của từng người', () async {
     final p = FinanceProvider();
     p.savePerson(const MoneyPerson('a', 'An', 'Bạn bè'));
     p.savePerson(const MoneyPerson('b', 'Bình', 'Bạn bè'));
@@ -231,7 +231,7 @@ void main() {
     await p.flush();
     p.dispose();
   });
-  test('Monthly overall target, category budgets and copying', () async {
+  test('Mục tiêu tháng, ngân sách theo danh mục và sao chép sang tháng sau', () async {
     final p = FinanceProvider();
     p.saveBudget(MoneyBudget(
         id: 'all', categoryId: null, month: month, amount: 1000000));

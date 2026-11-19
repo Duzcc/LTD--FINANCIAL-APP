@@ -359,10 +359,14 @@ class _InsightsScreenState extends State<InsightsScreen> {
                                 EntryTile(e),
                                 Padding(
                                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
-                                    child: Text('⚠ ${a.reasons.join(' • ')}',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: a.kind == 'duplicate' ? AppColors.accentOrange : AppColors.accentRed))),
+                                    child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                      Icon(Icons.warning_amber_rounded,
+                                          size: 16, color: a.kind == 'duplicate' ? AppColors.accentOrange : AppColors.accentRed),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                          child: Text(a.reasons.join(' • '),
+                                              style: TextStyle(fontSize: 12, color: a.kind == 'duplicate' ? AppColors.accentOrange : AppColors.accentRed))),
+                                    ])),
                               ]))),
                     ],
                     if (server != null && server.budgets.isNotEmpty) ...[

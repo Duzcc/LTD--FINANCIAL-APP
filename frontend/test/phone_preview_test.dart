@@ -21,7 +21,7 @@ import 'package:finance_app/features/recurring/presentation/recurring_screen.dar
 import 'package:finance_app/features/security/data/services/app_lock.dart';
 
 void main() {
-  testWidgets('Capture phone previews', (tester) async {
+  testWidgets('Chụp ảnh xem trước trên điện thoại', (tester) async {
     const fontDir = String.fromEnvironment('PREVIEW_FONT_DIR');
     if (fontDir.isNotEmpty) {
       await tester.runAsync(() async {

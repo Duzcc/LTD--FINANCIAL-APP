@@ -7,7 +7,7 @@ import 'package:finance_app/core/network/api_client.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 
 void main() {
-  test('Login with wrong password reports the server message', () async {
+  test('Sai mật khẩu thì hiện đúng thông báo lỗi', () async {
     final server = FakeBackend();
     final p = FinanceProvider(api: ApiClient(client: server.client));
     await expectLater(
@@ -17,7 +17,7 @@ void main() {
     p.dispose();
   });
 
-  test('Login requires the emailed OTP before a session is created', () async {
+  test('Phải nhập OTP gửi qua email mới tạo phiên đăng nhập', () async {
     final server = FakeBackend();
     final p = FinanceProvider(api: ApiClient(client: server.client));
     final challenge = await p.signIn(email: ' AN@test.vn ', password: '123456');
@@ -31,7 +31,7 @@ void main() {
     p.dispose();
   });
 
-  test('Login, push local changes in dependency order, then logout',
+  test('Đăng nhập, gửi thay đổi trên máy theo đúng thứ tự rồi đăng xuất',
       () async {
     SharedPreferences.setMockInitialValues({});
     final storage = await SharedPreferences.getInstance();
@@ -81,7 +81,7 @@ void main() {
     p.dispose();
   });
 
-  test('Existing local data asks before replacing account data', () async {
+  test('Có dữ liệu trên máy thì hỏi trước khi thay bằng dữ liệu tài khoản', () async {
     final server = FakeBackend();
     (server.snapshot['entries'] as List).add({
       'id': 'remote',
@@ -107,7 +107,7 @@ void main() {
     p.dispose();
   });
 
-  test('Expired session is reported without losing pending changes',
+  test('Hết phiên thì báo lỗi mà không mất thay đổi đang chờ',
       () async {
     final server = FakeBackend();
     final p = FinanceProvider(api: ApiClient(client: server.client));
@@ -120,7 +120,7 @@ void main() {
     p.dispose();
   });
 
-  test('Amount input helpers format Vietnamese thousands', () {
+  test('Ô số tiền định dạng phần nghìn kiểu Việt Nam', () {
     final f = AmountInputFormatter();
     expect(
         f
