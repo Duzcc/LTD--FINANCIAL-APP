@@ -16,9 +16,10 @@ flutter build web --release --no-web-resources-cdn   # bản Web không phụ th
 ```
 lib/
 ├── main.dart                     khởi động: bộ nhớ, thông báo, định kỳ, đồng bộ
-├── app/                          FinanceApp, MainScreen, thanh điều hướng, NotificationService
+├── app/                          FinanceApp, route, Splash, MainScreen, Drawer, thanh điều hướng
 ├── core/                         dùng chung, không phụ thuộc tính năng
 │   ├── network/api_client.dart   gọi REST, chuẩn hóa lỗi (ApiException)
+│   ├── services/                 thông báo cục bộ (NotificationService)
 │   ├── validation/validators.dart ràng buộc họ tên, email, mật khẩu, OTP, tài khoản ngân hàng (khớp backend)
 │   ├── utils/                    ngày, đọc/ghi trường JSON
 │   ├── theme/                    màu, theme
@@ -26,7 +27,10 @@ lib/
 └── features/<tính năng>/
     ├── domain/                   Dart thuần: entities, quy tắc nghiệp vụ, interface
     ├── data/                     datasources (REST, SharedPreferences, kênh native), models, repositories
-    └── presentation/             màn hình, widget, ChangeNotifier
+    └── presentation/
+        ├── screens/              mỗi màn hình một tệp
+        ├── widgets/              widget dùng lại trong tính năng
+        └── providers/            ChangeNotifier (Provider)
 ```
 
 | Tính năng | domain | data | presentation |
@@ -51,9 +55,10 @@ Mọi import dùng `package:finance_app/...` (lint `always_use_package_imports`)
 | `test/auth_otp_test.dart` | giao diện đăng ký báo lỗi từng ô; đăng nhập phải nhập OTP mới vào app |
 | `test/vietqr_test.dart` | cấu trúc VietQR (EMVCo/NAPAS), CRC-16, nội dung chuyển khoản, liên kết ngân hàng của ví |
 | `test/receive_qr_test.dart` | màn hình nhận tiền: tạo QR ngoại tuyến, chặn thu nợ vượt số còn lại, tự cập nhật khi tiền về |
-| `test/ai_repository_test.dart` | AI máy chủ ↔ dự phòng trên thiết bị, hành động trợ lý, phân tích, hóa đơn |
+| `test/ai_repository_test.dart` | AI phía máy chủ ↔ dự phòng trên thiết bị, hành động trợ lý, phân tích, hóa đơn |
 | `test/receipt_parser_test.dart` | đọc hóa đơn: sửa lỗi OCR, bỏ phiếu tổng tiền, dựng dòng ảnh nghiêng |
 | `test/features_test.dart` | mô hình trên thiết bị, định kỳ, khóa, xuất Excel |
 | `test/widget_test.dart`, `phone_preview_test.dart` | giao diện nhiều cỡ màn hình |
 | `integration_test/demo_test.dart` | kịch bản demo 16 bước trên máy ảo (iOS + Android), OCR thật |
 | `integration_test/full_features_test.dart` | đủ 9 nhóm chức năng với backend thật, đồng bộ hai thiết bị, mở mọi màn hình |
+| `integration_test/report_flows_test.dart` | các luồng trong báo cáo, thao tác chạm và nhập như người dùng |

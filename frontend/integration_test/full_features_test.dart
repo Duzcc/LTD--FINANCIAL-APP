@@ -8,29 +8,31 @@ import 'package:finance_app/app/app.dart';
 import 'package:finance_app/app/main_screen.dart';
 import 'package:finance_app/core/network/api_client.dart';
 import 'package:finance_app/features/security/data/services/app_lock.dart';
-import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
 import 'package:finance_app/features/finance/domain/entities/entities.dart';
 import 'package:finance_app/features/ai/data/repositories/ai_repository.dart';
-import 'package:finance_app/features/ai/presentation/ai_screens.dart';
-import 'package:finance_app/features/ai/presentation/assistant_screen.dart';
-import 'package:finance_app/features/ai/presentation/receipt_scan_screen.dart';
-import 'package:finance_app/features/ai/presentation/smart_search_screen.dart';
-import 'package:finance_app/features/auth/presentation/auth_screen.dart';
-import 'package:finance_app/features/auth/presentation/forgot_password_screen.dart';
-import 'package:finance_app/features/goals/presentation/goals_screen.dart';
-import 'package:finance_app/features/ledger/presentation/ledger_screen.dart';
-import 'package:finance_app/features/recurring/presentation/recurring_screen.dart';
-import 'package:finance_app/features/security/presentation/lock_screen.dart';
+import 'package:finance_app/features/ai/presentation/screens/insights_screen.dart';
+import 'package:finance_app/features/ai/presentation/screens/assistant_screen.dart';
+import 'package:finance_app/features/ai/presentation/screens/receipt_scan_screen.dart';
+import 'package:finance_app/features/ai/presentation/screens/smart_search_screen.dart';
+import 'package:finance_app/features/auth/presentation/screens/auth_screen.dart';
+import 'package:finance_app/features/auth/presentation/screens/forgot_password_screen.dart';
+import 'package:finance_app/features/goals/presentation/screens/goals_screen.dart';
+import 'package:finance_app/features/ledger/presentation/screens/ledger_screen.dart';
+import 'package:finance_app/features/recurring/presentation/screens/recurring_screen.dart';
+import 'package:finance_app/features/security/presentation/screens/lock_screen.dart';
 import 'package:finance_app/features/settings/data/services/excel_export.dart';
-import 'package:finance_app/features/settings/presentation/others_screen.dart';
-import 'package:finance_app/features/settings/presentation/settings_screens.dart';
-import 'package:finance_app/features/statistics/presentation/statistics_screen.dart';
-import 'package:finance_app/features/transactions/presentation/add_transaction_screen.dart';
-import 'package:finance_app/features/transactions/presentation/select_category_screen.dart';
-import 'package:finance_app/features/transactions/presentation/select_person_screen.dart';
-import 'package:finance_app/features/wallets/presentation/create_wallet_screen.dart';
-import 'package:finance_app/features/wallets/presentation/wallet_detail_screen.dart';
-import 'package:finance_app/features/wallets/presentation/wallets_screen.dart';
+import 'package:finance_app/features/settings/presentation/screens/account_screen.dart';
+import 'package:finance_app/features/settings/presentation/screens/rates_screen.dart';
+import 'package:finance_app/features/settings/presentation/screens/reminders_screen.dart';
+import 'package:finance_app/features/settings/presentation/screens/security_screen.dart';
+import 'package:finance_app/features/statistics/presentation/screens/statistics_screen.dart';
+import 'package:finance_app/features/transactions/presentation/screens/add_transaction_screen.dart';
+import 'package:finance_app/features/transactions/presentation/screens/select_category_screen.dart';
+import 'package:finance_app/features/transactions/presentation/screens/select_person_screen.dart';
+import 'package:finance_app/features/wallets/presentation/screens/create_wallet_screen.dart';
+import 'package:finance_app/features/wallets/presentation/screens/wallet_detail_screen.dart';
+import 'package:finance_app/features/wallets/presentation/screens/wallets_screen.dart';
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -313,7 +315,7 @@ void main() {
       'thong_ke': const StatisticsScreen(),
       'so_giao_dich': const LedgerScreen(),
       'ngan_sach': const GoalsScreen(),
-      'tai_khoan': const OthersScreen(),
+      'tai_khoan': const AccountScreen(),
       'vi': const WalletsScreen(),
       'chi_tiet_vi_tiet_kiem': const WalletDetailScreen(walletId: 'save'),
       'tao_vi': const CreateWalletScreen(),

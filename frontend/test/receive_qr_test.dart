@@ -4,9 +4,9 @@ import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:finance_app/core/network/api_client.dart';
 import 'package:finance_app/core/theme/app_theme.dart';
-import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
 import 'package:finance_app/features/finance/domain/entities/entities.dart';
-import 'package:finance_app/features/banking/presentation/receive_qr_screen.dart';
+import 'package:finance_app/features/banking/presentation/screens/receive_qr_screen.dart';
 import 'helpers/fake_backend.dart';
 
 const _mb = MoneyWallet(id: 'mb', name: 'MB', bankBin: '970422', bankAccount: '0123456789', bankHolder: 'NGUYEN AN');

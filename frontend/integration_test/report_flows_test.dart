@@ -8,10 +8,10 @@ import 'package:finance_app/app/app.dart';
 import 'package:finance_app/app/main_screen.dart';
 import 'package:finance_app/core/network/api_client.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
-import 'package:finance_app/features/finance/presentation/finance_provider.dart';
-import 'package:finance_app/features/statistics/presentation/statistics_screen.dart';
-import 'package:finance_app/features/transactions/presentation/add_transaction_screen.dart';
-import 'package:finance_app/features/wallets/presentation/wallet_detail_screen.dart';
+import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
+import 'package:finance_app/features/statistics/presentation/screens/statistics_screen.dart';
+import 'package:finance_app/features/transactions/presentation/screens/add_transaction_screen.dart';
+import 'package:finance_app/features/wallets/presentation/screens/wallet_detail_screen.dart';
 
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();

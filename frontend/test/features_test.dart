@@ -8,7 +8,7 @@ import 'package:finance_app/features/ai/domain/services/category_model.dart';
 import 'package:finance_app/features/ai/domain/services/insights.dart';
 import 'package:finance_app/features/ai/domain/services/quick_parser.dart';
 import 'package:finance_app/features/finance/domain/entities/entities.dart';
-import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
 import 'package:finance_app/features/security/data/services/app_lock.dart';
 import 'package:finance_app/features/settings/data/services/excel_export.dart';
 

@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import 'package:finance_app/core/widgets/finance_ui.dart';
-import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
 
 String reminderWhen(DateTime d) => DateFormat('HH:mm, dd/MM/yyyy').format(d);
 

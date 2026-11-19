@@ -1,0 +1,326 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:finance_app/core/utils/dates.dart';
+import 'package:finance_app/features/finance/domain/entities/entities.dart';
+import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
+import 'package:finance_app/core/widgets/finance_ui.dart';
+import 'package:finance_app/features/wallets/presentation/screens/currency_selection_screen.dart';
+import 'package:finance_app/features/banking/domain/vietqr.dart';
+import 'package:finance_app/core/validation/validators.dart';
+import 'package:finance_app/core/services/notification_service.dart';
+import 'package:finance_app/features/finance/presentation/widgets/entity_icons.dart';
+import 'package:finance_app/features/wallets/presentation/screens/wallet_icon_screen.dart';
+
+class CreateWalletScreen extends StatefulWidget {
+  const CreateWalletScreen({super.key, this.isFirstWallet = false, this.wallet, this.savings = false});
+  final bool isFirstWallet, savings;
+  final MoneyWallet? wallet;
+  @override
+  State<CreateWalletScreen> createState() => _CreateWalletScreenState();
+}
+
+class _CreateWalletScreenState extends State<CreateWalletScreen> {
+  final form = GlobalKey<FormState>();
+  late final name = TextEditingController(text: widget.wallet?.name ?? '');
+  late final opening = TextEditingController(text: formatAmountInput(widget.wallet?.opening ?? 0));
+  late final target = TextEditingController(text: formatAmountInput(widget.wallet?.target ?? 0));
+  late String currency = widget.wallet?.currency ?? 'VND';
+  late bool savings = widget.wallet?.savings ?? widget.savings,
+      excluded = widget.wallet?.excluded ?? false,
+      notify = widget.wallet?.notify ?? false;
+  late int? symbol = widget.wallet?.symbol;
+  late DateTime? deadline = widget.wallet?.deadline;
+  late bool linkBank = widget.wallet?.hasBank ?? false;
+  late String? bankBin = widget.wallet?.bankBin;
+  late final bankAccount = TextEditingController(text: widget.wallet?.bankAccount ?? '');
+  late final bankHolder = TextEditingController(text: widget.wallet?.bankHolder ?? '');
+  late DateTime? startDate = widget.wallet?.startDate ?? (widget.wallet == null ? dateOnly(DateTime.now()) : null);
+  @override
+  void dispose() {
+    name.dispose();
+    opening.dispose();
+    target.dispose();
+    bankAccount.dispose();
+    bankHolder.dispose();
+    super.dispose();
+  }
+
+  String? amountValidator(String? v) {
+    final n = (v ?? '').trim().isEmpty ? 0 : parseAmount(v!);
+    return n == null || !n.isFinite || n < 0 ? 'Nhập số hợp lệ, không âm' : null;
+  }
+
+  double amountOf(TextEditingController c) => parseAmount(c.text) ?? 0;
+
+  IconData get shownIcon => symbol == null
+      ? (savings ? Icons.savings_outlined : Icons.account_balance_wallet_outlined)
+      : walletIcons[symbol!];
+
+  Future<void> pickIcon() async {
+    final i = await openPage<int>(context, WalletIconScreen(selected: symbol ?? (savings ? 4 : 0)));
+    if (i != null && mounted) setState(() => symbol = i);
+  }
+
+  Future<void> setNotify(bool v) async {
+    setState(() => notify = v);
+    if (v && !await NotificationService.instance.requestPermission() && mounted) {
+      message(context, 'Chưa được cấp quyền thông báo. Hãy bật trong Cài đặt của hệ điều hành.');
+    }
+  }
+
+  void save() {
+    if (!form.currentState!.validate()) return;
+    final p = context.read<FinanceProvider>();
+    final bank = linkBank && currency == 'VND';
+    attempt(context, () {
+      p.saveWallet(MoneyWallet(
+          id: widget.wallet?.id ?? p.newId(),
+          name: name.text.trim(),
+          opening: amountOf(opening),
+          currency: currency,
+          savings: savings,
+          excluded: excluded,
+          notify: savings && notify,
+          symbol: symbol,
+          target: savings ? amountOf(target) : 0,
+          startDate: savings ? startDate : null,
+          deadline: savings ? deadline : null,
+          bankBin: bank ? bankBin : null,
+          bankAccount: bank ? bankAccount.text.replaceAll(RegExp(r'\s+'), '') : null,
+          bankHolder: bank ? bankHolder.text.trim().replaceAll(RegExp(r'\s+'), ' ') : null));
+      Navigator.pop(context);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) => FinancePage(
+      title: widget.wallet == null ? 'Thêm ví' : 'Chỉnh sửa ví',
+      bottom: FilledButton(onPressed: save, child: const Padding(padding: EdgeInsets.all(14), child: Text('Lưu ví'))),
+      child: Form(
+          autovalidateMode: AutovalidateMode.onUserInteraction,
+          key: form,
+          child: ListView(padding: const EdgeInsets.all(16), children: [
+            Row(children: [
+              for (final type in [false, true])
+                Expanded(
+                    child: Padding(
+                        padding: EdgeInsets.only(right: type ? 0 : 12),
+                        child: InkWell(
+                            borderRadius: BorderRadius.circular(18),
+                            onTap: () => setState(() => savings = type),
+                            child: Panel(
+                                color: savings == type
+                                    ? (type ? const Color(0xFFBC956D) : const Color(0xFF7C9583))
+                                    : Colors.white,
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Icon(type ? Icons.savings_outlined : Icons.account_balance_wallet_outlined,
+                                      size: 36, color: savings == type ? Colors.white : AppColors.textSecondary),
+                                  const SizedBox(height: 16),
+                                  Text(type ? 'Ví tiết kiệm' : 'Ví cơ bản',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          color: savings == type ? Colors.white : AppColors.textPrimary)),
+                                ])))))
+            ]),
+            const SizedBox(height: 20),
+            Panel(
+                child: Column(children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Padding(
+                    padding: const EdgeInsets.only(top: 4, right: 12),
+                    child: Tooltip(
+                        message: 'Chọn biểu tượng',
+                        child: InkWell(
+                            key: const ValueKey('wallet-icon-picker'),
+                            customBorder: const CircleBorder(),
+                            onTap: pickIcon,
+                            child: CircleAvatar(
+                                radius: 26,
+                                backgroundColor: AppColors.primaryGreenSurface,
+                                child: Icon(shownIcon, color: AppColors.primaryGreen))))),
+                Expanded(
+                    child: TextFormField(
+                        controller: name,
+                        textCapitalization: TextCapitalization.sentences,
+                        textInputAction: TextInputAction.next,
+                        decoration: const InputDecoration(labelText: 'Tên ví'),
+                        validator: (v) => v == null || v.trim().isEmpty ? 'Nhập tên ví' : null)),
+              ]),
+              const SizedBox(height: 12),
+              ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.currency_exchange),
+                  title: const Text('Đơn vị tiền tệ'),
+                  subtitle: Text(CurrencySelectionScreen.units[currency] ?? currency),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () async {
+                    final v = await openPage<String>(context, CurrencySelectionScreen(selectedCurrency: currency));
+                    if (v != null && mounted) setState(() => currency = v);
+                  }),
+              const SizedBox(height: 12),
+              TextFormField(
+                  controller: opening,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [AmountInputFormatter()],
+                  decoration: InputDecoration(
+                      labelText: savings ? 'Số tiền ban đầu' : 'Số dư hiện có', hintText: '0', suffixText: currency),
+                  validator: amountValidator),
+            ])),
+            if (savings) ...[
+              const SizedBox(height: 16),
+              Panel(
+                  child: Column(children: [
+                TextFormField(
+                    controller: target,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [AmountInputFormatter()],
+                    decoration: InputDecoration(
+                        labelText: 'Mục tiêu tiết kiệm',
+                        hintText: 'Số tiền cần đạt (không bắt buộc)',
+                        suffixText: currency),
+                    validator: amountValidator),
+                ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.play_circle_outline),
+                    title: const Text('Ngày bắt đầu'),
+                    subtitle: Text(startDate == null ? 'Chưa chọn' : dayLabel(startDate!)),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () async {
+                      final d = await showDatePicker(
+                          context: context,
+                          initialDate: startDate ?? DateTime.now(),
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2100));
+                      if (d != null && mounted) {
+                        setState(() {
+                          startDate = d;
+                          if (deadline != null && deadline!.isBefore(d)) {
+                            deadline = null;
+                          }
+                        });
+                      }
+                    }),
+                ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.event_outlined),
+                    title: const Text('Ngày kết thúc'),
+                    subtitle: Text(deadline == null ? 'Chưa đặt thời hạn' : dayLabel(deadline!)),
+                    trailing: deadline == null
+                        ? const Icon(Icons.chevron_right)
+                        : IconButton(
+                            tooltip: 'Bỏ thời hạn',
+                            onPressed: () => setState(() => deadline = null),
+                            icon: const Icon(Icons.clear)),
+                    onTap: () async {
+                      final first = startDate ?? DateTime(2020);
+                      final initial = deadline ?? DateTime.now();
+                      final d = await showDatePicker(
+                          context: context,
+                          initialDate: initial.isBefore(first) ? first : initial,
+                          firstDate: first,
+                          lastDate: DateTime(2100));
+                      if (d != null && mounted) setState(() => deadline = d);
+                    }),
+                SwitchListTile(
+                    key: const ValueKey('wallet-notify'),
+                    contentPadding: EdgeInsets.zero,
+                    tileColor: Colors.transparent,
+                    title: const Text('Bật thông báo'),
+                    subtitle: const Text(
+                        'Nhận thông báo khi ví có giao dịch mới từ thiết bị khác, giao dịch định kỳ hoặc ngân hàng.'),
+                    value: notify,
+                    onChanged: setNotify),
+              ]))
+            ],
+            const SizedBox(height: 16),
+            Panel(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                child: Column(children: [
+                  SwitchListTile(
+                      key: const ValueKey('link-bank'),
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Liên kết tài khoản ngân hàng'),
+                      subtitle: Text(currency == 'VND'
+                          ? 'Nhận tiền bằng mã VietQR, tự ghi giao dịch khi kết nối SePay.'
+                          : 'Chỉ dùng cho ví VND.'),
+                      value: linkBank && currency == 'VND',
+                      onChanged: currency == 'VND' ? (v) => setState(() => linkBank = v) : null),
+                  if (linkBank && currency == 'VND') ...[
+                    DropdownButtonFormField<String>(
+                        key: const ValueKey('bank-bin'),
+                        initialValue: bankBin,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                            labelText: 'Ngân hàng', prefixIcon: Icon(Icons.account_balance_outlined)),
+                        items: [
+                          for (final b in vietBanks)
+                            DropdownMenuItem(value: b.bin, child: Text('${b.name} (${b.code})'))
+                        ],
+                        onChanged: (v) => setState(() => bankBin = v),
+                        validator: (v) => bankByBin(v) == null ? 'Chọn ngân hàng' : null),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                        key: const ValueKey('bank-account'),
+                        controller: bankAccount,
+                        keyboardType: TextInputType.number,
+                        maxLength: 19,
+                        decoration: const InputDecoration(
+                            labelText: 'Số tài khoản', counterText: '', prefixIcon: Icon(Icons.numbers)),
+                        validator: validateBankAccount),
+                    const SizedBox(height: 12),
+                    TextFormField(
+                        key: const ValueKey('bank-holder'),
+                        controller: bankHolder,
+                        textCapitalization: TextCapitalization.characters,
+                        maxLength: 50,
+                        decoration: const InputDecoration(
+                            labelText: 'Tên chủ tài khoản',
+                            hintText: 'NGUYEN VAN AN',
+                            counterText: '',
+                            prefixIcon: Icon(Icons.badge_outlined)),
+                        onChanged: (v) {
+                          final fixed = holderName(v);
+                          if (fixed != v) {
+                            bankHolder.value =
+                                TextEditingValue(text: fixed, selection: TextSelection.collapsed(offset: fixed.length));
+                          }
+                        },
+                        validator: validateBankHolder),
+                  ],
+                ])),
+            const SizedBox(height: 16),
+            SwitchListTile(
+                title: const Text('Không tính vào tổng'),
+                subtitle: const Text('Ví vẫn xuất hiện trong danh sách và giao dịch.'),
+                value: excluded,
+                onChanged: (v) => setState(() => excluded = v)),
+            if (widget.wallet != null) ...[
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Xóa ví'),
+                  onPressed: () async {
+                    final p = context.read<FinanceProvider>();
+                    final id = widget.wallet!.id;
+                    final refs = p.walletReferences(id);
+                    final ok = refs == 0
+                        ? await confirmDelete(context, 'Xóa ví này?')
+                        : await confirmAction(context,
+                            title: 'Xóa ví và dữ liệu liên quan?',
+                            content:
+                                'Ví đang có $refs giao dịch/ngân sách liên quan. Xóa ví sẽ xóa luôn các dữ liệu này; giao dịch chuyển tiền với ví khác cũng bị xóa nên số dư ví kia sẽ thay đổi. Thao tác không thể hoàn tác.',
+                            confirm: 'Xóa tất cả',
+                            danger: true);
+                    if (!ok || !context.mounted) return;
+                    attempt(context, () {
+                      p.deleteWallet(id, cascade: refs > 0);
+                      message(context, 'Đã xóa ví.');
+                      Navigator.pop(context, 'deleted');
+                    });
+                  })
+            ],
+            const SizedBox(height: 24),
+            const Text(
+                'Số dư hiện tại được tính từ số dư ban đầu và tất cả giao dịch của ví. Các tiền tệ được thống kê riêng.'),
+          ])));
+}

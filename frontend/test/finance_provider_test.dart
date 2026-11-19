@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:finance_app/features/finance/domain/entities/entities.dart';
-import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
 
 void main() {
   final month = DateTime(2026, 10);

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:finance_app/features/finance/domain/entities/entities.dart';
-import 'package:finance_app/features/finance/presentation/finance_provider.dart';
-import 'package:finance_app/features/transactions/presentation/add_transaction_screen.dart';
+import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
+import 'package:finance_app/features/transactions/presentation/screens/add_transaction_screen.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
-import 'package:finance_app/features/finance/presentation/entity_icons.dart';
+import 'package:finance_app/features/finance/presentation/widgets/entity_icons.dart';
 
 class EntryTile extends StatelessWidget {
   const EntryTile(this.entry, {super.key});

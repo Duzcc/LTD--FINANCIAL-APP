@@ -1,0 +1,230 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:finance_app/core/widgets/brand_logo.dart';
+import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
+import 'package:finance_app/core/widgets/finance_ui.dart';
+import 'package:finance_app/app/app_routes.dart';
+import 'package:finance_app/core/validation/validators.dart';
+import 'package:finance_app/features/auth/presentation/screens/forgot_password_screen.dart';
+import 'package:finance_app/features/auth/presentation/screens/otp_screen.dart';
+
+Future<void> finishSignIn(BuildContext context, bool needsDecision, {required bool fromSettings}) async {
+  final p = context.read<FinanceProvider>();
+  if (needsDecision) {
+    final useAccount = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+                title: const Text('Chọn dữ liệu sử dụng'),
+                content: const Text(
+                    'Thiết bị này và tài khoản đều đã có dữ liệu. Bạn muốn dùng dữ liệu của tài khoản (dữ liệu trên máy sẽ được thay thế) hay gộp dữ liệu máy này lên tài khoản?'),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+                  TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Gộp lên tài khoản')),
+                  FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Dùng dữ liệu tài khoản')),
+                ]));
+    if (useAccount == null) {
+      p.cancelLogin();
+      return;
+    }
+    await p.resolveLogin(useAccount: useAccount);
+  }
+  if (!context.mounted) return;
+  if (p.syncError != null) message(context, p.syncError!);
+  if (fromSettings) {
+    Navigator.of(context).popUntil((r) => r.isFirst);
+  } else {
+    Navigator.of(context).pushNamedAndRemoveUntil(AppRoutes.home, (_) => false);
+  }
+}
+
+class AuthScreen extends StatefulWidget {
+  const AuthScreen({super.key, this.fromSettings = false});
+
+  final bool fromSettings;
+  @override
+  State<AuthScreen> createState() => _AuthScreenState();
+}
+
+class _AuthScreenState extends State<AuthScreen> with BusyState {
+  final form = GlobalKey<FormState>();
+  final name = TextEditingController(),
+      email = TextEditingController(),
+      password = TextEditingController(),
+      confirm = TextEditingController(),
+      offlineName = TextEditingController();
+  bool registering = false, showPassword = false;
+
+  @override
+  void dispose() {
+    for (final c in [name, email, password, confirm, offlineName]) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  Future<void> submit() async {
+    if (!form.currentState!.validate()) return;
+    final p = context.read<FinanceProvider>();
+    await runBusy(() async {
+      final challenge = registering
+          ? await p.register(name: name.text, email: email.text, password: password.text)
+          : await p.signIn(email: email.text, password: password.text);
+      if (!mounted) return;
+      password.clear();
+      confirm.clear();
+      await openPage(context, OtpScreen(challenge: challenge, fromSettings: widget.fromSettings));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = context.watch<FinanceProvider>();
+    return Scaffold(
+        appBar: widget.fromSettings ? AppBar(title: const Text('Đăng nhập tài khoản')) : null,
+        body: SafeArea(
+            child: Center(
+                child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 480),
+                    child: Form(
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        key: form,
+                        child: ListView(padding: const EdgeInsets.fromLTRB(24, 24, 24, 32), children: [
+                          if (!widget.fromSettings) ...[
+                            const Align(alignment: Alignment.centerLeft, child: BrandLogo.app(size: 76)),
+                            const SizedBox(height: 24),
+                            const Text('Tiền của bạn.\nKế hoạch của bạn.',
+                                style: TextStyle(fontSize: 30, height: 1.2, fontWeight: FontWeight.w800)),
+                            const SizedBox(height: 10),
+                            const Text('Ghi chép thu chi, quản lý ví và từng bước đạt mục tiêu tiết kiệm.',
+                                style: TextStyle(fontSize: 15, height: 1.5)),
+                            const SizedBox(height: 24),
+                          ],
+                          SegmentedButton<bool>(
+                              segments: const [
+                                ButtonSegment(value: false, label: Text('Đăng nhập')),
+                                ButtonSegment(value: true, label: Text('Đăng ký')),
+                              ],
+                              selected: {
+                                registering
+                              },
+                              onSelectionChanged: (v) => setState(() {
+                                    registering = v.first;
+                                    error = null;
+                                    form.currentState?.reset();
+                                  })),
+                          const SizedBox(height: 20),
+                          if (registering) ...[
+                            TextFormField(
+                                controller: name,
+                                textInputAction: TextInputAction.next,
+                                textCapitalization: TextCapitalization.words,
+                                maxLength: 50,
+                                decoration: const InputDecoration(
+                                    labelText: 'Họ và tên', counterText: '', prefixIcon: Icon(Icons.person_outline)),
+                                validator: validateName),
+                            const SizedBox(height: 12),
+                          ],
+                          TextFormField(
+                              key: const ValueKey('auth-email'),
+                              controller: email,
+                              keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
+                              autocorrect: false,
+                              maxLength: 254,
+                              autofillHints: const [AutofillHints.email],
+                              decoration: const InputDecoration(
+                                  counterText: '', labelText: 'Email', prefixIcon: Icon(Icons.mail_outline)),
+                              validator: (v) => registering ? validateEmail(v) : validateLoginEmail(v)),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                              key: const ValueKey('auth-password'),
+                              controller: password,
+                              obscureText: !showPassword,
+                              textInputAction: registering ? TextInputAction.next : TextInputAction.done,
+                              maxLength: 72,
+                              decoration: InputDecoration(
+                                  labelText: 'Mật khẩu',
+                                  counterText: '',
+                                  helperText: registering ? passwordRules : null,
+                                  prefixIcon: const Icon(Icons.lock_outline),
+                                  suffixIcon: IconButton(
+                                      tooltip: showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu',
+                                      onPressed: () => setState(() => showPassword = !showPassword),
+                                      icon: Icon(
+                                          showPassword ? Icons.visibility_off_outlined : Icons.visibility_outlined))),
+                              validator: (v) =>
+                                  registering ? validatePassword(v, email: email.text) : validateLoginPassword(v),
+                              onFieldSubmitted: (_) => registering ? null : submit()),
+                          if (registering) ...[
+                            const SizedBox(height: 12),
+                            TextFormField(
+                                controller: confirm,
+                                obscureText: !showPassword,
+                                textInputAction: TextInputAction.done,
+                                onFieldSubmitted: (_) => submit(),
+                                decoration: const InputDecoration(
+                                    labelText: 'Nhập lại mật khẩu', prefixIcon: Icon(Icons.lock_outline)),
+                                validator: (v) => (v ?? '').isEmpty
+                                    ? 'Vui lòng nhập lại mật khẩu'
+                                    : v != password.text
+                                        ? 'Mật khẩu nhập lại không khớp'
+                                        : null),
+                          ],
+                          if (error != null) ...[
+                            const SizedBox(height: 12),
+                            Text(error!, style: const TextStyle(color: AppColors.accentRed)),
+                          ],
+                          const SizedBox(height: 16),
+                          FilledButton(
+                              onPressed: busy ? null : submit,
+                              child: Padding(
+                                  padding: const EdgeInsets.all(14),
+                                  child: busy
+                                      ? const SizedBox.square(
+                                          dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                                      : Text(registering ? 'Tạo tài khoản' : 'Đăng nhập'))),
+                          if (!registering)
+                            Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                    onPressed: () => openPage(context,
+                                        ForgotPasswordScreen(email: email.text, fromSettings: widget.fromSettings)),
+                                    child: const Text('Quên mật khẩu?'))),
+                          if (!widget.fromSettings) ...[
+                            const SizedBox(height: 8),
+                            const Row(children: [
+                              Expanded(child: Divider()),
+                              Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Text('hoặc')),
+                              Expanded(child: Divider()),
+                            ]),
+                            const SizedBox(height: 16),
+                            TextField(
+                                controller: offlineName,
+                                textCapitalization: TextCapitalization.words,
+                                decoration: const InputDecoration(
+                                    labelText: 'Bạn muốn được gọi là gì?',
+                                    hintText: 'Tên của bạn',
+                                    prefixIcon: Icon(Icons.badge_outlined))),
+                            const SizedBox(height: 12),
+                            OutlinedButton(
+                                onPressed: () {
+                                  final invalid =
+                                      offlineName.text.trim().isEmpty ? null : validateName(offlineName.text);
+                                  if (invalid != null) {
+                                    message(context, invalid);
+                                    return;
+                                  }
+                                  p.preferences(name: offlineName.text.isEmpty ? 'Bạn' : offlineName.text);
+                                  Navigator.pushReplacementNamed(context, AppRoutes.home);
+                                },
+                                child: const Padding(padding: EdgeInsets.all(14), child: Text('Bắt đầu sử dụng'))),
+                            const SizedBox(height: 10),
+                            const Text(
+                                'Không cần tài khoản: dữ liệu được lưu trên điện thoại này. Bạn có thể đăng nhập sau trong mục Tài khoản để sao lưu và dùng trên nhiều thiết bị.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(fontSize: 12, height: 1.5)),
+                          ],
+                        ]))))));
+  }
+}

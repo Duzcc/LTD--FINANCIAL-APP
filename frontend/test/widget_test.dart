@@ -1,24 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import 'package:finance_app/features/wallets/presentation/wallets_screen.dart';
+import 'package:finance_app/features/wallets/presentation/screens/wallets_screen.dart';
 import 'package:finance_app/app/splash_screen.dart';
 import 'package:finance_app/app/app.dart';
 import 'package:finance_app/core/theme/app_theme.dart';
 import 'package:finance_app/features/finance/domain/entities/entities.dart';
-import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
 import 'package:finance_app/app/main_screen.dart';
-import 'package:finance_app/features/transactions/presentation/add_transaction_screen.dart';
-import 'package:finance_app/features/wallets/presentation/create_wallet_screen.dart';
-import 'package:finance_app/features/transactions/presentation/select_category_screen.dart';
-import 'package:finance_app/features/transactions/presentation/select_person_screen.dart';
-import 'package:finance_app/features/goals/presentation/goals_screen.dart';
-import 'package:finance_app/features/statistics/presentation/statistics_screen.dart';
-import 'package:finance_app/features/ai/presentation/ai_screens.dart';
-import 'package:finance_app/features/ai/presentation/assistant_screen.dart';
-import 'package:finance_app/features/recurring/presentation/recurring_screen.dart';
-import 'package:finance_app/features/settings/presentation/settings_screens.dart';
-import 'package:finance_app/features/settings/presentation/others_screen.dart';
+import 'package:finance_app/features/transactions/presentation/screens/add_transaction_screen.dart';
+import 'package:finance_app/features/wallets/presentation/screens/create_wallet_screen.dart';
+import 'package:finance_app/features/transactions/presentation/screens/select_category_screen.dart';
+import 'package:finance_app/features/transactions/presentation/screens/select_person_screen.dart';
+import 'package:finance_app/features/goals/presentation/screens/goals_screen.dart';
+import 'package:finance_app/features/statistics/presentation/screens/statistics_screen.dart';
+import 'package:finance_app/features/ai/presentation/screens/insights_screen.dart';
+import 'package:finance_app/features/ai/presentation/screens/assistant_screen.dart';
+import 'package:finance_app/features/recurring/presentation/screens/recurring_screen.dart';
+import 'package:finance_app/features/settings/presentation/screens/rates_screen.dart';
+import 'package:finance_app/features/settings/presentation/screens/reminders_screen.dart';
+import 'package:finance_app/features/settings/presentation/screens/security_screen.dart';
+import 'package:finance_app/features/settings/presentation/screens/account_screen.dart';
 import 'package:finance_app/features/security/data/services/app_lock.dart';
 
 void main() {
@@ -99,7 +101,7 @@ void main() {
       const RatesScreen(),
       const RemindersScreen(),
       const ExportScreen(),
-      const OthersScreen(),
+      const AccountScreen(),
     ]) {
       await tester.pumpWidget(MultiProvider(
           providers: [

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:finance_app/features/banking/domain/vietqr.dart';
 import 'package:finance_app/core/validation/validators.dart';
-import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
 import 'package:finance_app/features/finance/domain/entities/entities.dart';
 
 Map<String, String> tlv(String s) {

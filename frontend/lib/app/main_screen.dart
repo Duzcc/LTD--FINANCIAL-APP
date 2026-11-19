@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
-import 'package:finance_app/features/home/presentation/home_screen.dart';
-import 'package:finance_app/features/ledger/presentation/ledger_screen.dart';
-import 'package:finance_app/features/transactions/presentation/add_transaction_screen.dart';
-import 'package:finance_app/features/goals/presentation/goals_screen.dart';
-import 'package:finance_app/features/ai/presentation/assistant_screen.dart';
-import 'package:finance_app/features/settings/presentation/others_screen.dart';
+import 'package:finance_app/features/home/presentation/screens/home_screen.dart';
+import 'package:finance_app/features/ledger/presentation/screens/ledger_screen.dart';
+import 'package:finance_app/features/transactions/presentation/screens/add_transaction_screen.dart';
+import 'package:finance_app/features/goals/presentation/screens/goals_screen.dart';
+import 'package:finance_app/features/ai/presentation/screens/assistant_screen.dart';
+import 'package:finance_app/features/settings/presentation/screens/account_screen.dart';
 import 'package:finance_app/app/app_drawer.dart';
 import 'package:finance_app/app/main_bottom_nav.dart';
 
@@ -69,7 +69,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                     SizedBox.shrink(),
                     AssistantScreen(),
                     GoalsScreen(),
-                    OthersScreen()
+                    AccountScreen()
                   ])),
                 ]))),
         bottomNavigationBar: MainBottomNav(

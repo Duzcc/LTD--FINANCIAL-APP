@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'package:finance_app/core/widgets/finance_ui.dart';
-import 'package:finance_app/features/finance/presentation/finance_provider.dart';
-import 'package:finance_app/features/finance/presentation/entity_icons.dart';
+import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
+import 'package:finance_app/features/finance/presentation/widgets/entity_icons.dart';
 import 'package:finance_app/features/finance/domain/entities/entities.dart';
 import 'package:finance_app/features/ai/data/repositories/ai_repository.dart';
 import 'package:finance_app/features/ai/domain/entities/ai_models.dart';
 import 'package:finance_app/features/ai/domain/services/quick_parser.dart';
 import 'package:finance_app/features/ai/domain/services/receipt_split.dart';
-import 'package:finance_app/features/ai/presentation/ai_screens.dart';
+import 'package:finance_app/features/ai/presentation/widgets/quick_entry_sheet.dart';
 
 class ReceiptReviewCard extends StatefulWidget {
   const ReceiptReviewCard(

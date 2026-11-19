@@ -39,3 +39,6 @@ frontend/ios/.symlinks/
 frontend/android/build/
 tool/.lenh*
 tool/*.tgz
+
+*.iml
+.DS_Store

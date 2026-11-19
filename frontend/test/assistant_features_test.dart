@@ -10,10 +10,10 @@ import 'package:finance_app/features/ai/domain/services/receipt_parser.dart';
 import 'package:finance_app/features/ai/domain/services/receipt_split.dart';
 import 'package:finance_app/features/ai/domain/services/reminder_parser.dart';
 import 'package:finance_app/features/ai/domain/services/spending_coach.dart';
-import 'package:finance_app/features/ai/presentation/assistant_screen.dart';
+import 'package:finance_app/features/ai/presentation/screens/assistant_screen.dart';
 import 'package:finance_app/features/ai/presentation/widgets/receipt_review_card.dart';
 import 'package:finance_app/features/finance/domain/entities/entities.dart';
-import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
 
 void main() {
   final now = DateTime(2026, 10, 20, 10);

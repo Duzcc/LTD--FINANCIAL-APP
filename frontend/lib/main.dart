@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:finance_app/app/app.dart';
-import 'package:finance_app/features/finance/presentation/finance_provider.dart';
+import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
 import 'package:finance_app/features/security/data/services/app_lock.dart';
-import 'package:finance_app/app/notification_service.dart';
+import 'package:finance_app/core/services/notification_service.dart';
 
 // không mở được bộ nhớ thì app vẫn chạy, chỉ là không lưu được
 Future<SharedPreferences?> _openStorage() async {
