@@ -16,8 +16,8 @@ class SessionClient {
   Future<Map<String, dynamic>> send(String method, String path,
       {Object? body, bool auth = true}) async {
     final sent = session();
-    // Phiên hết hạn (lỗi 401) thì xin phiên mới một lần rồi gửi lại yêu cầu.
-    // Nhiều yêu cầu cùng hết hạn một lúc chỉ dùng chung một lần xin phiên mới.
+    // hết phiên (401) thì xin phiên mới một lần rồi gửi lại,
+    // nhiều request cùng lúc thì dùng chung một lần xin
     try {
       return await api.send(method, sent?.baseUrl ?? serverUrl(), path,
           body: body, token: auth ? sent?.token : null);

@@ -37,7 +37,7 @@ class NotificationService {
     _ready = true;
   }
 
-  // Máy không hỗ trợ thông báo thì coi như chưa được cho phép; nhắc nhở vẫn được lưu lại.
+  // máy không hỗ trợ thì coi như chưa cho phép
   Future<bool> requestPermission() => _requestPermission().catchError((Object _) => false);
 
   Future<bool> _requestPermission() async {
@@ -85,7 +85,7 @@ class NotificationService {
   Future<void> apply(FinanceProvider p) async {
     if (kIsWeb) return;
     await init();
-    // Chỉ hủy lịch hẹn; thông báo giao dịch của ví đang hiện vẫn được giữ.
+    // chỉ hủy lịch nhắc, không xóa thông báo đang hiện
     for (final pending in await _plugin.pendingNotificationRequests()) {
       await _plugin.cancel(id: pending.id);
     }

@@ -100,7 +100,7 @@ class AiRepository {
 
   ServerInsights? get cachedInsights => remoteAvailable && _cacheKey == _dataKey ? _cache : null;
 
-  // Chỉ hỏi phân tích khi thay đổi đã lên máy chủ: nhiều thay đổi liền nhau chỉ tạo một lần gọi, sau lần đồng bộ cuối.
+  // chỉ phân tích khi đã sao lưu xong, sửa liên tục thì chỉ gọi một lần
   void refreshInsightsIfStale() {
     if (!remoteAvailable || cachedInsights != null || _inflight != null) return;
     if (p.syncing || p.pendingChanges > 0) return;
@@ -131,7 +131,7 @@ class AiRepository {
 
   CategoryModel get _model => p.cached(() => CategoryModel.train(p.categories, p.entries));
 
-  // Danh mục phải cùng loại với hóa đơn: khoản thu chỉ nhận danh mục thu, khoản chi chỉ nhận danh mục chi.
+  // khoản thu chỉ nhận danh mục thu, khoản chi chỉ nhận danh mục chi
   ReceiptResult categorize(ReceiptResult r, [EntryKind? kind]) {
     final k = kind ?? r.kind;
     final income = k == EntryKind.income;

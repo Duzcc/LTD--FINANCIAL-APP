@@ -23,7 +23,7 @@ class _VoiceInputButtonState extends State<VoiceInputButton> {
       setState(() => listening = false);
       return;
     }
-    // Máy không hỗ trợ nhận giọng nói sẽ báo lỗi ngay khi khởi động, coi như chưa sẵn sàng.
+    // máy không hỗ trợ giọng nói thì coi như chưa sẵn sàng
     _ready ??= await _speech.initialize(onStatus: (s) {
       if ((s == 'done' || s == 'notListening') && mounted && listening) {
         setState(() => listening = false);

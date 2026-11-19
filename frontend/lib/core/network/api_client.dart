@@ -56,7 +56,7 @@ class ApiClient {
       request.body = jsonEncode(body);
     }
     http.Response response;
-    // Mọi lỗi mạng đều đổi thành ApiException để màn hình chỉ phải xử lý một loại lỗi.
+    // gom lỗi mạng về ApiException cho màn hình dễ xử lý
     try {
       response = await http.Response.fromStream(
           await _client.send(request).timeout(timeout));
@@ -73,7 +73,7 @@ class ApiClient {
         final decoded = jsonDecode(utf8.decode(response.bodyBytes));
         if (decoded is Map<String, dynamic>) data = decoded;
       } on FormatException {
-        // Nhận về trang HTML thay vì JSON: thường do nhập sai địa chỉ máy chủ.
+        // nhận về HTML thay vì JSON, thường do sai địa chỉ
         if (response.statusCode < 400) {
           throw const ApiException(
               0, 'BAD_RESPONSE', 'Dịch vụ tạm thời không khả dụng. Vui lòng thử lại sau.');

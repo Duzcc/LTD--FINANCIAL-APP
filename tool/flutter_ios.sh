@@ -1,12 +1,12 @@
 #!/bin/bash
-# Chạy lệnh flutter cho iOS trong thư mục frontend/ (dùng CocoaPods cục bộ nếu máy chưa có `pod`).
+# Chạy flutter cho iOS, dùng CocoaPods cục bộ nếu máy chưa có pod.
 set -euo pipefail
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 project_root="$repo_root/frontend"
 cd "$project_root"
-# Giữ thư mục build iOS ngoài Desktop/iCloud (iCloud gắn FinderInfo khiến codesign từ chối framework).
+# build ngoài Desktop vì iCloud làm codesign lỗi
 ios_build_root="/private/tmp/android-nhom3-ios-build"
 mkdir -p "$ios_build_root" "$project_root/build"
 if [ ! -e "$project_root/build/ios" ] && [ ! -L "$project_root/build/ios" ]; then

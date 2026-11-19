@@ -53,8 +53,7 @@ async function rotate(rawRefreshToken) {
     await sessions.deleteById(current._id);
     throw unauthorized('Phiên đăng nhập đã bị thu hồi.');
   }
-  // Mỗi mã làm mới chỉ dùng được một lần. Hai yêu cầu dùng cùng mã một lúc thì chỉ yêu cầu nào
-  // xóa được mã cũ mới nhận phiên mới; yêu cầu còn lại bị từ chối.
+  // refresh token chỉ dùng một lần; hai request cùng lúc thì chỉ cái xóa được token cũ mới có phiên mới
   const next = await issue(user, current.sid || undefined);
   if (!(await sessions.deleteById(current._id))) {
     await sessions.deleteByTokenHash(sha256(next.refreshToken));

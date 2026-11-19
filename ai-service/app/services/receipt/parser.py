@@ -20,8 +20,7 @@ _NOT_ITEM = ("giam gia", "chiet khau", "discount", "vat", "thue", "khuyen mai", 
 _HEADER = ("ten hang", "don gia", "thanh tien", "t.tien", "d.gia", "sl ", "mat hang", "so luong")
 _NOT_MERCHANT = ("dia chi", "dc:", "d/c", "dt:", "dt ", "tel", "hotline", "mst", "ma so thue", "hoa don",
                  "phieu", "so hd", "ngay", "thu ngan", "nhan vien", "ban hang", "www", "http")
-# Dấu hiệu tiền đi vào túi người dùng: hoàn tiền, nhận chuyển khoản, phiếu lương.
-# Không dùng "phiếu thu" vì phiếu thu được đưa cho người trả tiền, tức vẫn là khoản chi.
+# không có "phiếu thu" vì phiếu thu đưa cho người trả tiền, vẫn là khoản chi
 INCOME_MARKERS = ("hoan tien", "tien hoan", "hoan tra", "refund", "ban da nhan", "nhan tien tu", "nhan chuyen khoan",
                   "ghi co", "phieu luong", "bang luong", "thuc linh", "luong thuc nhan")
 KNOWN_MERCHANTS = ("circle k", "winmart", "bach hoa xanh", "highlands", "phuc long", "co.opmart", "coopmart",

@@ -20,7 +20,7 @@ async function applyOp(userId, state, op) {
 async function applyBatch(userId, ops) {
   if (!Array.isArray(ops) || ops.length > MAX_OPS) throw badRequest('Danh sách thao tác không hợp lệ.');
   const state = await ledger.loadState(userId);
-  // Dừng ở thao tác lỗi đầu tiên và báo cho app biết đã lưu được bao nhiêu thao tác trước đó.
+  // dừng ở thao tác lỗi đầu tiên, báo app biết đã lưu được bao nhiêu
   for (const [index, op] of ops.entries()) {
     try {
       await applyOp(userId, state, op);

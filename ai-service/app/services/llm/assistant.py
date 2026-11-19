@@ -53,7 +53,7 @@ class Assistant:
         reason = None
         if self.provider is not None:
             system = SYSTEM_PROMPT.format(today=kit.now.date().isoformat(), currency=snapshot.currency)
-            # Dịch vụ AI bên ngoài lỗi hoặc quá tải thì vẫn trả lời được bằng bộ luật có sẵn.
+            # LLM lỗi thì trả lời bằng luật
             try:
                 text, used = await self.provider.run(system, messages, TOOL_SPECS, kit.call)
                 if text:

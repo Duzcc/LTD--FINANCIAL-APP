@@ -1,15 +1,8 @@
 #!/bin/zsh -l
-# Kiểm tra cả 3 phần (frontend, backend, ai-service); kết quả ghi vào tool/ket_qua_kiem_tra.txt
+# Chạy test cả 3 phần, kết quả ghi vào tool/ket_qua_kiem_tra.txt
 cd "$(dirname "$0")/.."
 ROOT="$PWD"
 OUT=tool/ket_qua_kiem_tra.txt
-# Chế độ chạy thử: nếu có tool/.lenh.sh thì chạy lệnh đó thay cho kiểm tra
-if [ -s tool/.lenh.sh ]; then
-  mv tool/.lenh.sh tool/.lenh_dang_chay.sh
-  zsh -l tool/.lenh_dang_chay.sh > tool/lenh_out.txt 2>&1
-  echo "== LENH XONG ==" >> tool/lenh_out.txt
-  exit 0
-fi
 {
   echo "== $(date) =="
   echo "== [ai-service] pytest =="

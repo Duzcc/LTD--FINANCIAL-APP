@@ -1,5 +1,5 @@
 #!/bin/zsh -l
-# Chạy một kịch bản integration_test trên thiết bị: chay_kiem_thu_thiet_bi.sh <id-thiết-bị> <tệp> [thư-mục-ảnh]
+# Cách dùng: chay_kiem_thu_thiet_bi.sh <id thiết bị> <tệp test> [thư mục ảnh]
 ROOT="${0:A:h:h}"
 DEV=$1; TARGET=$2; OUTDIR=${3:-demo}
 cd "$ROOT/frontend"

@@ -50,7 +50,6 @@ def from_llm_json(text: str) -> ReceiptResult | None:
     m = re.search(r"\{.*\}", text, re.S)
     if not m:
         return None
-    # Mô hình AI đôi khi trả về JSON hỏng; khi đó coi như không đọc được hóa đơn.
     try:
         data = json.loads(m.group(0))
     except json.JSONDecodeError:

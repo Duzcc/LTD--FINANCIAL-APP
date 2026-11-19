@@ -55,7 +55,7 @@ async def scan(image: UploadFile = File(...), categories: str = Form("[]"),
     media = image.content_type or "image/jpeg"
     if media not in {"image/jpeg", "image/png", "image/webp", "image/heic"}:
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "Chỉ hỗ trợ ảnh JPEG/PNG/WebP.")
-    # Danh sách danh mục chỉ để gợi ý; gửi sai thì vẫn đọc hóa đơn bình thường.
+    # danh mục chỉ để gợi ý, gửi sai thì bỏ qua
     try:
         cats = [Category(**c) for c in json.loads(categories)]
     except (ValueError, TypeError):
@@ -69,7 +69,7 @@ async def scan(image: UploadFile = File(...), categories: str = Form("[]"),
         if ocr_result.total and ocr_result.confidence >= 0.8:
             return _to_response(ocr_result, cats)
     if assistant.provider is not None:
-        # AI đọc ảnh lỗi thì dùng kết quả đọc chữ đã có ở trên.
+        # AI đọc ảnh lỗi thì dùng kết quả OCR ở trên
         try:
             text = await assistant.provider.complete_vision(receipt.RECEIPT_PROMPT, receipt.b64(data), media)
             r = receipt.from_llm_json(text)

@@ -1,4 +1,4 @@
-// Kiểm tra toàn hệ thống qua HTTP như ứng dụng thật: tài khoản → dữ liệu → báo cáo → AI.
+// Gọi API như app thật để kiểm tra cả hệ thống.
 import { readFileSync } from 'node:fs';
 const API = process.env.API || 'http://localhost:3000/api';
 const AI = process.env.AI || 'http://localhost:8000';
@@ -14,8 +14,8 @@ async function call(method, path, body, { auth = true, base = API, headers = {} 
 }
 async function check(name, fn) {
   const t0 = Date.now();
-  try { const info = await fn(); results.push(['✅', name, `${Date.now() - t0}ms`, info ?? '']); }
-  catch (e) { results.push(['❌', name, `${Date.now() - t0}ms`, String(e.message).slice(0, 160)]); }
+  try { const info = await fn(); results.push(['OK', name, `${Date.now() - t0}ms`, info ?? '']); }
+  catch (e) { results.push(['LỖI', name, `${Date.now() - t0}ms`, String(e.message).slice(0, 160)]); }
 }
 const expect = (c, msg) => { if (!c) throw new Error(msg); };
 const now = new Date();
@@ -69,7 +69,7 @@ await check('Đồng bộ hàng loạt 90 ngày giao dịch (sync/batch)', async
   add({ kind: 'lend', amount: 500000, date: day(3), walletId: 'cash', personId: 'minh', note: 'cho Minh mượn' });
   add({ kind: 'transfer', amount: 2000000, date: day(2), walletId: 'bank', destinationId: 'save', note: 'để dành' });
   const r = await call('POST', '/sync/batch', { ops });
-  if (r.status !== 200) { // khoản cho vay cần đối tượng → tạo rồi gửi lại
+  if (r.status !== 200) { // cho vay cần đối tượng: tạo rồi gửi lại
     throw new Error(JSON.stringify(r.data));
   }
   return `${r.data.applied} thao tác`;
@@ -141,5 +141,5 @@ await check('Xóa tài khoản và toàn bộ dữ liệu', async () => {
   const after = await call('POST', '/auth/login', { email, password: 'matkhau123' }, { auth: false }); expect(after.status === 401, after.status); return 'đã xóa';
 });
 for (const [ok, name, ms, info] of results) console.log(`${ok} ${name} (${ms})${info ? ' — ' + info : ''}`);
-const failed = results.filter((r) => r[0] === '❌').length;
+const failed = results.filter((r) => r[0] === 'LỖI').length;
 console.log(`\nTỔNG: ${results.length - failed}/${results.length} đạt`);

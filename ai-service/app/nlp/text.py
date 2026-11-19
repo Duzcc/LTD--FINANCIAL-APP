@@ -19,7 +19,7 @@ ABBREVIATIONS = {
 
 
 def calendar_date(year: int, month: int, day: int, hour: int = 0) -> datetime | None:
-    # Người dùng hay gõ ngày không có thật (31/11, 29/2 năm thường): trả về None thay vì báo lỗi.
+    # ngày không có thật như 31/11 thì trả None
     if 1 <= month <= 12 and 1 <= day <= calendar.monthrange(year, month)[1]:
         return datetime(year, month, day, hour)
     return None

@@ -13,13 +13,12 @@ class SyncOp {
       };
 }
 
-// Hàng chờ các thay đổi chưa gửi lên máy chủ. Mỗi thay đổi có số thứ tự riêng,
-// nên nếu người dùng sửa tiếp trong lúc đang gửi thì bản mới vẫn nằm lại để gửi lần sau.
+// Hàng chờ thay đổi chưa gửi. Mỗi thay đổi có số thứ tự nên sửa lúc đang gửi thì bản mới vẫn còn để gửi sau.
 class ChangeTracker {
   final Map<String, int> _versions = {};
   int _clock = 0;
 
-  // Thêm ví, danh mục trước rồi mới tới giao dịch dùng chúng; khi xóa thì làm ngược lại.
+  // thêm ví, danh mục trước giao dịch; xóa thì ngược lại
   static const _upsertOrder = ['wallets', 'categories', 'people', 'recurring', 'entries', 'budgets'];
   static const _deleteFirst = ['budgets', 'entries', 'recurring'];
   static const _deleteLast = ['people', 'categories', 'wallets'];

@@ -39,7 +39,7 @@ VietBank? bankByBin(String? bin) {
   return null;
 }
 
-// Ngân hàng chỉ nhận nội dung chuyển khoản không dấu, tối đa 25 ký tự.
+// ngân hàng chỉ nhận nội dung không dấu, tối đa 25 ký tự
 String transferContent(String text) {
   final s = foldVietnamese(text).toUpperCase();
   return s.length > 25 ? s.substring(0, 25).trim() : s;
@@ -53,11 +53,11 @@ String holderName(String text) {
       .replaceFirst(RegExp(r'^ +'), '');
 }
 
-// Mã QR ngân hàng là chuỗi các ô "mã ô + độ dài 2 chữ số + nội dung" theo chuẩn VietQR (NAPAS).
+// mỗi ô = mã ô + độ dài 2 chữ số + nội dung (chuẩn VietQR)
 String _tlv(String id, String value) =>
     '$id${value.length.toString().padLeft(2, '0')}$value';
 
-// 4 ký tự cuối của mã QR là mã kiểm tra, ứng dụng ngân hàng dùng nó để phát hiện mã bị sai.
+// 4 ký tự cuối là mã kiểm tra CRC
 String crc16(String data) {
   var crc = 0xFFFF;
   for (final byte in data.codeUnits) {

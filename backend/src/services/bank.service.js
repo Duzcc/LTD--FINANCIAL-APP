@@ -67,7 +67,7 @@ function checkIncomeCategory(state, categoryId) {
   if (!L.byId(state.categories, categoryId)?.income) throw badRequest('Chọn danh mục thu nhập phù hợp.');
 }
 
-// Mã ngẫu nhiên hiếm khi trùng mã đã có; nếu trùng thì tạo mã khác và thử lại.
+// trùng mã thì sinh mã khác
 async function insertWithUniqueCode(data) {
   for (let attempt = 1; attempt <= CODE_ATTEMPTS; attempt += 1) {
     const request = await requests.createUnique({ ...data, code: newCode() });

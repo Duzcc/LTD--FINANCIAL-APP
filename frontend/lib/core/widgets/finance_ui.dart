@@ -27,8 +27,7 @@ String errorText(Object error) =>
 void message(BuildContext context, Object error) => ScaffoldMessenger.of(context)
     .showSnackBar(SnackBar(content: Text(errorText(error))));
 
-// Chỉ bắt lỗi người dùng có thể gặp: nhập sai, mất mạng, máy chủ từ chối.
-// Lỗi do code viết sai vẫn được ném ra để phát hiện khi chạy thử.
+// chỉ bắt lỗi người dùng gặp (nhập sai, mất mạng), lỗi code thì để văng ra
 Future<Object?> failureOf(FutureOr<void> Function() action) async {
   try {
     await action();

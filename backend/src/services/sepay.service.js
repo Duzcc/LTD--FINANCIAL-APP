@@ -14,8 +14,7 @@ const LOOKBACK_MS = 3600000;
 const SAME_TRANSFER_MS = 86400000;
 const PAGE_SIZE = 5000;
 
-// Mã thanh toán có dạng LTD + 6 ký tự. Ngân hàng hay chèn dấu cách hoặc ký tự lạ vào nội dung,
-// nên bỏ hết ký tự không phải chữ/số rồi mới tìm mã.
+// ngân hàng hay chèn dấu cách vào nội dung nên bỏ hết ký tự lạ rồi mới tìm mã LTD
 const findCodes = (text) => [...String(text || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
   .matchAll(/(?=(LTD[A-HJ-NP-Z2-9]{6}))/g)].map((m) => m[1]);
 
@@ -63,8 +62,7 @@ function direction(entry, walletId) {
   return KINDS[entry.kind].sign > 0 ? 'in' : 'out';
 }
 
-// Người dùng có thể đã tự ghi khoản này trước khi tiền về. Nếu thấy giao dịch cùng số tiền,
-// cùng chiều, cách nhau không quá 1 ngày thì coi là một, không ghi thêm bản trùng.
+// người dùng có thể đã tự ghi rồi: cùng số tiền, cùng chiều, lệch không quá 1 ngày thì coi là một
 async function manualTwin(owner, state, wallet, event) {
   const at = (event.occurredAt || new Date()).getTime();
   const taken = new Set(await events.linkedEntryIds(owner));
@@ -96,7 +94,7 @@ async function pollingOwner() {
   return (await users.findByEmail(config.sepay.ownerEmail))?._id || null;
 }
 
-// SePay có thể gửi lại cùng một giao dịch nhiều lần; lần thứ hai trở đi trả về null để bỏ qua.
+// SePay có thể gửi lại cùng giao dịch, lần sau trả null để bỏ qua
 const createEvent = (owner, { providerId, accountNumber, transferType, amount, text, occurredAt }) => events.createUnique({
   user: owner,
   providerId: String(providerId),
@@ -132,7 +130,7 @@ async function handleIncoming(transfer) {
     await events.save(event);
     return { result, ...extra };
   };
-  // Ghi giao dịch thất bại thì xóa sự kiện vừa lưu, để lần SePay gửi lại vẫn được xử lý.
+  // ghi lỗi thì xóa sự kiện để lần SePay gửi lại còn xử lý được
   const undoOnError = async (e) => {
     await events.deleteById(event._id);
     throw e;
@@ -168,7 +166,7 @@ async function syncStart() {
   return starts.length ? new Date(Math.min(...starts)) : null;
 }
 
-// Lần đầu lấy giao dịch từ thời điểm cần thiết sớm nhất; các lần sau chỉ lấy giao dịch mới hơn lần trước.
+// lần đầu lấy từ mốc sớm nhất cần, sau đó chỉ lấy giao dịch mới
 async function syncFromApi() {
   if (!pollingEnabled()) return { checked: 0, matched: 0 };
   const start = cursor ? null : await syncStart();

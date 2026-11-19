@@ -63,8 +63,7 @@ const _totalKeys = <(String, int)>[
 ];
 const _subtotal = ['tong tien hang', 'tam tinh', 'subtotal', 'cong tien hang', 'tien hang'];
 const _cash = ['tien khach dua', 'khach dua', 'tien nhan', 'khach tra', 'cash', 'tien mat'];
-// Dấu hiệu tiền đi vào túi người dùng: hoàn tiền, nhận chuyển khoản, phiếu lương.
-// Không dùng "phiếu thu" vì phiếu thu được đưa cho người trả tiền, tức vẫn là khoản chi.
+// không có "phiếu thu" vì phiếu thu đưa cho người trả tiền, vẫn là khoản chi
 const _incomeMarkers = [
   'hoan tien', 'tien hoan', 'hoan tra', 'refund', 'ban da nhan', 'nhan tien tu', 'nhan chuyen khoan',
   'ghi co', 'phieu luong', 'bang luong', 'thuc linh', 'luong thuc nhan',

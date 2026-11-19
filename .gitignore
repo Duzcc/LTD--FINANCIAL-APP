@@ -28,10 +28,8 @@ ai-service/.ruff_cache/
 .tooling/
 tool/*.txt
 tool/.*
-!tool/*.command
-!tool/*.sh
 
-# Tệp cá nhân không thuộc dự án
+# Khác
 .RData
 .Rhistory
 frontend/android/local.properties

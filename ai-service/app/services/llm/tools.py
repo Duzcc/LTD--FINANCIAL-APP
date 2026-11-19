@@ -66,7 +66,7 @@ class FinanceToolkit:
         handler = self.handlers.get(name)
         if handler is None:
             return {"error": f"Không có công cụ {name}"}
-        # AI có thể gọi công cụ với tham số sai; báo lại cho AI tự sửa thay vì làm hỏng cả câu trả lời.
+        # tham số sai thì báo lại để AI tự sửa
         try:
             return handler(**(args or {}))
         except TypeError as exc:

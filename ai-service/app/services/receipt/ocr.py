@@ -161,7 +161,7 @@ def ocr_image(data: bytes) -> tuple[str, str] | None:
     for engine in ENGINES:
         if not engine.available():
             continue
-        # Một công cụ đọc chữ bị lỗi thì thử công cụ tiếp theo thay vì dừng hẳn.
+        # công cụ này lỗi thì thử cái tiếp theo
         try:
             rows = engine.recognize(data)
         except Exception as exc:

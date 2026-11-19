@@ -35,7 +35,7 @@ class TextRecognizer {
 
   Future<OcrResult?> recognize(String imagePath) async {
     if (kIsWeb) return null;
-    // Máy không có tính năng đọc chữ thì trả về null để chuyển sang đọc trên máy chủ.
+    // máy không đọc được chữ thì trả null để máy chủ đọc
     try {
       final r = await _channel.invokeMapMethod<String, dynamic>('recognize', {'path': imagePath});
       if (r == null) return null;

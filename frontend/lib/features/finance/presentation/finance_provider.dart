@@ -169,7 +169,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
   }
 
   void restore() {
-    // Dữ liệu cũ hỏng thì không ghi đè lên nó, để người dùng còn khôi phục từ bản sao lưu.
+    // dữ liệu cũ hỏng thì không ghi đè, để còn khôi phục
     try {
       final saved = _local.read();
       if (saved != null) _applySaved(saved);
@@ -231,7 +231,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
         'lastSync': lastSync?.toUtc().toIso8601String(),
       };
 
-  // dataChanged: false khi chỉ trạng thái đồng bộ thay đổi, để bộ nhớ đệm phân tích và mô hình danh mục không bị tính lại.
+  // dataChanged: false khi chỉ trạng thái sao lưu đổi, khỏi tính lại phân tích
   void _changed({bool sync = true, bool dataChanged = true}) {
     if (_corruptStorage) {
       _notify();
@@ -405,7 +405,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
               personId: rule.personId,
               note: rule.note,
               recurringId: rule.id);
-          // Một lần lặp không hợp lệ (ví dụ ví đã hết tiền) thì tạm dừng quy tắc đó và báo cho người dùng.
+          // tạo lỗi (ví dụ ví hết tiền) thì dừng quy tắc này và báo người dùng
           try {
             saveEntry(occurrence);
             fresh.add(occurrence);
@@ -563,7 +563,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
     displayName = '${user['name'] ?? displayName}';
     syncError = null;
     final AccountSnapshot snapshot;
-    // Tải dữ liệu thất bại thì hủy đăng nhập, tránh trạng thái đã đăng nhập mà không có dữ liệu.
+    // tải dữ liệu lỗi thì hủy đăng nhập
     try {
       snapshot = AccountSnapshot(await _sync.fetchSnapshot());
     } catch (_) {
@@ -626,7 +626,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
     await syncNow();
   }
 
-  // Chỉ báo giao dịch đến từ nơi khác (thiết bị khác, ngân hàng); lần đồng bộ đầu tiên không báo để tránh dồn thông báo.
+  // chỉ báo giao dịch từ máy khác hoặc ngân hàng; lần tải đầu không báo kẻo dồn thông báo
   void _reportActivity(Iterable<MoneyEntry> fresh) {
     final activity = [
       for (final e in fresh)
@@ -709,7 +709,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
     return null;
   }
 
-  // Đánh dấu "đã gửi" trước khi gửi, để thay đổi xảy ra trong lúc chờ vẫn được gửi ở lần sau.
+  // đánh dấu trước khi gửi để thay đổi lúc đang chờ vẫn được gửi lần sau
   Future<void> _pushProfile() async {
     _profileDirty = false;
     try {
@@ -733,7 +733,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
       await _sync.pushBatch([for (final op in ops) op.toJson()]);
       _changes.acknowledge(ops, versions);
     } on ApiException catch (e) {
-      // Máy chủ đã lưu được một phần: bỏ các thay đổi đã lưu khỏi hàng chờ, phần còn lại gửi lần sau.
+      // máy chủ đã lưu một phần: bỏ phần đó khỏi hàng chờ
       final applied = e.body?['applied'];
       if (applied is! int) rethrow;
       _changes.acknowledge(ops.take(applied), versions);

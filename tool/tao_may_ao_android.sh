@@ -1,5 +1,5 @@
 #!/bin/zsh -l
-# Tải ảnh hệ thống Android 15 (arm64) và tạo máy ảo "Nhom3_Pixel" để chạy thử ứng dụng.
+# Tạo máy ảo Android 15 tên Nhom3_Pixel.
 export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 SDK=$HOME/Library/Android/sdk
 IMG="system-images;android-35;google_apis;arm64-v8a"

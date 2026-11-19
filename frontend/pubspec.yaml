@@ -39,8 +39,7 @@ flutter:
     - assets/branding/logo_256.png
     - assets/branding/ai_assistant_256.png
     - assets/branding/ai_assistant_avatar_256.png
-  # Đóng gói font Roboto (có đủ dấu tiếng Việt) để iOS và Web hiển thị giống thiết kế,
-  # Web không phụ thuộc CDN font của Google.
+  # Roboto có đủ dấu tiếng Việt, đóng gói sẵn cho iOS và Web
   fonts:
     - family: Roboto
       fonts:

@@ -30,7 +30,7 @@ def metrics() -> dict:
 MODEL_NAMES = ("categorizer", "intent")
 
 
-# Thiếu hoặc hỏng file mô hình thì trả lỗi về để ensure_models() huấn luyện lại.
+# lỗi thì trả về để ensure_models() train lại
 def _load_models() -> Exception | None:
     try:
         for name in MODEL_NAMES:

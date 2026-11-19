@@ -61,7 +61,7 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
     );
   }
 
-  // Không có mạng hoặc chưa đăng nhập: tìm các giao dịch chứa đủ mọi từ đã gõ.
+  // không có mạng thì tìm giao dịch chứa đủ các từ đã gõ
   (List<MoneyEntry>, String) _searchOnDevice(FinanceProvider p, String q) {
     final words = foldVietnamese(q).split(' ').where((w) => w.length > 1).toList();
     final found = p.entries.where((e) {

@@ -1,5 +1,4 @@
-// Đi lại các luồng trong báo cáo (mục 2.4.4, 2.4.5, 2.5) bằng thao tác trên giao diện:
-// chạm, nhập, chọn — như người dùng thật — rồi kiểm tra số dư, công nợ, ngân sách và dữ liệu trên máy chủ.
+// Chạy lại các luồng trong báo cáo (2.4.4, 2.4.5, 2.5) bằng thao tác trên giao diện.
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -42,7 +41,7 @@ void main() {
             (w) => w is Scrollable && (w.axisDirection == AxisDirection.down || w.axisDirection == AxisDirection.up));
         await t.scrollUntilVisible(f, delta, scrollable: vertical.hitTestable().first, maxScrolls: 30);
       } on StateError {
-        // Không thấy theo chiều này thì thử chiều còn lại.
+        // chiều này không thấy thì thử chiều kia
       }
     }
     await t.ensureVisible(f.last);
@@ -91,7 +90,7 @@ void main() {
     await settle(t, 1000);
     expect(find.byType(MainScreen), findsOneWidget);
 
-    // ---- Test flow 1 / Bảng 22–23: quản lý ví --------------------------------------------
+    // Test flow 1 / Bảng 22–23: quản lý ví
     await t.tap(find.widgetWithText(Tab, 'Ví'));
     await settle(t);
     await tap(t, find.widgetWithText(FilledButton, 'Thêm ví'));
@@ -146,7 +145,7 @@ void main() {
     await settle(t);
     if (find.byType(WalletDetailScreen).evaluate().isNotEmpty) await back(t);
 
-    // ---- Test flow 2: quản lý danh mục ---------------------------------------------------
+    // Test flow 2: quản lý danh mục
     await t.tap(find.byKey(const ValueKey('open-drawer')));
     await settle(t);
     await tapText(t, 'Danh mục');
@@ -180,7 +179,7 @@ void main() {
     expect(p.category(bonus.id), isNull);
     await back(t);
 
-    // ---- Test flow 3 / Bảng 25–27: ghi nhận, sửa, xóa giao dịch thu chi --------------------
+    // Test flow 3 / Bảng 25–27: ghi nhận, sửa, xóa giao dịch thu chi
     Future<void> openAdd() async {
       await t.tap(find.descendant(of: find.byType(MainScreen), matching: find.byIcon(Icons.add)).last);
       await settle(t);
@@ -245,7 +244,7 @@ void main() {
     expect(p.balance(bank.id), 5000000 + 2000000, reason: 'xóa giao dịch hoàn lại số dư');
     await type(t, find.byType(TextField).first, '');
 
-    // ---- Luồng 3 / Bảng 29: vay nợ và Sổ nợ ----------------------------------------------
+    // Luồng 3 / Bảng 29: vay nợ và Sổ nợ
     await tab(t, 'Tổng quan');
     await t.tap(find.widgetWithText(Tab, 'Sổ nợ'));
     await settle(t);
@@ -277,7 +276,7 @@ void main() {
     expect(p.balance(bank.id), 7000000);
     expect(find.text('Đã tất toán'), findsWidgets);
 
-    // ---- Luồng 2 / Bảng 32: ngân sách ----------------------------------------------------
+    // Luồng 2 / Bảng 32: ngân sách
     await openAdd();
     await type(t, find.byKey(const ValueKey('transaction-amount')), '120000');
     await tapText(t, 'Cà phê');
@@ -308,7 +307,7 @@ void main() {
     await confirmDelete(t);
     expect(p.budgets.where((b) => b.categoryId == coffee.id), isEmpty);
 
-    // ---- Bảng 20: Tổng quan ---------------------------------------------------------------
+    // Bảng 20: Tổng quan
     await tab(t, 'Tổng quan');
     await t.tap(find.widgetWithText(Tab, 'Báo cáo'));
     await settle(t);
@@ -322,7 +321,7 @@ void main() {
     await shot(t, 'thong_ke');
     await back(t);
 
-    // ---- Bảng 34 + 2.5: đồng bộ và dữ liệu trên máy chủ thống nhất -----------------------
+    // Bảng 34 + 2.5: đồng bộ và dữ liệu trên máy chủ thống nhất
     await tab(t, 'Tài khoản');
     await p.syncNow();
     await settle(t);

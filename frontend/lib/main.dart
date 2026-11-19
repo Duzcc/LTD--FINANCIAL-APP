@@ -7,7 +7,7 @@ import 'package:finance_app/features/finance/presentation/finance_provider.dart'
 import 'package:finance_app/features/security/data/services/app_lock.dart';
 import 'package:finance_app/app/notification_service.dart';
 
-// Bộ nhớ máy hỏng hoặc bị chặn thì app vẫn mở được, chỉ là dữ liệu không được lưu lại.
+// không mở được bộ nhớ thì app vẫn chạy, chỉ là không lưu được
 Future<SharedPreferences?> _openStorage() async {
   try {
     return await SharedPreferences.getInstance();
