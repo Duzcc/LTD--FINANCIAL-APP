@@ -257,7 +257,6 @@ class _AssistantScreenState extends State<AssistantScreen> {
         ]));
   }
 
-  /// Tin nhắn của trợ lý có ảnh đại diện bên trái; tin của người dùng giữ nguyên.
   Widget _withAvatar(ChatMessage m, Widget bubble) => m.fromUser
       ? bubble
       : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [

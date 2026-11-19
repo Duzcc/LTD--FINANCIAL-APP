@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/finance/presentation/entity_icons.dart';
 
-/// Trả về chỉ số biểu tượng đã chọn qua Navigator.pop.
 class WalletIconScreen extends StatelessWidget {
   const WalletIconScreen({super.key, required this.selected});
   final int selected;
