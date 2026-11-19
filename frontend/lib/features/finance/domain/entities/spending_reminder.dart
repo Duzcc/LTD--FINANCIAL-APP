@@ -11,11 +11,7 @@ enum ReminderRepeat {
 }
 
 class SpendingReminder {
-  const SpendingReminder(
-      {required this.id,
-      required this.title,
-      required this.at,
-      this.repeat = ReminderRepeat.none});
+  const SpendingReminder({required this.id, required this.title, required this.at, this.repeat = ReminderRepeat.none});
   final String id, title;
   final DateTime at;
   final ReminderRepeat repeat;
@@ -42,8 +38,7 @@ class SpendingReminder {
 
   bool expired(DateTime now) => repeat == ReminderRepeat.none && !at.isAfter(now);
 
-  Map<String, dynamic> toJson() =>
-      {'id': id, 'title': title, 'at': isoUtc(at), 'repeat': repeat.name};
+  Map<String, dynamic> toJson() => {'id': id, 'title': title, 'at': isoUtc(at), 'repeat': repeat.name};
 
   factory SpendingReminder.fromJson(Map<String, dynamic> j) => SpendingReminder(
       id: j['id'],

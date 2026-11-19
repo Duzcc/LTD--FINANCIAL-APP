@@ -14,8 +14,7 @@ class FinanceLocalDataSource {
     return raw == null ? null : jsonDecode(raw) as Map<String, dynamic>;
   }
 
-  Future<bool> write(Map<String, dynamic> data) async =>
-      await _storage?.setString(dataKey, jsonEncode(data)) ?? true;
+  Future<bool> write(Map<String, dynamic> data) async => await _storage?.setString(dataKey, jsonEncode(data)) ?? true;
 
   Future<void> clear() async => _storage?.remove(dataKey);
 }

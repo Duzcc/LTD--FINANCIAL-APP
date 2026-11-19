@@ -23,19 +23,11 @@ void main() {
         excluded: excluded,
         personId: person,
       );
-  test('Thêm, sửa, chuyển ví và xóa giao dịch thì số dư và ngân sách được tính lại',
-      () async {
+  test('Thêm, sửa, chuyển ví và xóa giao dịch thì số dư và ngân sách được tính lại', () async {
     final p = FinanceProvider();
-    p.saveWallet(
-        const MoneyWallet(id: 'cash', name: 'Tiền mặt', opening: 1000000));
-    p.saveWallet(
-        const MoneyWallet(id: 'bank', name: 'Ngân hàng', opening: 500000));
-    p.saveBudget(MoneyBudget(
-        id: 'budget',
-        categoryId: 'food',
-        month: month,
-        amount: 200000,
-        walletId: 'cash'));
+    p.saveWallet(const MoneyWallet(id: 'cash', name: 'Tiền mặt', opening: 1000000));
+    p.saveWallet(const MoneyWallet(id: 'bank', name: 'Ngân hàng', opening: 500000));
+    p.saveBudget(MoneyBudget(id: 'budget', categoryId: 'food', month: month, amount: 200000, walletId: 'cash'));
     p.saveEntry(entry('a', EntryKind.expense, 50000));
     expect(p.balance('cash'), 950000);
     expect(p.used(p.budgets.single), 50000);
@@ -50,13 +42,10 @@ void main() {
     await p.flush();
     p.dispose();
   });
-  test('Chuyển tiền thay đổi cả hai ví và không tính vào thu chi',
-      () async {
+  test('Chuyển tiền thay đổi cả hai ví và không tính vào thu chi', () async {
     final p = FinanceProvider();
-    p.saveWallet(
-        const MoneyWallet(id: 'cash', name: 'Tiền mặt', opening: 1000000));
-    p.saveWallet(
-        const MoneyWallet(id: 'saving', name: 'Tiết kiệm', savings: true));
+    p.saveWallet(const MoneyWallet(id: 'cash', name: 'Tiền mặt', opening: 1000000));
+    p.saveWallet(const MoneyWallet(id: 'saving', name: 'Tiết kiệm', savings: true));
     p.saveEntry(entry('t', EntryKind.transfer, 200000, dest: 'saving'));
     expect(p.balance('cash'), 800000);
     expect(p.balance('saving'), 200000);
@@ -66,11 +55,9 @@ void main() {
     p.deleteEntry('t');
     expect(p.balance('cash'), 1000000);
     expect(p.balance('saving'), 0);
-    expect(() => p.saveEntry(entry('x', EntryKind.transfer, 1, dest: 'cash')),
-        throwsArgumentError);
+    expect(() => p.saveEntry(entry('x', EntryKind.transfer, 1, dest: 'cash')), throwsArgumentError);
     p.saveWallet(const MoneyWallet(id: 'usd', name: 'Dollar', currency: 'USD'));
-    expect(() => p.saveEntry(entry('x', EntryKind.transfer, 1, dest: 'usd')),
-        throwsArgumentError);
+    expect(() => p.saveEntry(entry('x', EntryKind.transfer, 1, dest: 'usd')), throwsArgumentError);
     await p.flush();
     p.dispose();
   });
@@ -87,22 +74,18 @@ void main() {
     expect(p.debt(borrowed: false, personId: 'a'), 70);
     expect(p.total(month, income: false), 50);
     expect(p.total(month, income: true), 0);
-    expect(() => p.saveEntry(entry('invalid', EntryKind.borrow, 5)),
-        throwsArgumentError);
+    expect(() => p.saveEntry(entry('invalid', EntryKind.borrow, 5)), throwsArgumentError);
     await p.flush();
     p.dispose();
   });
   test('Không lẫn dữ liệu giữa các tháng, loại tiền và ví loại khỏi báo cáo', () async {
     final p = FinanceProvider();
-    p.saveWallet(const MoneyWallet(
-        id: 'usd', name: 'USD', currency: 'USD', opening: 100));
+    p.saveWallet(const MoneyWallet(id: 'usd', name: 'USD', currency: 'USD', opening: 100));
     p.saveEntry(entry('one', EntryKind.expense, 5, wallet: 'usd'));
     p.saveEntry(entry('two', EntryKind.expense, 100));
     p.saveEntry(entry('hidden', EntryKind.expense, 20, excluded: true));
-    p.saveEntry(
-        entry('last', EntryKind.expense, 50, date: DateTime(2026, 9, 30)));
-    p.saveEntry(
-        entry('31', EntryKind.income, 200, date: DateTime(2026, 10, 31)));
+    p.saveEntry(entry('last', EntryKind.expense, 50, date: DateTime(2026, 9, 30)));
+    p.saveEntry(entry('31', EntryKind.income, 200, date: DateTime(2026, 10, 31)));
     expect(p.total(month, income: false), 100);
     expect(p.total(month, income: false, unit: 'USD'), 5);
     expect(p.total(month, income: true), 200);
@@ -110,30 +93,21 @@ void main() {
     expect(p.totalBalance('USD'), 95);
     expect(() => p.deleteWallet('usd'), throwsArgumentError);
     expect(() => p.deleteCategory('food'), throwsArgumentError);
-    expect(() => p.saveEntry(entry('zero', EntryKind.expense, 0)),
-        throwsArgumentError);
-    expect(() => p.saveEntry(entry('nan', EntryKind.expense, double.nan)),
-        throwsArgumentError);
+    expect(() => p.saveEntry(entry('zero', EntryKind.expense, 0)), throwsArgumentError);
+    expect(() => p.saveEntry(entry('nan', EntryKind.expense, double.nan)), throwsArgumentError);
     await p.flush();
     p.dispose();
   });
-  test('Dữ liệu còn nguyên sau khi mở lại app, kể cả chỉnh sửa, cài đặt và xóa',
-      () async {
+  test('Dữ liệu còn nguyên sau khi mở lại app, kể cả chỉnh sửa, cài đặt và xóa', () async {
     SharedPreferences.setMockInitialValues({});
     final storage = await SharedPreferences.getInstance();
     final p = FinanceProvider(storage: storage);
     p.preferences(name: 'Đức', unit: 'VND', hidden: true);
-    p.saveWallet(MoneyWallet(
-        id: 'saving',
-        name: 'Laptop',
-        savings: true,
-        target: 20000000,
-        deadline: DateTime(2027)));
+    p.saveWallet(MoneyWallet(id: 'saving', name: 'Laptop', savings: true, target: 20000000, deadline: DateTime(2027)));
     p.saveEntry(entry('one', EntryKind.income, 300000));
     p.saveEntry(entry('two', EntryKind.expense, 50000));
     p.deleteEntry('two');
-    p.saveBudget(
-        MoneyBudget(id: 'b', categoryId: 'food', month: month, amount: 200000));
+    p.saveBudget(MoneyBudget(id: 'b', categoryId: 'food', month: month, amount: 200000));
     await p.flush();
     final restored = FinanceProvider(storage: storage)..restore();
     expect(restored.entries.length, 1);
@@ -145,28 +119,24 @@ void main() {
     p.dispose();
     restored.dispose();
   });
-  test('Chuyển tiền và nạp tiết kiệm không vượt số dư ví nguồn',
-      () async {
+  test('Chuyển tiền và nạp tiết kiệm không vượt số dư ví nguồn', () async {
     final p = FinanceProvider();
-    p.saveWallet(
-        const MoneyWallet(id: 'cash', name: 'Tiền mặt', opening: 300000));
-    p.saveWallet(
-        const MoneyWallet(id: 'saving', name: 'Tiết kiệm', savings: true));
+    p.saveWallet(const MoneyWallet(id: 'cash', name: 'Tiền mặt', opening: 300000));
+    p.saveWallet(const MoneyWallet(id: 'saving', name: 'Tiết kiệm', savings: true));
     expect(
         () => p.saveEntry(entry('t', EntryKind.transfer, 300001, dest: 'saving')),
-        throwsA(isA<ArgumentError>().having((e) => e.message, 'message',
-            'Số dư ví Tiền mặt không đủ (còn 300.000 VND).')));
+        throwsA(
+            isA<ArgumentError>().having((e) => e.message, 'message', 'Số dư ví Tiền mặt không đủ (còn 300.000 VND).')));
     p.saveEntry(entry('t', EntryKind.transfer, 200000, dest: 'saving'));
     p.saveEntry(entry('t', EntryKind.transfer, 300000, dest: 'saving'));
     expect(p.balance('cash'), 0);
-    expect(() => p.saveEntry(entry('back', EntryKind.transfer, 300001,
-            wallet: 'saving', dest: 'cash')),
+    expect(() => p.saveEntry(entry('back', EntryKind.transfer, 300001, wallet: 'saving', dest: 'cash')),
         throwsArgumentError);
-    p.saveEntry(entry('back', EntryKind.transfer, 300000,
-        wallet: 'saving', dest: 'cash'));
+    p.saveEntry(entry('back', EntryKind.transfer, 300000, wallet: 'saving', dest: 'cash'));
     expect(p.balance('saving'), 0);
     expect(
-        () => p.saveEntry(entry('t', EntryKind.transfer, 300000, wallet: 'cash', dest: 'saving', date: DateTime(2026, 11))),
+        () => p.saveEntry(
+            entry('t', EntryKind.transfer, 300000, wallet: 'cash', dest: 'saving', date: DateTime(2026, 11))),
         returnsNormally);
     expect(p.entries, hasLength(2));
     p.saveRecurring(RecurringRule(
@@ -183,12 +153,10 @@ void main() {
     await p.flush();
     p.dispose();
   });
-  test('Quy tắc ví: trùng tên, ngày tiết kiệm và xóa kèm giao dịch',
-      () async {
+  test('Quy tắc ví: trùng tên, ngày tiết kiệm và xóa kèm giao dịch', () async {
     final p = FinanceProvider();
     p.saveWallet(const MoneyWallet(id: 'bank', name: 'Ngân hàng'));
-    expect(() => p.saveWallet(const MoneyWallet(id: 'x', name: ' ngân HÀNG ')),
-        throwsArgumentError);
+    expect(() => p.saveWallet(const MoneyWallet(id: 'x', name: ' ngân HÀNG ')), throwsArgumentError);
     expect(
         () => p.saveWallet(MoneyWallet(
             id: 's',
@@ -215,13 +183,10 @@ void main() {
     final p = FinanceProvider();
     p.savePerson(const MoneyPerson('a', 'An', 'Bạn bè'));
     p.savePerson(const MoneyPerson('b', 'Bình', 'Bạn bè'));
-    expect(() => p.saveEntry(entry('c0', EntryKind.collect, 10, person: 'a')),
-        throwsArgumentError);
+    expect(() => p.saveEntry(entry('c0', EntryKind.collect, 10, person: 'a')), throwsArgumentError);
     p.saveEntry(entry('l', EntryKind.lend, 100, person: 'a'));
-    expect(() => p.saveEntry(entry('c1', EntryKind.collect, 120, person: 'a')),
-        throwsArgumentError);
-    expect(() => p.saveEntry(entry('c2', EntryKind.collect, 10, person: 'b')),
-        throwsArgumentError);
+    expect(() => p.saveEntry(entry('c1', EntryKind.collect, 120, person: 'a')), throwsArgumentError);
+    expect(() => p.saveEntry(entry('c2', EntryKind.collect, 10, person: 'b')), throwsArgumentError);
     p.saveEntry(entry('c3', EntryKind.collect, 100, person: 'a'));
     p.saveEntry(entry('c3', EntryKind.collect, 60, person: 'a'));
     final t = p.debtTotals(borrowed: false);
@@ -233,16 +198,10 @@ void main() {
   });
   test('Mục tiêu tháng, ngân sách theo danh mục và sao chép sang tháng sau', () async {
     final p = FinanceProvider();
-    p.saveBudget(MoneyBudget(
-        id: 'all', categoryId: null, month: month, amount: 1000000));
-    expect(
-        () => p.saveBudget(MoneyBudget(
-            id: 'all2', categoryId: null, month: month, amount: 5)),
-        throwsArgumentError);
-    p.saveBudget(MoneyBudget(
-        id: 'goal', categoryId: null, month: month, amount: 9, income: true));
-    p.saveBudget(
-        MoneyBudget(id: 'food', categoryId: 'food', month: month, amount: 300));
+    p.saveBudget(MoneyBudget(id: 'all', categoryId: null, month: month, amount: 1000000));
+    expect(() => p.saveBudget(MoneyBudget(id: 'all2', categoryId: null, month: month, amount: 5)), throwsArgumentError);
+    p.saveBudget(MoneyBudget(id: 'goal', categoryId: null, month: month, amount: 9, income: true));
+    p.saveBudget(MoneyBudget(id: 'food', categoryId: 'food', month: month, amount: 300));
     p.saveEntry(entry('a', EntryKind.expense, 200));
     p.saveEntry(entry('b', EntryKind.expense, 50, category: 'house'));
     p.saveEntry(entry('c', EntryKind.income, 7));

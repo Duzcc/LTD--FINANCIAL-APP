@@ -94,8 +94,9 @@ def parse_query(query: str, now: datetime) -> SearchFilters:
     return flt
 
 
-def search(query: str, transactions: list[Transaction], categories: list[Category], now: datetime,
-           limit: int = 30) -> tuple[SearchFilters, list[tuple[Transaction, float]]]:
+def search(
+    query: str, transactions: list[Transaction], categories: list[Category], now: datetime, limit: int = 30
+) -> tuple[SearchFilters, list[tuple[Transaction, float]]]:
     flt = parse_query(query, now)
     pool = []
     for t in transactions:

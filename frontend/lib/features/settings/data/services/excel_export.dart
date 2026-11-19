@@ -25,8 +25,7 @@ class ExcelExport {
   }
 
   static String _sheet(List<List<Object?>> rows) {
-    final b = StringBuffer(
-        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+    final b = StringBuffer('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
         '<sheetData>');
     for (var r = 0; r < rows.length; r++) {
@@ -38,8 +37,7 @@ class ExcelExport {
         if (v is num && r > 0) {
           b.write('<c r="$ref"$style><v>$v</v></c>');
         } else {
-          b.write(
-              '<c r="$ref" t="inlineStr"$style><is><t xml:space="preserve">${_esc(v)}</t></is></c>');
+          b.write('<c r="$ref" t="inlineStr"$style><is><t xml:space="preserve">${_esc(v)}</t></is></c>');
         }
       }
       b.write('</row>');
@@ -55,7 +53,19 @@ class ExcelExport {
       (
         'Giao dịch',
         [
-          ['Ngày', 'Loại', 'Số tiền', 'Tiền tệ', 'Ví', 'Ví nhận', 'Danh mục', 'Đối tượng', 'Ghi chú', 'Hạn trả', 'Không tính báo cáo'],
+          [
+            'Ngày',
+            'Loại',
+            'Số tiền',
+            'Tiền tệ',
+            'Ví',
+            'Ví nhận',
+            'Danh mục',
+            'Đối tượng',
+            'Ghi chú',
+            'Hạn trả',
+            'Không tính báo cáo'
+          ],
           for (final e in [...p.entries]..sort((a, b) => b.date.compareTo(a.date)))
             [
               f.format(e.date),
@@ -112,42 +122,54 @@ class ExcelExport {
   static List<int> build(LedgerQueries p) {
     final list = sheets(p);
     final archive = Archive();
-    void add(String name, String content) =>
-        archive.addFile(ArchiveFile.string(name, content));
-    add('[Content_Types].xml',
+    void add(String name, String content) => archive.addFile(ArchiveFile.string(name, content));
+    add(
+        '[Content_Types].xml',
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
-        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
-        '<Default Extension="xml" ContentType="application/xml"/>'
-        '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
-        '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
-        '${[for (var i = 1; i <= list.length; i++) '<Override PartName="/xl/worksheets/sheet$i.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'].join()}'
-        '</Types>');
-    add('_rels/.rels',
+            '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+            '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+            '<Default Extension="xml" ContentType="application/xml"/>'
+            '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'
+            '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'
+            '${[
+          for (var i = 1; i <= list.length; i++)
+            '<Override PartName="/xl/worksheets/sheet$i.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+        ].join()}'
+            '</Types>');
+    add(
+        '_rels/.rels',
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
-        '</Relationships>');
-    add('xl/workbook.xml',
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>'
+            '</Relationships>');
+    add(
+        'xl/workbook.xml',
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'
-        '${[for (var i = 1; i <= list.length; i++) '<sheet name="${_esc(list[i - 1].$1)}" sheetId="$i" r:id="rId$i"/>'].join()}'
-        '</sheets></workbook>');
-    add('xl/_rels/workbook.xml.rels',
+            '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'
+            '${[
+          for (var i = 1; i <= list.length; i++) '<sheet name="${_esc(list[i - 1].$1)}" sheetId="$i" r:id="rId$i"/>'
+        ].join()}'
+            '</sheets></workbook>');
+    add(
+        'xl/_rels/workbook.xml.rels',
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
-        '${[for (var i = 1; i <= list.length; i++) '<Relationship Id="rId$i" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet$i.xml"/>'].join()}'
-        '<Relationship Id="rId${list.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
-        '</Relationships>');
-    add('xl/styles.xml',
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            '${[
+          for (var i = 1; i <= list.length; i++)
+            '<Relationship Id="rId$i" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet$i.xml"/>'
+        ].join()}'
+            '<Relationship Id="rId${list.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>'
+            '</Relationships>');
+    add(
+        'xl/styles.xml',
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
-        '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
-        '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'
-        '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>'
-        '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
-        '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
-        '<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs>'
-        '</styleSheet>');
+            '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts>'
+            '<fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>'
+            '<borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>'
+            '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>'
+            '<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs>'
+            '</styleSheet>');
     for (var i = 0; i < list.length; i++) {
       add('xl/worksheets/sheet${i + 1}.xml', _sheet(list[i].$2));
     }

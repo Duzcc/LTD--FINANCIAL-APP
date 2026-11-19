@@ -19,9 +19,24 @@ function startStub() {
     if (mode === 'down' && req.path !== '/health') return res.status(503).json({ detail: 'down' });
     next();
   });
-  s.get('/health', (_q, r) => r.json({ status: mode === 'down' ? 'down' : 'ok', version: '1.0.0', assistant: 'rules' }));
-  s.post('/v1/chat', (q, r) => r.json({ reply: `Có ${q.body.snapshot.transactions.length} giao dịch`, provider: 'rules', toolsUsed: ['get_overview'], actions: [{ type: 'create_transaction', data: { amount: 1 } }] }));
-  s.post('/v1/categorize', (q, r) => r.json({ predictions: [{ categoryId: q.body.categories[0].id, probability: 0.9 }], personalWeight: q.body.history.length ? 0.5 : 0, modelVersion: 't' }));
+  s.get('/health', (_q, r) =>
+    r.json({ status: mode === 'down' ? 'down' : 'ok', version: '1.0.0', assistant: 'rules' }),
+  );
+  s.post('/v1/chat', (q, r) =>
+    r.json({
+      reply: `Có ${q.body.snapshot.transactions.length} giao dịch`,
+      provider: 'rules',
+      toolsUsed: ['get_overview'],
+      actions: [{ type: 'create_transaction', data: { amount: 1 } }],
+    }),
+  );
+  s.post('/v1/categorize', (q, r) =>
+    r.json({
+      predictions: [{ categoryId: q.body.categories[0].id, probability: 0.9 }],
+      personalWeight: q.body.history.length ? 0.5 : 0,
+      modelVersion: 't',
+    }),
+  );
   s.post('/v1/parse', (q, r) => r.json({ kind: 'expense', amount: 45000, note: q.body.text }));
   s.post('/v1/forecast', (q, r) => r.json({ projected: 123, now: q.body.snapshot.now }));
   s.post('/v1/anomalies', (_q, r) => r.status(500).json({}));
@@ -29,10 +44,14 @@ function startStub() {
   s.post('/v1/search', (q, r) => r.json({ filters: {}, hits: [], query: q.body.query }));
   s.post('/v1/receipts/parse-text', (_q, r) => r.json({ total: 46000 }));
   s.post('/v1/receipts/scan', (_q, r) => r.status(501).json({ detail: 'Máy chủ chưa có mô hình thị giác' }));
-  return new Promise((resolve) => { const srv = http.createServer(s).listen(0, () => resolve(srv)); });
+  return new Promise((resolve) => {
+    const srv = http.createServer(s).listen(0, () => resolve(srv));
+  });
 }
 
-let app; let api; let token;
+let app;
+let api;
+let token;
 const request = require('supertest');
 const { connectTestDb, disconnectTestDb } = require('./helpers/db');
 const { signup } = require('./helpers/auth');
@@ -48,8 +67,32 @@ before(async () => {
   token = (await signup(app, 'Trợ Lý', 'ai@test.vn', 'Matkhau1')).token;
   const now = new Date();
   const changes = [
-    { entity: 'entries', action: 'upsert', id: 'tx1', data: { kind: 'expense', amount: 45000, date: now.toISOString(), walletId: 'cash', categoryId: 'food', note: 'Phở bò' } },
-    { entity: 'entries', action: 'upsert', id: 'tx2', data: { kind: 'expense', amount: 30000, date: now.toISOString(), walletId: 'cash', categoryId: 'transport', note: 'Grab đi làm' } },
+    {
+      entity: 'entries',
+      action: 'upsert',
+      id: 'tx1',
+      data: {
+        kind: 'expense',
+        amount: 45000,
+        date: now.toISOString(),
+        walletId: 'cash',
+        categoryId: 'food',
+        note: 'Phở bò',
+      },
+    },
+    {
+      entity: 'entries',
+      action: 'upsert',
+      id: 'tx2',
+      data: {
+        kind: 'expense',
+        amount: 30000,
+        date: now.toISOString(),
+        walletId: 'cash',
+        categoryId: 'transport',
+        note: 'Grab đi làm',
+      },
+    },
   ];
   const s = await auth(api().post('/api/sync/batch')).send({ ops: changes });
   assert.equal(s.status, 200, JSON.stringify(s.body));
@@ -70,7 +113,9 @@ test('status báo AI service sẵn sàng', async () => {
 
 test('chat chuyển tiếp snapshot (không lộ thông tin tài khoản) kèm khóa dịch vụ', { skip: e2e }, async () => {
   calls.length = 0;
-  const r = await auth(api().post('/api/ai/chat')).send({ messages: [{ role: 'user', content: 'tháng này chi bao nhiêu' }] });
+  const r = await auth(api().post('/api/ai/chat')).send({
+    messages: [{ role: 'user', content: 'tháng này chi bao nhiêu' }],
+  });
   assert.equal(r.status, 200);
   assert.equal(r.body.source, 'ai-service');
   assert.equal(r.body.reply, 'Có 2 giao dịch');

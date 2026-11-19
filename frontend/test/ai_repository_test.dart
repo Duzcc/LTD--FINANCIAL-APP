@@ -60,12 +60,20 @@ void main() {
   test('Trợ lý máy chủ trả hành động cần xác nhận; đẩy thay đổi trước khi hỏi', () async {
     final (p, server) = await signedIn();
     p.saveEntry(MoneyEntry(
-        id: 'e1', kind: EntryKind.expense, amount: 30000, walletId: 'cash', categoryId: 'food', date: DateTime(2026, 10, 5)));
+        id: 'e1',
+        kind: EntryKind.expense,
+        amount: 30000,
+        walletId: 'cash',
+        categoryId: 'food',
+        date: DateTime(2026, 10, 5)));
     server.ai['/api/ai/chat'] = (b) => {
           'reply': 'Mình đã chuẩn bị giao dịch.',
           'source': 'ai-service',
           'actions': [
-            {'type': 'create_transaction', 'data': {'kind': 'expense', 'amount': 35000, 'categoryId': 'food'}}
+            {
+              'type': 'create_transaction',
+              'data': {'kind': 'expense', 'amount': 35000, 'categoryId': 'food'}
+            }
           ],
         };
     final r = await AiRepository(p).chat([
@@ -81,10 +89,23 @@ void main() {
   test('Phân tích máy chủ: dự báo, bất thường, gợi ý ngân sách', () async {
     final (p, server) = await signedIn();
     server.ai['/api/ai/insights'] = (_) => {
-          'forecast': {'spent': 100, 'projected': 300, 'lower': 250, 'upper': 380, 'daysLeft': 10, 'method': 'weekday_profile', 'nextMonth': 320},
+          'forecast': {
+            'spent': 100,
+            'projected': 300,
+            'lower': 250,
+            'upper': 380,
+            'daysLeft': 10,
+            'method': 'weekday_profile',
+            'nextMonth': 320
+          },
           'anomalies': {
             'anomalies': [
-              {'transactionId': 'e1', 'score': 0.9, 'kind': 'amount', 'reasons': ['Cao gấp 5 lần']}
+              {
+                'transactionId': 'e1',
+                'score': 0.9,
+                'kind': 'amount',
+                'reasons': ['Cao gấp 5 lần']
+              }
             ],
             'spikes': []
           },
@@ -117,13 +138,16 @@ void main() {
     p.dispose();
   });
 
-  test('Phân tích máy chủ: dữ liệu đổi trong lúc chờ thì không coi kết quả là mới; lỗi thì chờ trước khi thử lại', () async {
+  test('Phân tích máy chủ: dữ liệu đổi trong lúc chờ thì không coi kết quả là mới; lỗi thì chờ trước khi thử lại',
+      () async {
     final (p, server) = await signedIn();
     final repo = AiRepository(p);
     server.ai['/api/ai/insights'] = (_) {
       p.saveEntry(MoneyEntry(
           id: 'e9', kind: EntryKind.expense, amount: 1, walletId: 'cash', categoryId: 'food', date: DateTime.now()));
-      return {'forecast': {'spent': 1, 'projected': 2, 'lower': 1, 'upper': 3, 'daysLeft': 1, 'method': 'x'}};
+      return {
+        'forecast': {'spent': 1, 'projected': 2, 'lower': 1, 'upper': 3, 'daysLeft': 1, 'method': 'x'}
+      };
     };
     expect(await repo.insights(), isNotNull);
     expect(repo.cachedInsights, isNull, reason: 'kết quả được tính trước khi có giao dịch mới');
@@ -140,11 +164,17 @@ void main() {
   test('Nhiều thay đổi liền nhau chỉ gọi phân tích một lần; đồng bộ xong vẫn giữ kết quả', () async {
     final (p, server) = await signedIn();
     final repo = AiRepository(p);
-    server.ai['/api/ai/insights'] = (_) =>
-        {'forecast': {'spent': 1, 'projected': 2, 'lower': 1, 'upper': 3, 'daysLeft': 1, 'method': 'x'}};
+    server.ai['/api/ai/insights'] = (_) => {
+          'forecast': {'spent': 1, 'projected': 2, 'lower': 1, 'upper': 3, 'daysLeft': 1, 'method': 'x'}
+        };
     for (var i = 0; i < 3; i++) {
       p.saveEntry(MoneyEntry(
-          id: 'burst$i', kind: EntryKind.expense, amount: 1000, walletId: 'cash', categoryId: 'food', date: DateTime.now()));
+          id: 'burst$i',
+          kind: EntryKind.expense,
+          amount: 1000,
+          walletId: 'cash',
+          categoryId: 'food',
+          date: DateTime.now()));
       repo.refreshInsightsIfStale();
     }
     expect(server.aiCalls.where((c) => c.endsWith('/insights')), isEmpty, reason: 'chưa đẩy lên máy chủ thì chưa hỏi');

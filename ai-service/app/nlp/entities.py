@@ -6,10 +6,10 @@ from datetime import datetime, timedelta
 
 from .text import calendar_date, fold, fold_keep_numbers
 
-_AMOUNT = re.compile(
-    r"(\d+(?:[.,]\d+)*)\s*(k|nghin|ngan|ng|tr|trieu|cu|ty|ti|d|dong|vnd|usd|\$)?(\d{1,3})?\b"
+_AMOUNT = re.compile(r"(\d+(?:[.,]\d+)*)\s*(k|nghin|ngan|ng|tr|trieu|cu|ty|ti|d|dong|vnd|usd|\$)?(\d{1,3})?\b")
+_CLASSIFIER = re.compile(
+    r"\s*(ly|cai|chiec|nguoi|phan|lan|ve|goi|hop|chai|cuon|bat|to|dia|suat|kg|km|gio|ngay|thang)\b"
 )
-_CLASSIFIER = re.compile(r"\s*(ly|cai|chiec|nguoi|phan|lan|ve|goi|hop|chai|cuon|bat|to|dia|suat|kg|km|gio|ngay|thang)\b")
 _UNIT = {"k": 1e3, "nghin": 1e3, "ngan": 1e3, "ng": 1e3, "tr": 1e6, "trieu": 1e6, "cu": 1e6, "ty": 1e9, "ti": 1e9}
 
 
@@ -27,7 +27,7 @@ def find_amount(text: str) -> Amount | None:
     for m in _AMOUNT.finditer(f):
         raw, unit, tail = m.group(1), m.group(2), m.group(3)
         before = f[: m.start()]
-        after = f[m.end():]
+        after = f[m.end() :]
         if unit not in _UNIT and re.search(r"(ngay|thang|luc|gio)\s*$", before):
             continue
         if unit is None and _CLASSIFIER.match(after):

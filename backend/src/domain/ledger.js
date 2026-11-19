@@ -41,7 +41,10 @@ function outstanding(state, { borrowed, personId, currency, excludeId }) {
   const settle = borrowed ? 'repay' : 'collect';
   return state.entries
     .filter((e) => e.id !== excludeId && (personId == null || e.personId === personId))
-    .filter((e) => { const w = byId(state.wallets, e.walletId); return w && (!currency || w.currency === currency); })
+    .filter((e) => {
+      const w = byId(state.wallets, e.walletId);
+      return w && (!currency || w.currency === currency);
+    })
     .reduce((s, e) => s + (e.kind === principal ? e.amount : e.kind === settle ? -e.amount : 0), 0);
 }
 
@@ -70,7 +73,12 @@ function validateWallet(state, input, id) {
   if (w.symbol !== null && !(Number.isInteger(w.symbol) && w.symbol >= 0 && w.symbol < WALLET_SYMBOLS)) {
     throw badRequest('Biểu tượng ví không hợp lệ.');
   }
-  if (!w.savings) { w.target = 0; w.startDate = null; w.deadline = null; w.notify = false; }
+  if (!w.savings) {
+    w.target = 0;
+    w.startDate = null;
+    w.deadline = null;
+    w.notify = false;
+  }
   if (w.startDate && w.deadline && dayStart(w.deadline) < dayStart(w.startDate)) {
     throw badRequest('Ngày kết thúc phải sau ngày bắt đầu.');
   }
@@ -88,7 +96,10 @@ function validateBankLink(w) {
   if (!bankByBin(w.bankBin)) throw badRequest('Vui lòng chọn ngân hàng hợp lệ.');
   w.bankAccount = String(w.bankAccount || '').replace(/\s+/g, '');
   if (!/^[A-Za-z0-9]{6,19}$/.test(w.bankAccount)) throw badRequest('Số tài khoản gồm 6–19 chữ số hoặc chữ cái.');
-  w.bankHolder = String(w.bankHolder || '').trim().replace(/\s+/g, ' ').toUpperCase();
+  w.bankHolder = String(w.bankHolder || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toUpperCase();
   if (!/^[A-Z ]{2,50}$/.test(w.bankHolder)) throw badRequest('Tên chủ tài khoản viết IN HOA không dấu, 2–50 ký tự.');
   if (w.currency !== 'VND') throw badRequest('Chỉ liên kết ngân hàng cho ví VND.');
 }
@@ -110,7 +121,9 @@ function validateCategory(state, input, id) {
   };
   if (!c.name) throw badRequest('Vui lòng nhập tên danh mục.');
   if (c.symbol < 0 || c.symbol >= CATEGORY_SYMBOLS) c.symbol = 0;
-  if (state.categories.some((x) => x.id !== id && x.income === c.income && x.name.toLowerCase() === c.name.toLowerCase())) {
+  if (
+    state.categories.some((x) => x.id !== id && x.income === c.income && x.name.toLowerCase() === c.name.toLowerCase())
+  ) {
     throw conflict('Tên danh mục đã tồn tại.', 'DUPLICATE_NAME');
   }
   const prev = byId(state.categories, id);
@@ -120,18 +133,23 @@ function validateCategory(state, input, id) {
   return c;
 }
 const categoryRefs = (state, id) =>
-  state.entries.filter((e) => e.categoryId === id).length + state.budgets.filter((b) => b.categoryId === id).length
-  + (state.recurring || []).filter((r) => r.categoryId === id).length;
+  state.entries.filter((e) => e.categoryId === id).length +
+  state.budgets.filter((b) => b.categoryId === id).length +
+  (state.recurring || []).filter((r) => r.categoryId === id).length;
 
 function validatePerson(state, input, id) {
   const p = { id, name: str(input.name), group: str(input.group) || 'Cá nhân' };
   if (!p.name) throw badRequest('Vui lòng nhập tên đối tượng.');
   return p;
 }
-const personRefs = (state, id) => state.entries.filter((e) => e.personId === id).length
-  + (state.recurring || []).filter((r) => r.personId === id).length;
+const personRefs = (state, id) =>
+  state.entries.filter((e) => e.personId === id).length +
+  (state.recurring || []).filter((r) => r.personId === id).length;
 
-const formatAmount = (v) => `${v < 0 ? '-' : ''}${Math.round(Math.abs(v)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
+const formatAmount = (v) =>
+  `${v < 0 ? '-' : ''}${Math.round(Math.abs(v))
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
 
 function effectOn(e, walletId) {
   let s = e.walletId === walletId ? e.amount * KINDS[e.kind].sign : 0;
@@ -181,11 +199,18 @@ function validateEntry(state, input, id, { checkDebt = true, checkBalance = fals
     throw badRequest('Ngày đến hạn không được trước ngày giao dịch.');
   }
   if (checkDebt && (kind === 'collect' || kind === 'repay')) {
-    const left = outstanding(state, { borrowed: kind === 'repay', personId: e.personId, currency: wallet.currency, excludeId: id });
+    const left = outstanding(state, {
+      borrowed: kind === 'repay',
+      personId: e.personId,
+      currency: wallet.currency,
+      excludeId: id,
+    });
     if (e.amount > left + 1e-9) {
-      throw badRequest(kind === 'repay'
-        ? `Số tiền trả nợ vượt số còn phải trả (${left}).`
-        : `Số tiền thu nợ vượt số còn phải thu (${left}).`);
+      throw badRequest(
+        kind === 'repay'
+          ? `Số tiền trả nợ vượt số còn phải trả (${left}).`
+          : `Số tiền thu nợ vượt số còn phải thu (${left}).`,
+      );
     }
   }
   return e;
@@ -217,7 +242,8 @@ function validateRecurring(state, input, id) {
     nextDate: date(input.nextDate, 'Lần kế tiếp'),
     active: input.active !== false,
   };
-  if (r.endDate && dayStart(r.endDate) < dayStart(r.startDate)) throw badRequest('Ngày kết thúc phải sau ngày bắt đầu.');
+  if (r.endDate && dayStart(r.endDate) < dayStart(r.startDate))
+    throw badRequest('Ngày kết thúc phải sau ngày bắt đầu.');
   return r;
 }
 
@@ -245,9 +271,15 @@ function validateBudget(state, input, id) {
     if (!w) throw badRequest('Ví không tồn tại.');
     if (w.currency !== b.currency) throw badRequest('Tiền tệ không khớp với ví.');
   }
-  const overlap = state.budgets.some((v) => v.id !== id && v.categoryId === b.categoryId && v.income === b.income
-    && v.currency === b.currency && sameMonth(monthValue(v.month), b.month)
-    && (v.walletId === b.walletId || v.walletId == null || b.walletId == null));
+  const overlap = state.budgets.some(
+    (v) =>
+      v.id !== id &&
+      v.categoryId === b.categoryId &&
+      v.income === b.income &&
+      v.currency === b.currency &&
+      sameMonth(monthValue(v.month), b.month) &&
+      (v.walletId === b.walletId || v.walletId == null || b.walletId == null),
+  );
   if (overlap) throw conflict('Ngân sách cho danh mục và ví trong tháng này đã tồn tại.', 'DUPLICATE_BUDGET');
   return b;
 }
@@ -259,12 +291,31 @@ function used(state, b) {
     .filter((e) => (b.income ? isIncome(e.kind) : isExpense(e.kind)))
     .filter((e) => !b.categoryId || e.categoryId === b.categoryId)
     .filter((e) => (b.walletId ? e.walletId === b.walletId : true))
-    .filter((e) => { const w = byId(state.wallets, e.walletId); return w && w.currency === b.currency; })
+    .filter((e) => {
+      const w = byId(state.wallets, e.walletId);
+      return w && w.currency === b.currency;
+    })
     .reduce((s, e) => s + e.amount, 0);
 }
 
 module.exports = {
-  balance, outstanding, used, walletRefs, categoryRefs, personRefs,
-  validateWallet, validateCategory, validatePerson, validateEntry, validateBudget, validateRecurring,
-  monthStart, monthEnd, sameMonth, byId, date, monthValue, monthKey,
+  balance,
+  outstanding,
+  used,
+  walletRefs,
+  categoryRefs,
+  personRefs,
+  validateWallet,
+  validateCategory,
+  validatePerson,
+  validateEntry,
+  validateBudget,
+  validateRecurring,
+  monthStart,
+  monthEnd,
+  sameMonth,
+  byId,
+  date,
+  monthValue,
+  monthKey,
 };

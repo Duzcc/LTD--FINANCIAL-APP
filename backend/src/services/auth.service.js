@@ -84,7 +84,8 @@ async function resendOtp(body) {
 async function verifyEmail(user, body) {
   if (user.emailVerified) return { user: user.toJSON() };
   const code = String(body.code || '').trim();
-  const valid = user.verifyCodeHash && user.verifyCodeExpires > new Date() && (await bcrypt.compare(code, user.verifyCodeHash));
+  const valid =
+    user.verifyCodeHash && user.verifyCodeExpires > new Date() && (await bcrypt.compare(code, user.verifyCodeHash));
   if (!valid) throw badRequest('Mã xác thực không đúng hoặc đã hết hạn.', 'INVALID_CODE');
   Object.assign(user, { emailVerified: true, verifyCodeHash: null, verifyCodeExpires: null });
   await users.save(user);
@@ -124,7 +125,8 @@ async function resetPassword(body) {
   const user = await users.findByEmail(email);
   const invalid = badRequest('Mã khôi phục không đúng hoặc đã hết hạn.', 'INVALID_CODE');
   if (!user?.resetCodeHash || !(user.resetCodeExpires > new Date())) throw invalid;
-  if (user.resetAttempts >= MAX_RESET_ATTEMPTS) throw badRequest('Bạn đã nhập sai quá nhiều lần, hãy yêu cầu mã mới.', 'INVALID_CODE');
+  if (user.resetAttempts >= MAX_RESET_ATTEMPTS)
+    throw badRequest('Bạn đã nhập sai quá nhiều lần, hãy yêu cầu mã mới.', 'INVALID_CODE');
   if (!(await bcrypt.compare(code, user.resetCodeHash))) {
     user.resetAttempts += 1;
     await users.save(user);
@@ -181,10 +183,11 @@ module.exports = {
   resetPassword,
   updateProfile,
   changePassword,
-  logout: (user, sessionId, body = {}) => session.signOut(user, {
-    sessionId,
-    everywhere: body.all === true,
-    refreshToken: body.refreshToken,
-  }),
+  logout: (user, sessionId, body = {}) =>
+    session.signOut(user, {
+      sessionId,
+      everywhere: body.all === true,
+      refreshToken: body.refreshToken,
+    }),
   deleteAccount,
 };

@@ -30,8 +30,7 @@ class RecurringScreen extends StatelessWidget {
             const SizedBox(height: 12),
             Panel(
                 color: const Color(0xFFF7E9E6),
-                child: Text(p.recurringError!,
-                    style: const TextStyle(color: AppColors.accentRed))),
+                child: Text(p.recurringError!, style: const TextStyle(color: AppColors.accentRed))),
           ],
           const SizedBox(height: 12),
           for (final r in rules)
@@ -46,9 +45,7 @@ class RecurringScreen extends StatelessWidget {
                                 ? Icons.savings_outlined
                                 : p.category(r.categoryId)?.icon ?? Icons.repeat,
                             color: r.active ? const Color(0xFF8D7564) : AppColors.textGrey),
-                        title: Text(r.note.isNotEmpty
-                            ? r.note
-                            : p.category(r.categoryId)?.name ?? r.kind.label),
+                        title: Text(r.note.isNotEmpty ? r.note : p.category(r.categoryId)?.name ?? r.kind.label),
                         subtitle: Text(
                             '${r.describe} • ${p.findWallet(r.walletId)?.name ?? ''}${r.kind == EntryKind.transfer ? ' → ${p.findWallet(r.destinationId)?.name ?? ''}' : ''}\n'
                             '${r.active ? 'Lần tới: ${dayLabel(r.upcoming)}' : 'Đã dừng'}'),
@@ -57,9 +54,7 @@ class RecurringScreen extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              Text(
-                                  money(r.amount,
-                                      p.findWallet(r.walletId)?.currency ?? 'VND'),
+                              Text(money(r.amount, p.findWallet(r.walletId)?.currency ?? 'VND'),
                                   style: TextStyle(
                                       fontWeight: FontWeight.w700,
                                       color: r.kind == EntryKind.transfer
@@ -101,8 +96,7 @@ class _RecurringEditorState extends State<RecurringEditor> {
   final form = GlobalKey<FormState>();
   late final r = widget.rule;
   late EntryKind kind = r?.kind ?? widget.initialKind;
-  late final amount = TextEditingController(
-      text: formatAmountInput(r?.amount ?? widget.initialAmount ?? 0));
+  late final amount = TextEditingController(text: formatAmountInput(r?.amount ?? widget.initialAmount ?? 0));
   late final note = TextEditingController(text: r?.note ?? widget.initialNote ?? '');
   late String? walletId = r?.walletId ?? widget.initialWalletId,
       destinationId = r?.destinationId ?? widget.initialDestinationId,
@@ -132,10 +126,7 @@ class _RecurringEditorState extends State<RecurringEditor> {
   void save() {
     if (!form.currentState!.validate()) return;
     final p = context.read<FinanceProvider>();
-    final changedSchedule = r == null ||
-        r!.startDate != start ||
-        r!.frequency != frequency ||
-        r!.interval != interval;
+    final changedSchedule = r == null || r!.startDate != start || r!.frequency != frequency || r!.interval != interval;
     attempt(context, () {
       var rule = RecurringRule(
           id: r?.id ?? p.newId(),
@@ -157,11 +148,7 @@ class _RecurringEditorState extends State<RecurringEditor> {
       }
       p.saveRecurring(rule);
       final created = p.runRecurring();
-      message(
-          context,
-          created > 0
-              ? 'Đã lưu và tạo $created giao dịch đến hạn.'
-              : 'Đã lưu giao dịch định kỳ.');
+      message(context, created > 0 ? 'Đã lưu và tạo $created giao dịch đến hạn.' : 'Đã lưu giao dịch định kỳ.');
       Navigator.pop(context);
     });
   }
@@ -172,9 +159,7 @@ class _RecurringEditorState extends State<RecurringEditor> {
     final wallet = p.findWallet(walletId);
     return FinancePage(
         title: r == null ? 'Tạo giao dịch định kỳ' : 'Sửa giao dịch định kỳ',
-        bottom: FilledButton(
-            onPressed: save,
-            child: const Padding(padding: EdgeInsets.all(14), child: Text('Lưu'))),
+        bottom: FilledButton(onPressed: save, child: const Padding(padding: EdgeInsets.all(14), child: Text('Lưu'))),
         child: Form(
             autovalidateMode: AutovalidateMode.onUserInteraction,
             key: form,
@@ -194,10 +179,7 @@ class _RecurringEditorState extends State<RecurringEditor> {
                             kind = k;
                             final c = p.category(categoryId);
                             if (c == null || c.income != kind.isIncome) {
-                              categoryId = p.categories
-                                  .where((c) => c.income == kind.isIncome)
-                                  .firstOrNull
-                                  ?.id;
+                              categoryId = p.categories.where((c) => c.income == kind.isIncome).firstOrNull?.id;
                             }
                           })),
               ]),
@@ -206,8 +188,7 @@ class _RecurringEditorState extends State<RecurringEditor> {
                   controller: amount,
                   inputFormatters: [AmountInputFormatter()],
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: InputDecoration(
-                      labelText: 'Số tiền mỗi lần', suffixText: wallet?.currency ?? 'VND'),
+                  decoration: InputDecoration(labelText: 'Số tiền mỗi lần', suffixText: wallet?.currency ?? 'VND'),
                   validator: (v) {
                     final n = parseAmount(v ?? '');
                     return n == null || n <= 0 ? 'Nhập số tiền lớn hơn 0' : null;
@@ -215,18 +196,16 @@ class _RecurringEditorState extends State<RecurringEditor> {
               const SizedBox(height: 12),
               TextFormField(
                   controller: note,
-                  decoration: const InputDecoration(
-                      labelText: 'Tên / ghi chú', hintText: 'Ví dụ: Tiền nhà, Netflix, Lương')),
+                  decoration:
+                      const InputDecoration(labelText: 'Tên / ghi chú', hintText: 'Ví dụ: Tiền nhà, Netflix, Lương')),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                   key: ValueKey('rw-$walletId'),
                   initialValue: walletId,
                   isExpanded: true,
-                  decoration: InputDecoration(
-                      labelText: kind == EntryKind.transfer ? 'Từ ví' : 'Ví'),
+                  decoration: InputDecoration(labelText: kind == EntryKind.transfer ? 'Từ ví' : 'Ví'),
                   items: [
-                    for (final w in p.wallets)
-                      DropdownMenuItem(value: w.id, child: Text('${w.name} (${w.currency})'))
+                    for (final w in p.wallets) DropdownMenuItem(value: w.id, child: Text('${w.name} (${w.currency})'))
                   ],
                   onChanged: (v) => setState(() {
                         walletId = v;
@@ -241,8 +220,7 @@ class _RecurringEditorState extends State<RecurringEditor> {
                     isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Đến ví (ví tiết kiệm)'),
                     items: [
-                      for (final w in p.wallets.where(
-                          (w) => w.id != walletId && w.currency == wallet?.currency))
+                      for (final w in p.wallets.where((w) => w.id != walletId && w.currency == wallet?.currency))
                         DropdownMenuItem(value: w.id, child: Text(w.name))
                     ],
                     onChanged: (v) => setState(() => destinationId = v),
@@ -258,9 +236,7 @@ class _RecurringEditorState extends State<RecurringEditor> {
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () async {
                       final c = await openPage<MoneyCategory>(
-                          context,
-                          SelectCategoryScreen(
-                              selectedCategoryId: categoryId, income: kind.isIncome));
+                          context, SelectCategoryScreen(selectedCategoryId: categoryId, income: kind.isIncome));
                       if (c != null && mounted) setState(() => categoryId = c.id);
                     }),
               if (kind.isDebt)
@@ -272,8 +248,7 @@ class _RecurringEditorState extends State<RecurringEditor> {
                     subtitle: Text(personId == null ? 'Bắt buộc' : p.personName(personId)),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () async {
-                      final person = await openPage<MoneyPerson>(
-                          context, SelectPersonScreen(selectedPerson: personId));
+                      final person = await openPage<MoneyPerson>(context, SelectPersonScreen(selectedPerson: personId));
                       if (person != null && mounted) setState(() => personId = person.id);
                     }),
               const SectionTitle('Lịch lặp'),
@@ -284,8 +259,7 @@ class _RecurringEditorState extends State<RecurringEditor> {
                         isExpanded: true,
                         decoration: const InputDecoration(labelText: 'Tần suất'),
                         items: [
-                          for (final f in RepeatFrequency.values)
-                            DropdownMenuItem(value: f, child: Text(f.label))
+                          for (final f in RepeatFrequency.values) DropdownMenuItem(value: f, child: Text(f.label))
                         ],
                         onChanged: (v) => setState(() => frequency = v ?? frequency))),
                 const SizedBox(width: 12),
@@ -310,10 +284,7 @@ class _RecurringEditorState extends State<RecurringEditor> {
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () async {
                     final d = await showDatePicker(
-                        context: context,
-                        initialDate: start,
-                        firstDate: DateTime(2020),
-                        lastDate: DateTime(2100));
+                        context: context, initialDate: start, firstDate: DateTime(2020), lastDate: DateTime(2100));
                     if (d != null && mounted) setState(() => start = d);
                   }),
               ListTile(
@@ -330,10 +301,7 @@ class _RecurringEditorState extends State<RecurringEditor> {
                           icon: const Icon(Icons.clear)),
                   onTap: () async {
                     final d = await showDatePicker(
-                        context: context,
-                        initialDate: end ?? start,
-                        firstDate: start,
-                        lastDate: DateTime(2100));
+                        context: context, initialDate: end ?? start, firstDate: start, lastDate: DateTime(2100));
                     if (d != null && mounted) setState(() => end = d);
                   }),
               SwitchListTile(
@@ -345,8 +313,7 @@ class _RecurringEditorState extends State<RecurringEditor> {
               if (r != null)
                 TextButton.icon(
                     icon: const Icon(Icons.delete_outline, color: AppColors.accentRed),
-                    label: const Text('Xóa giao dịch định kỳ',
-                        style: TextStyle(color: AppColors.accentRed)),
+                    label: const Text('Xóa giao dịch định kỳ', style: TextStyle(color: AppColors.accentRed)),
                     onPressed: () async {
                       if (await confirmAction(context,
                               title: 'Xóa giao dịch định kỳ?',

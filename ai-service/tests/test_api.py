@@ -9,9 +9,13 @@ from tests.conftest import CATEGORIES, NOW, PEOPLE, WALLETS, make_transactions
 
 
 def snapshot_json():
-    return {"now": NOW.isoformat(), "categories": [c.model_dump() for c in CATEGORIES],
-            "people": [p.model_dump() for p in PEOPLE], "wallets": [w.model_dump() for w in WALLETS],
-            "transactions": [json.loads(t.model_dump_json()) for t in make_transactions(120)]}
+    return {
+        "now": NOW.isoformat(),
+        "categories": [c.model_dump() for c in CATEGORIES],
+        "people": [p.model_dump() for p in PEOPLE],
+        "wallets": [w.model_dump() for w in WALLETS],
+        "transactions": [json.loads(t.model_dump_json()) for t in make_transactions(120)],
+    }
 
 
 def test_health(client):
@@ -26,7 +30,9 @@ def test_models(client):
 
 
 def test_categorize(client):
-    r = client.post("/v1/categorize", json={"text": "phở bò", "categories": [c.model_dump() for c in CATEGORIES], "income": False})
+    r = client.post(
+        "/v1/categorize", json={"text": "phở bò", "categories": [c.model_dump() for c in CATEGORIES], "income": False}
+    )
     assert r.status_code == 200
     assert r.json()["predictions"][0]["categoryId"] == "food"
 
@@ -37,14 +43,23 @@ def test_validation_error_shape(client):
 
 
 def test_parse(client):
-    r = client.post("/v1/parse", json={"text": "cho Minh mượn 500k", "now": NOW.isoformat(),
-                                       "people": [p.model_dump() for p in PEOPLE], "wallets": [w.model_dump() for w in WALLETS]})
+    r = client.post(
+        "/v1/parse",
+        json={
+            "text": "cho Minh mượn 500k",
+            "now": NOW.isoformat(),
+            "people": [p.model_dump() for p in PEOPLE],
+            "wallets": [w.model_dump() for w in WALLETS],
+        },
+    )
     body = r.json()
     assert body["kind"] == "lend" and body["amount"] == 500_000 and body["newPersonName"] == "Minh"
 
 
-@pytest.mark.parametrize("path,key", [("/v1/forecast", "projected"), ("/v1/anomalies", "anomalies"),
-                                      ("/v1/budgets/recommend", "suggestions")])
+@pytest.mark.parametrize(
+    "path,key",
+    [("/v1/forecast", "projected"), ("/v1/anomalies", "anomalies"), ("/v1/budgets/recommend", "suggestions")],
+)
 def test_analytics_endpoints(client, path, key):
     r = client.post(path, json={"snapshot": snapshot_json()})
     assert r.status_code == 200, r.text
@@ -58,7 +73,10 @@ def test_search_endpoint(client):
 
 def test_receipt_text_endpoint(client):
     from tests.test_analytics import RECEIPT
-    r = client.post("/v1/receipts/parse-text", json={"text": RECEIPT, "categories": [c.model_dump() for c in CATEGORIES]})
+
+    r = client.post(
+        "/v1/receipts/parse-text", json={"text": RECEIPT, "categories": [c.model_dump() for c in CATEGORIES]}
+    )
     body = r.json()
     assert body["total"] == 46_000
     assert body["items"][0]["quantity"] == 2 and body["items"][0]["unitPrice"] == 6_000
@@ -79,8 +97,12 @@ def test_receipt_scan_without_engines(client):
 
 
 def test_chat_rules(client):
-    for q, expect in [("tháng này mình chi bao nhiêu?", "chi"), ("dự báo cuối tháng", "Dự báo"),
-                      ("ai đang nợ mình?", "nợ"), ("ghi giúp ăn bún chả 50k", "Xác nhận")]:
+    for q, expect in [
+        ("tháng này mình chi bao nhiêu?", "chi"),
+        ("dự báo cuối tháng", "Dự báo"),
+        ("ai đang nợ mình?", "nợ"),
+        ("ghi giúp ăn bún chả 50k", "Xác nhận"),
+    ]:
         r = client.post("/v1/chat", json={"snapshot": snapshot_json(), "messages": [{"role": "user", "content": q}]})
         body = r.json()
         assert r.status_code == 200 and body["provider"] == "rules"
@@ -91,10 +113,16 @@ def test_chat_rules(client):
 
 def test_chat_rules_allowance_and_search(client):
     snap = snapshot_json() | {"budgets": [{"categoryId": None, "amount": 9_000_000}]}
-    r = client.post("/v1/chat", json={"snapshot": snap, "messages": [{"role": "user", "content": "hôm nay mình được chi bao nhiêu?"}]})
+    r = client.post(
+        "/v1/chat",
+        json={"snapshot": snap, "messages": [{"role": "user", "content": "hôm nay mình được chi bao nhiêu?"}]},
+    )
     body = r.json()
     assert "/ngày" in body["reply"] and body["toolsUsed"] == ["get_spending_allowance"]
-    r = client.post("/v1/chat", json={"snapshot": snapshot_json(), "messages": [{"role": "user", "content": "tìm giao dịch cà phê"}]})
+    r = client.post(
+        "/v1/chat",
+        json={"snapshot": snapshot_json(), "messages": [{"role": "user", "content": "tìm giao dịch cà phê"}]},
+    )
     action = r.json()["actions"][0]
     assert action["type"] == "show_transactions" and action["data"]["ids"]
 
@@ -116,16 +144,23 @@ async def test_anthropic_tool_loop(monkeypatch):
         assert request.headers["x-api-key"] == "k" and request.headers["anthropic-version"] == "2023-06-01"
         if len(calls) == 1:
             assert any(t["name"] == "forecast_month" for t in body["tools"])
-            return httpx.Response(200, json={"content": [{"type": "tool_use", "id": "tu1", "name": "forecast_month", "input": {}}]})
+            return httpx.Response(
+                200, json={"content": [{"type": "tool_use", "id": "tu1", "name": "forecast_month", "input": {}}]}
+            )
         result = json.loads(body["messages"][-1]["content"][0]["content"])
-        return httpx.Response(200, json={"content": [{"type": "text", "text": f"Dự kiến {result['projected_month_total']}"}]})
+        return httpx.Response(
+            200, json={"content": [{"type": "text", "text": f"Dự kiến {result['projected_month_total']}"}]}
+        )
 
     s = get_settings()
     for k, v in {"llm_provider": "anthropic", "llm_api_key": "k", "llm_model": "claude-test"}.items():
         monkeypatch.setattr(s, k, v)
     from app.schemas.finance import FinanceSnapshot
+
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
-        reply = await Assistant(http).chat(FinanceSnapshot(**snapshot_json()), [{"role": "user", "content": "cuối tháng tiêu bao nhiêu"}])
+        reply = await Assistant(http).chat(
+            FinanceSnapshot(**snapshot_json()), [{"role": "user", "content": "cuối tháng tiêu bao nhiêu"}]
+        )
     assert reply.provider == "anthropic" and reply.tools_used == ["forecast_month"]
     assert reply.reply.startswith("Dự kiến ") and len(calls) == 2
 
@@ -137,9 +172,28 @@ async def test_openai_compat_propose_and_fallback(monkeypatch):
     def handler(request: httpx.Request) -> httpx.Response:
         step["n"] += 1
         if step["n"] == 1:
-            return httpx.Response(200, json={"choices": [{"message": {"content": None, "tool_calls": [
-                {"id": "c1", "type": "function", "function": {"name": "propose_transaction",
-                                                              "arguments": json.dumps({"text": "cà phê 35k"})}}]}}]})
+            return httpx.Response(
+                200,
+                json={
+                    "choices": [
+                        {
+                            "message": {
+                                "content": None,
+                                "tool_calls": [
+                                    {
+                                        "id": "c1",
+                                        "type": "function",
+                                        "function": {
+                                            "name": "propose_transaction",
+                                            "arguments": json.dumps({"text": "cà phê 35k"}),
+                                        },
+                                    }
+                                ],
+                            }
+                        }
+                    ]
+                },
+            )
         if step["n"] == 2:
             return httpx.Response(200, json={"choices": [{"message": {"content": "Đã tạo đề xuất."}}]})
         return httpx.Response(500, text="boom")
@@ -148,6 +202,7 @@ async def test_openai_compat_propose_and_fallback(monkeypatch):
     for k, v in {"llm_provider": "openai", "llm_base_url": "http://ollama:11434/v1", "llm_model": "qwen2.5"}.items():
         monkeypatch.setattr(s, k, v)
     from app.schemas.finance import FinanceSnapshot
+
     snap = FinanceSnapshot(**snapshot_json())
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
         a = Assistant(http)

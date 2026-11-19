@@ -37,24 +37,16 @@ class _WalletListState extends State<WalletList> {
     final units = {p.currency, ...p.wallets.map((w) => w.currency)};
     return ListView(padding: const EdgeInsets.all(16), children: [
       Panel(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          const Expanded(
-              child: Text('Ví của tôi',
-                  style: TextStyle(fontWeight: FontWeight.w700))),
-          Chip(
-              label: Text('${p.wallets.length} ví'),
-              visualDensity: VisualDensity.compact),
+          const Expanded(child: Text('Ví của tôi', style: TextStyle(fontWeight: FontWeight.w700))),
+          Chip(label: Text('${p.wallets.length} ví'), visualDensity: VisualDensity.compact),
         ]),
         const SizedBox(height: 6),
-        Text(spendableOnly ? 'Tài sản có thể dùng ngay' : 'Tổng tài sản',
-            style: const TextStyle(fontSize: 12)),
+        Text(spendableOnly ? 'Tài sản có thể dùng ngay' : 'Tổng tài sản', style: const TextStyle(fontSize: 12)),
         for (final unit in units)
           if (p.wallets.any((w) => w.currency == unit))
-            Text(
-                secret(p.hideBalance,
-                    p.totalBalance(unit, spendableOnly: spendableOnly), unit),
+            Text(secret(p.hideBalance, p.totalBalance(unit, spendableOnly: spendableOnly), unit),
                 style: Theme.of(context).textTheme.headlineSmall),
         SwitchListTile(
             contentPadding: EdgeInsets.zero,
@@ -67,9 +59,7 @@ class _WalletListState extends State<WalletList> {
       for (final savings in [false, true]) ...[
         SectionTitle(savings ? 'Ví tiết kiệm' : 'Ví cơ bản'),
         for (final w in p.wallets.where((w) => w.savings == savings))
-          Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: WalletCard(wallet: w)),
+          Padding(padding: const EdgeInsets.only(bottom: 10), child: WalletCard(wallet: w)),
         if (!p.wallets.any((w) => w.savings == savings))
           Padding(
               padding: const EdgeInsets.only(bottom: 10),
@@ -105,19 +95,14 @@ class WalletCard extends StatelessWidget {
                       isLabelVisible: !w.excluded,
                       backgroundColor: AppColors.primaryGreen,
                       label: const Icon(Icons.check, size: 8, color: Colors.white),
-                      child: RoundIcon(w.icon,
-                          color: w.savings
-                              ? const Color(0xFFBC956D)
-                              : const Color(0xFF7C9583))),
+                      child: RoundIcon(w.icon, color: w.savings ? const Color(0xFFBC956D) : const Color(0xFF7C9583))),
                   title: Text(w.name),
                   subtitle: Text(
                       '${w.savings ? 'Tiết kiệm' : 'Cơ bản'} • ${w.currency}${w.excluded ? ' • không tính vào tổng' : ''}'),
                   trailing: Text(secret(p.hideBalance, balance, w.currency),
                       style: TextStyle(
                           fontWeight: FontWeight.w700,
-                          color: balance < 0
-                              ? AppColors.accentRed
-                              : AppColors.textPrimary))),
+                          color: balance < 0 ? AppColors.accentRed : AppColors.textPrimary))),
               if (w.savings && w.target > 0)
                 Padding(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -135,9 +120,7 @@ class SavingsProgress extends StatelessWidget {
     final w = wallet;
     final ratio = w.target == 0 ? 0.0 : (balance / w.target);
     final today = dateOnly(DateTime.now());
-    final daysLeft = w.deadline == null
-        ? null
-        : dateOnly(w.deadline!).difference(today).inDays;
+    final daysLeft = w.deadline == null ? null : dateOnly(w.deadline!).difference(today).inDays;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       LinearProgressIndicator(
           value: ratio.clamp(0, 1),

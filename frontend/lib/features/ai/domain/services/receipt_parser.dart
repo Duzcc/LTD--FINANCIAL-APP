@@ -56,17 +56,38 @@ String receiptKey(String line) {
 }
 
 const _totalKeys = <(String, int)>[
-  ('tong thanh toan', 0), ('tong tien thanh toan', 0), ('khach phai tra', 0), ('khach can tra', 0),
-  ('can thanh toan', 0), ('phai thanh toan', 0), ('grand total', 0), ('amount due', 0),
-  ('tong cong', 1), ('thanh toan', 1), ('total', 1), ('phai tra', 1),
-  ('tong tien', 2), ('tong', 3), ('cong', 4),
+  ('tong thanh toan', 0),
+  ('tong tien thanh toan', 0),
+  ('khach phai tra', 0),
+  ('khach can tra', 0),
+  ('can thanh toan', 0),
+  ('phai thanh toan', 0),
+  ('grand total', 0),
+  ('amount due', 0),
+  ('tong cong', 1),
+  ('thanh toan', 1),
+  ('total', 1),
+  ('phai tra', 1),
+  ('tong tien', 2),
+  ('tong', 3),
+  ('cong', 4),
 ];
 const _subtotal = ['tong tien hang', 'tam tinh', 'subtotal', 'cong tien hang', 'tien hang'];
 const _cash = ['tien khach dua', 'khach dua', 'tien nhan', 'khach tra', 'cash', 'tien mat'];
 // không có "phiếu thu" vì phiếu thu đưa cho người trả tiền, vẫn là khoản chi
 const _incomeMarkers = [
-  'hoan tien', 'tien hoan', 'hoan tra', 'refund', 'ban da nhan', 'nhan tien tu', 'nhan chuyen khoan',
-  'ghi co', 'phieu luong', 'bang luong', 'thuc linh', 'luong thuc nhan',
+  'hoan tien',
+  'tien hoan',
+  'hoan tra',
+  'refund',
+  'ban da nhan',
+  'nhan tien tu',
+  'nhan chuyen khoan',
+  'ghi co',
+  'phieu luong',
+  'bang luong',
+  'thuc linh',
+  'luong thuc nhan',
 ];
 
 EntryKind receiptKind(List<String> lines) {
@@ -78,12 +99,61 @@ const _change = ['tien thua', 'tien thoi', 'thoi lai', 'tra lai khach', 'tien tr
 const _notItem = ['giam gia', 'chiet khau', 'discount', 'vat', 'thue', 'khuyen mai', 'phi dich vu', 'service'];
 const _discount = ['giam gia', 'chiet khau', 'khuyen mai', 'discount'];
 const _header = ['ten hang', 'don gia', 'thanh tien', 't.tien', 'd.gia', 'sl ', 'mat hang', 'so luong'];
-const _notMerchant = ['dia chi', 'dc:', 'd/c', 'dt:', 'dt ', 'tel', 'hotline', 'mst', 'ma so thue', 'hoa don',
-  'phieu', 'so hd', 'ngay', 'thu ngan', 'nhan vien', 'ban hang', 'www', 'http'];
-const knownMerchants = ['circle k', 'winmart', 'bach hoa xanh', 'highlands', 'phuc long', 'co.opmart', 'coopmart',
-  'co.op', '7-eleven', 'gs25', 'familymart', 'ministop', 'lotte', 'aeon', 'big c', 'go!', 'mm mega', 'kfc',
-  'lotteria', 'jollibee', 'pharmacity', 'long chau', 'an khang', 'the coffee house', 'starbucks', 'katinat',
-  'guardian', 'dien may xanh', 'the gioi di dong', 'fahasa', 'uniqlo', 'pho thin', 'gong cha'];
+const _notMerchant = [
+  'dia chi',
+  'dc:',
+  'd/c',
+  'dt:',
+  'dt ',
+  'tel',
+  'hotline',
+  'mst',
+  'ma so thue',
+  'hoa don',
+  'phieu',
+  'so hd',
+  'ngay',
+  'thu ngan',
+  'nhan vien',
+  'ban hang',
+  'www',
+  'http'
+];
+const knownMerchants = [
+  'circle k',
+  'winmart',
+  'bach hoa xanh',
+  'highlands',
+  'phuc long',
+  'co.opmart',
+  'coopmart',
+  'co.op',
+  '7-eleven',
+  'gs25',
+  'familymart',
+  'ministop',
+  'lotte',
+  'aeon',
+  'big c',
+  'go!',
+  'mm mega',
+  'kfc',
+  'lotteria',
+  'jollibee',
+  'pharmacity',
+  'long chau',
+  'an khang',
+  'the coffee house',
+  'starbucks',
+  'katinat',
+  'guardian',
+  'dien may xanh',
+  'the gioi di dong',
+  'fahasa',
+  'uniqlo',
+  'pho thin',
+  'gong cha'
+];
 
 final _num = RegExp(r'(?<![\w.,])(\d{1,3}(?:[.,]\d{3})+|\d{4,9})(?:[.,]0{1,2})?\s*(?:đ|d|vnd|vnđ|dong)?(?![\w])',
     caseSensitive: false);
@@ -243,9 +313,12 @@ ParsedReceipt parseReceipt(String text) {
     final f = receiptKey(ln);
     final vals = receiptAmounts(ln);
     var name = ln.replaceAll(RegExp(r'[\d.,]+\s*(đ|d|vnd)?\s*$', caseSensitive: false), '').trim();
-    name = name.replaceAll(RegExp(r'\s+\d+\s*[xX*]?\s*[\d.,]*\s*$'), '').replaceAll(RegExp(r'^[\s.:\-*]+|[\s.:\-*]+$'), '');
+    name = name
+        .replaceAll(RegExp(r'\s+\d+\s*[xX*]?\s*[\d.,]*\s*$'), '')
+        .replaceAll(RegExp(r'^[\s.:\-*]+|[\s.:\-*]+$'), '');
     final hasText = RegExp(r'[a-z]').allMatches(f).length >= 2;
-    if (_has(f, [..._notMerchant, ..._notItem]) || (merchant != null && ln.startsWith(merchant)) ||
+    if (_has(f, [..._notMerchant, ..._notItem]) ||
+        (merchant != null && ln.startsWith(merchant)) ||
         RegExp(r'^[\-=_*. ]+$').hasMatch(ln)) {
       pending = null;
       continue;
@@ -272,7 +345,11 @@ ParsedReceipt parseReceipt(String text) {
   }
   if (cash != null && change != null && cash > change) sources.add(('tiền khách đưa − tiền thừa', cash - change, 2));
   if (subtotal != null) {
-    sources.add((discount != null ? 'tổng tiền hàng − giảm giá' : 'tổng tiền hàng', subtotal - (discount ?? 0), discount != null ? 2 : 1.5));
+    sources.add((
+      discount != null ? 'tổng tiền hàng − giảm giá' : 'tổng tiền hàng',
+      subtotal - (discount ?? 0),
+      discount != null ? 2 : 1.5
+    ));
   }
   if (items.length >= 2) sources.add(('tổng các dòng hàng', itemsSum - (discount ?? 0), 1.5));
 

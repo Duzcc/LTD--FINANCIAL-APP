@@ -10,11 +10,26 @@ _NON_WORD = re.compile(r"[^0-9a-zA-ZÀ-ỹ\s]+")
 _SPACES = re.compile(r"\s+")
 
 ABBREVIATIONS = {
-    "cf": "cà phê", "cafe": "cà phê", "coffee": "cà phê", "ck": "chuyển khoản",
-    "tt": "thanh toán", "sv": "sinh viên", "nv": "nhân viên", "dt": "điện thoại",
-    "đt": "điện thoại", "ko": "không", "k0": "không", "mn": "mọi người",
-    "bh": "bảo hiểm", "hp": "học phí", "ts": "trà sữa", "bn": "bao nhiêu",
-    "sn": "sinh nhật", "đc": "được", "dc": "được", "lg": "lương",
+    "cf": "cà phê",
+    "cafe": "cà phê",
+    "coffee": "cà phê",
+    "ck": "chuyển khoản",
+    "tt": "thanh toán",
+    "sv": "sinh viên",
+    "nv": "nhân viên",
+    "dt": "điện thoại",
+    "đt": "điện thoại",
+    "ko": "không",
+    "k0": "không",
+    "mn": "mọi người",
+    "bh": "bảo hiểm",
+    "hp": "học phí",
+    "ts": "trà sữa",
+    "bn": "bao nhiêu",
+    "sn": "sinh nhật",
+    "đc": "được",
+    "dc": "được",
+    "lg": "lương",
 }
 
 

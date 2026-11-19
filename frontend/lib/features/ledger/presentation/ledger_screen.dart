@@ -49,8 +49,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
   @override
   Widget build(BuildContext context) {
     final p = context.watch<FinanceProvider>();
-    if (walletId.isNotEmpty &&
-        !p.wallets.any((w) => w.id == walletId && w.currency == p.currency)) {
+    if (walletId.isNotEmpty && !p.wallets.any((w) => w.id == walletId && w.currency == p.currency)) {
       walletId = '';
     }
     if (categoryId.isNotEmpty && p.category(categoryId) == null) {
@@ -60,13 +59,9 @@ class _LedgerScreenState extends State<LedgerScreen> {
     final q = query.trim().toLowerCase();
     final entries = (range == null
             ? p.inMonth(month, unit: p.currency)
-            : p.between(dateOnly(range!.start),
-                dateOnly(range!.end).add(const Duration(days: 1)),
-                unit: p.currency))
+            : p.between(dateOnly(range!.start), dateOnly(range!.end).add(const Duration(days: 1)), unit: p.currency))
         .where((e) =>
-            (walletId.isEmpty ||
-                e.walletId == walletId ||
-                e.destinationId == walletId) &&
+            (walletId.isEmpty || e.walletId == walletId || e.destinationId == walletId) &&
             (categoryId.isEmpty || e.categoryId == categoryId) &&
             (personId.isEmpty || e.personId == personId) &&
             (type == 'all' ||
@@ -85,12 +80,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
             LedgerSort.amountDesc => b.amount.compareTo(a.amount),
             LedgerSort.amountAsc => a.amount.compareTo(b.amount),
           });
-    final income = entries
-        .where((e) => e.kind.isIncome && !e.excluded)
-        .fold(0.0, (s, e) => s + e.amount);
-    final expense = entries
-        .where((e) => e.kind.isExpense && !e.excluded)
-        .fold(0.0, (s, e) => s + e.amount);
+    final income = entries.where((e) => e.kind.isIncome && !e.excluded).fold(0.0, (s, e) => s + e.amount);
+    final expense = entries.where((e) => e.kind.isExpense && !e.excluded).fold(0.0, (s, e) => s + e.amount);
     final byDate = sort == LedgerSort.newest || sort == LedgerSort.oldest;
     final dayNet = <DateTime, double>{};
     for (final e in entries) {
@@ -104,19 +95,15 @@ class _LedgerScreenState extends State<LedgerScreen> {
     }
     final header = <Widget>[
       if (range == null)
-        MonthPicker(
-            value: month, onChanged: (v) => setState(() => month = v))
+        MonthPicker(value: month, onChanged: (v) => setState(() => month = v))
       else
         Row(children: [
           const Icon(Icons.date_range, size: 18),
           const SizedBox(width: 8),
           Expanded(
-              child: Text(
-                  '${dayLabel(range!.start)} – ${dayLabel(range!.end)}',
+              child: Text('${dayLabel(range!.start)} – ${dayLabel(range!.end)}',
                   style: const TextStyle(fontWeight: FontWeight.w600))),
-          TextButton(
-              onPressed: () => setState(() => range = null),
-              child: const Text('Theo tháng')),
+          TextButton(onPressed: () => setState(() => range = null), child: const Text('Theo tháng')),
         ]),
       TextField(
           controller: search,
@@ -126,8 +113,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
               prefixIcon: const Icon(Icons.search),
               suffixIcon: IconButton(
                   tooltip: 'Bộ lọc',
-                  onPressed: () =>
-                      setState(() => showFilters = !showFilters),
+                  onPressed: () => setState(() => showFilters = !showFilters),
                   icon: Badge(
                       isLabelVisible: activeFilters > 0,
                       label: Text('$activeFilters'),
@@ -146,9 +132,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
               Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: ChoiceChip(
-                      label: Text(v.value),
-                      selected: type == v.key,
-                      onSelected: (_) => setState(() => type = v.key))),
+                      label: Text(v.value), selected: type == v.key, onSelected: (_) => setState(() => type = v.key))),
           ])),
       if (showFilters || activeFilters > 1) ...[
         const SizedBox(height: 12),
@@ -159,8 +143,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
             decoration: const InputDecoration(labelText: 'Ví'),
             items: [
               const DropdownMenuItem(value: '', child: Text('Tất cả ví')),
-              for (final w
-                  in p.wallets.where((w) => w.currency == p.currency))
+              for (final w in p.wallets.where((w) => w.currency == p.currency))
                 DropdownMenuItem(value: w.id, child: Text(w.name))
             ],
             onChanged: (v) => setState(() => walletId = v ?? '')),
@@ -171,12 +154,9 @@ class _LedgerScreenState extends State<LedgerScreen> {
             isExpanded: true,
             decoration: const InputDecoration(labelText: 'Danh mục'),
             items: [
-              const DropdownMenuItem(
-                  value: '', child: Text('Tất cả danh mục')),
+              const DropdownMenuItem(value: '', child: Text('Tất cả danh mục')),
               for (final c in p.categories)
-                DropdownMenuItem(
-                    value: c.id,
-                    child: Text('${c.name} (${c.income ? 'thu' : 'chi'})'))
+                DropdownMenuItem(value: c.id, child: Text('${c.name} (${c.income ? 'thu' : 'chi'})'))
             ],
             onChanged: (v) => setState(() => categoryId = v ?? '')),
         const SizedBox(height: 12),
@@ -186,10 +166,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
             isExpanded: true,
             decoration: const InputDecoration(labelText: 'Đối tượng'),
             items: [
-              const DropdownMenuItem(
-                  value: '', child: Text('Tất cả đối tượng')),
-              for (final person in p.people)
-                DropdownMenuItem(value: person.id, child: Text(person.name))
+              const DropdownMenuItem(value: '', child: Text('Tất cả đối tượng')),
+              for (final person in p.people) DropdownMenuItem(value: person.id, child: Text(person.name))
             ],
             onChanged: (v) => setState(() => personId = v ?? '')),
         const SizedBox(height: 8),
@@ -199,10 +177,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
               label: const Text('Khoảng thời gian'),
               onPressed: () async {
                 final r = await showDateRangePicker(
-                    context: context,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime(2100),
-                    initialDateRange: range);
+                    context: context, firstDate: DateTime(2020), lastDate: DateTime(2100), initialDateRange: range);
                 if (r != null && mounted) setState(() => range = r);
               }),
           if (activeFilters > 0)
@@ -220,19 +195,13 @@ class _LedgerScreenState extends State<LedgerScreen> {
       Panel(
           child: Row(children: [
         Expanded(
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-              Text('${entries.length} giao dịch • ${p.currency}',
-                  style: const TextStyle(fontWeight: FontWeight.w700)),
-              Text('Sắp xếp: ${_sortLabels[sort]}',
-                  style: const TextStyle(fontSize: 12)),
-            ])),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('${entries.length} giao dịch • ${p.currency}', style: const TextStyle(fontWeight: FontWeight.w700)),
+          Text('Sắp xếp: ${_sortLabels[sort]}', style: const TextStyle(fontSize: 12)),
+        ])),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text('+${money(income, p.currency)}',
-              style: const TextStyle(color: AppColors.primaryGreen)),
-          Text('−${money(expense, p.currency)}',
-              style: const TextStyle(color: AppColors.accentRed)),
+          Text('+${money(income, p.currency)}', style: const TextStyle(color: AppColors.primaryGreen)),
+          Text('−${money(expense, p.currency)}', style: const TextStyle(color: AppColors.accentRed)),
         ]),
       ])),
       const SizedBox(height: 8),
@@ -245,10 +214,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
               icon: const Icon(Icons.sort),
               initialValue: sort,
               onSelected: (v) => setState(() => sort = v),
-              itemBuilder: (_) => [
-                    for (final e in _sortLabels.entries)
-                      PopupMenuItem(value: e.key, child: Text(e.value))
-                  ]),
+              itemBuilder: (_) =>
+                  [for (final e in _sortLabels.entries) PopupMenuItem(value: e.key, child: Text(e.value))]),
           IconButton(
               tooltip: 'Thêm giao dịch',
               onPressed: () => openPage(context, const AddTransactionScreen()),
@@ -261,9 +228,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
               if (i < header.length) return header[i];
               if (entries.isEmpty) {
                 return EmptyView(
-                    title: query.isEmpty && activeFilters == 0
-                        ? 'Chưa có giao dịch'
-                        : 'Không tìm thấy giao dịch',
+                    title: query.isEmpty && activeFilters == 0 ? 'Chưa có giao dịch' : 'Không tìm thấy giao dịch',
                     subtitle: query.isEmpty && activeFilters == 0
                         ? 'Thêm giao dịch đầu tiên để bắt đầu theo dõi thu chi.'
                         : 'Thử đổi từ khóa, kỳ thời gian hoặc bộ lọc.',
@@ -273,17 +238,12 @@ class _LedgerScreenState extends State<LedgerScreen> {
               final index = i - header.length;
               final e = entries[index];
               final day = dateOnly(e.date);
-              final startsDay = byDate &&
-                  (index == 0 || dateOnly(entries[index - 1].date) != day);
+              final startsDay = byDate && (index == 0 || dateOnly(entries[index - 1].date) != day);
               if (!startsDay) return EntryTile(e, key: ValueKey(e.id));
-              return Column(
-                  key: ValueKey(e.id),
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _DayHeader(
-                        day: day, net: dayNet[day] ?? 0, currency: p.currency),
-                    EntryTile(e),
-                  ]);
+              return Column(key: ValueKey(e.id), crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                _DayHeader(day: day, net: dayNet[day] ?? 0, currency: p.currency),
+                EntryTile(e),
+              ]);
             }));
   }
 }
@@ -306,12 +266,8 @@ class _DayHeader extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
       child: Row(children: [
-        Expanded(
-            child: Text(_weekday(day),
-                style: const TextStyle(fontWeight: FontWeight.w700))),
+        Expanded(child: Text(_weekday(day), style: const TextStyle(fontWeight: FontWeight.w700))),
         Text(money(net, currency),
-            style: TextStyle(
-                fontSize: 12,
-                color: net >= 0 ? AppColors.primaryGreen : AppColors.accentRed)),
+            style: TextStyle(fontSize: 12, color: net >= 0 ? AppColors.primaryGreen : AppColors.accentRed)),
       ]));
 }

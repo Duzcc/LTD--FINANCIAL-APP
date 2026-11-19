@@ -6,7 +6,9 @@ const NAME = /^[\p{L}][\p{L} .'-]*$/u;
 const OTP = /^\d{6}$/;
 
 function newEmail(value) {
-  const email = String(value || '').trim().toLowerCase();
+  const email = String(value || '')
+    .trim()
+    .toLowerCase();
   if (!email) throw badRequest('Vui lòng nhập email.');
   if (email.length > 254 || email.split('@')[0].length > 64) throw badRequest('Email quá dài.');
   if (!EMAIL.test(email) || email.includes('..') || /^\.|\.@/.test(email)) throw badRequest('Email không hợp lệ.');
@@ -14,14 +16,18 @@ function newEmail(value) {
 }
 
 function existingEmail(value) {
-  const email = String(value || '').trim().toLowerCase();
+  const email = String(value || '')
+    .trim()
+    .toLowerCase();
   if (!email) throw badRequest('Vui lòng nhập email.');
   if (email.length > 254 || !email.includes('@')) throw badRequest('Email không hợp lệ.');
   return email;
 }
 
 function fullName(value) {
-  const name = String(value || '').trim().replace(/\s+/g, ' ');
+  const name = String(value || '')
+    .trim()
+    .replace(/\s+/g, ' ');
   if (!name) throw badRequest('Vui lòng nhập họ tên.');
   if (name.length < 2) throw badRequest('Họ tên phải có ít nhất 2 ký tự.');
   if (name.length > 50) throw badRequest('Họ tên tối đa 50 ký tự.');
@@ -55,9 +61,13 @@ function profile(body) {
   }
   if (body.hideBalance !== undefined) changes.hideBalance = body.hideBalance === true;
   if (body.rates && typeof body.rates === 'object') {
-    changes.rates = Object.fromEntries(Object.entries(body.rates)
-      .filter(([currency, rate]) => CURRENCIES.includes(currency) && Number.isFinite(Number(rate)) && Number(rate) > 0)
-      .map(([currency, rate]) => [currency, Number(rate)]));
+    changes.rates = Object.fromEntries(
+      Object.entries(body.rates)
+        .filter(
+          ([currency, rate]) => CURRENCIES.includes(currency) && Number.isFinite(Number(rate)) && Number(rate) > 0,
+        )
+        .map(([currency, rate]) => [currency, Number(rate)]),
+    );
   }
   return changes;
 }

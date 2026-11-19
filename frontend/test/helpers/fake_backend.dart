@@ -35,18 +35,13 @@ class FakeBackend {
   MockClient get client => MockClient((request) async {
         requests.add(request);
         final path = request.url.path;
-        Map<String, dynamic> body() =>
-            request.body.isEmpty ? {} : jsonDecode(request.body);
-        http.Response json(Object data, [int status = 200]) => http.Response(
-            jsonEncode(data), status,
-            headers: {'content-type': 'application/json; charset=utf-8'});
+        Map<String, dynamic> body() => request.body.isEmpty ? {} : jsonDecode(request.body);
+        http.Response json(Object data, [int status = 200]) =>
+            http.Response(jsonEncode(data), status, headers: {'content-type': 'application/json; charset=utf-8'});
         if (path == '/api/auth/login') {
           if (body()['password'] != '123456') {
             return json({
-              'error': {
-                'code': 'UNAUTHORIZED',
-                'message': 'Email hoặc mật khẩu không đúng.'
-              }
+              'error': {'code': 'UNAUTHORIZED', 'message': 'Email hoặc mật khẩu không đúng.'}
             }, 401);
           }
           return json({
@@ -61,10 +56,7 @@ class FakeBackend {
         if (path == '/api/auth/verify-otp') {
           if (body()['otpToken'] != 'otp1' || body()['code'] != otpCode) {
             return json({
-              'error': {
-                'code': 'INVALID_CODE',
-                'message': 'Mã OTP không đúng. Bạn còn 4 lần thử.'
-              }
+              'error': {'code': 'INVALID_CODE', 'message': 'Mã OTP không đúng. Bạn còn 4 lần thử.'}
             }, 400);
           }
           return json({'token': token, 'refreshToken': refreshToken, 'user': snapshot['user']});
@@ -94,10 +86,7 @@ class FakeBackend {
             final list = snapshot[op['entity']] as List;
             list.removeWhere((x) => x['id'] == op['id']);
             if (op['action'] == 'upsert') {
-              list.add(<String, dynamic>{
-                ...(op['data'] as Map).cast<String, dynamic>(),
-                'id': op['id']
-              });
+              list.add(<String, dynamic>{...(op['data'] as Map).cast<String, dynamic>(), 'id': op['id']});
             }
           }
           return json({'applied': (b['ops'] as List).length});
@@ -133,8 +122,7 @@ class FakeBackend {
       });
 }
 
-Future<bool> signInWithOtp(FinanceProvider p,
-    {String email = 'an@test.vn', String password = '123456'}) async {
+Future<bool> signInWithOtp(FinanceProvider p, {String email = 'an@test.vn', String password = '123456'}) async {
   final challenge = await p.signIn(email: email, password: password);
   return p.verifyOtp(challenge, challenge.devCode!);
 }

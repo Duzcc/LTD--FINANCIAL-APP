@@ -22,8 +22,7 @@ class WalletIconScreen extends StatelessWidget {
 }
 
 class _IconChoice extends StatelessWidget {
-  const _IconChoice(
-      {super.key, required this.icon, required this.selected, required this.onTap});
+  const _IconChoice({super.key, required this.icon, required this.selected, required this.onTap});
   final IconData icon;
   final bool selected;
   final VoidCallback onTap;
@@ -33,13 +32,9 @@ class _IconChoice extends StatelessWidget {
       color: selected ? AppColors.primaryGreenSurface : AppColors.cardWhite,
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-              color: selected ? AppColors.primaryGreen : AppColors.divider,
-              width: selected ? 2 : 1)),
+          side: BorderSide(color: selected ? AppColors.primaryGreen : AppColors.divider, width: selected ? 2 : 1)),
       child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: onTap,
-          child: Icon(icon,
-              size: 30,
-              color: selected ? AppColors.primaryGreen : AppColors.textSecondary)));
+          child: Icon(icon, size: 30, color: selected ? AppColors.primaryGreen : AppColors.textSecondary)));
 }

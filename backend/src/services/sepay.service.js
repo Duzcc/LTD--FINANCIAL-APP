@@ -15,13 +15,19 @@ const SAME_TRANSFER_MS = 86400000;
 const PAGE_SIZE = 5000;
 
 // ngân hàng hay chèn dấu cách vào nội dung nên bỏ hết ký tự lạ rồi mới tìm mã LTD
-const findCodes = (text) => [...String(text || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
-  .matchAll(/(?=(LTD[A-HJ-NP-Z2-9]{6}))/g)].map((m) => m[1]);
+const findCodes = (text) =>
+  [
+    ...String(text || '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '')
+      .matchAll(/(?=(LTD[A-HJ-NP-Z2-9]{6}))/g),
+  ].map((m) => m[1]);
 
 function incomeCategory(state, request) {
-  const category = (request.categoryId && L.byId(state.categories, request.categoryId))
-    || state.categories.find((c) => c.income && c.id === 'other_income')
-    || state.categories.find((c) => c.income);
+  const category =
+    (request.categoryId && L.byId(state.categories, request.categoryId)) ||
+    state.categories.find((c) => c.income && c.id === 'other_income') ||
+    state.categories.find((c) => c.income);
   if (!category) throw badRequest('Chưa có danh mục thu nhập.');
   return category;
 }
@@ -35,9 +41,10 @@ async function recordPayment(userId, state, request, event) {
   let entry = income;
   if (request.kind === 'collect') {
     const owed = L.outstanding(state, { borrowed: false, personId: request.personId, currency: 'VND' });
-    entry = event.amount <= owed
-      ? { ...base, kind: 'collect', personId: request.personId }
-      : { ...income, note: `${note} (vượt số nợ còn lại)` };
+    entry =
+      event.amount <= owed
+        ? { ...base, kind: 'collect', personId: request.personId }
+        : { ...income, note: `${note} (vượt số nợ còn lại)` };
   }
   await ledger.upsert(userId, state, 'entries', id, entry);
   return id;
@@ -57,7 +64,8 @@ function linkedWallet(state, accountNumber) {
 }
 
 function direction(entry, walletId) {
-  if (entry.kind === 'transfer') return entry.destinationId === walletId ? 'in' : entry.walletId === walletId ? 'out' : null;
+  if (entry.kind === 'transfer')
+    return entry.destinationId === walletId ? 'in' : entry.walletId === walletId ? 'out' : null;
   if (entry.walletId !== walletId) return null;
   return KINDS[entry.kind].sign > 0 ? 'in' : 'out';
 }
@@ -66,11 +74,14 @@ function direction(entry, walletId) {
 async function manualTwin(owner, state, wallet, event) {
   const at = (event.occurredAt || new Date()).getTime();
   const taken = new Set(await events.linkedEntryIds(owner));
-  return state.entries.find((e) => !e.id.startsWith('bank_')
-    && !taken.has(e.id)
-    && e.amount === event.amount
-    && direction(e, wallet.id) === event.transferType
-    && Math.abs(new Date(e.date).getTime() - at) <= SAME_TRANSFER_MS);
+  return state.entries.find(
+    (e) =>
+      !e.id.startsWith('bank_') &&
+      !taken.has(e.id) &&
+      e.amount === event.amount &&
+      direction(e, wallet.id) === event.transferType &&
+      Math.abs(new Date(e.date).getTime() - at) <= SAME_TRANSFER_MS,
+  );
 }
 
 async function recordBankTransfer(owner, state, wallet, event, text) {
@@ -95,22 +106,27 @@ async function pollingOwner() {
 }
 
 // SePay có thể gửi lại cùng giao dịch, lần sau trả null để bỏ qua
-const createEvent = (owner, { providerId, accountNumber, transferType, amount, text, occurredAt }) => events.createUnique({
-  user: owner,
-  providerId: String(providerId),
-  accountNumber: String(accountNumber || ''),
-  transferType: transferType === 'out' ? 'out' : 'in',
-  amount: Number.isFinite(amount) ? amount : 0,
-  content: String(text).toUpperCase().slice(0, 500),
-  occurredAt: occurredAt && !Number.isNaN(occurredAt.getTime()) ? occurredAt : null,
-});
+const createEvent = (owner, { providerId, accountNumber, transferType, amount, text, occurredAt }) =>
+  events.createUnique({
+    user: owner,
+    providerId: String(providerId),
+    accountNumber: String(accountNumber || ''),
+    transferType: transferType === 'out' ? 'out' : 'in',
+    amount: Number.isFinite(amount) ? amount : 0,
+    content: String(text).toUpperCase().slice(0, 500),
+    occurredAt: occurredAt && !Number.isNaN(occurredAt.getTime()) ? occurredAt : null,
+  });
 
 function walletMatches(wallet, accountNumber) {
   return Boolean(wallet) && !(accountNumber && wallet.bankAccount && accountNumber !== wallet.bankAccount);
 }
 
 async function settle(request, event, entryId) {
-  const updated = await requests.addPayment(request._id, { amount: event.amount, paidAt: event.occurredAt || new Date(), entryId });
+  const updated = await requests.addPayment(request._id, {
+    amount: event.amount,
+    paidAt: event.occurredAt || new Date(),
+    entryId,
+  });
   if (!updated.amount || updated.paidAmount >= updated.amount) await requests.markPaid(request._id);
 }
 
@@ -162,7 +178,9 @@ async function syncStart() {
   const oldest = await requests.findOldestActive();
   const owner = await pollingOwner();
   const wallet = owner ? await ledgerRepository.oldestBankWallet(owner) : null;
-  const starts = [oldest && oldest.createdAt.getTime() - LOOKBACK_MS, wallet && wallet.createdAt.getTime()].filter(Boolean);
+  const starts = [oldest && oldest.createdAt.getTime() - LOOKBACK_MS, wallet && wallet.createdAt.getTime()].filter(
+    Boolean,
+  );
   return starts.length ? new Date(Math.min(...starts)) : null;
 }
 
@@ -201,7 +219,9 @@ function syncSoon() {
       console.warn(`[sepay] không đọc được giao dịch: ${e.message}`);
       return 0;
     })
-    .finally(() => { running = null; });
+    .finally(() => {
+      running = null;
+    });
   return running;
 }
 

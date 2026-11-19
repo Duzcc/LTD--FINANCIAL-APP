@@ -8,4 +8,12 @@ const deleteByTokenHash = (tokenHash, user) => RefreshToken.deleteOne({ tokenHas
 const deleteForDevice = (user, sid) => RefreshToken.deleteMany({ user, sid });
 const deleteForUser = (user) => RefreshToken.deleteMany({ user });
 
-module.exports = { create, findByTokenHash, existsForDevice, deleteById, deleteByTokenHash, deleteForDevice, deleteForUser };
+module.exports = {
+  create,
+  findByTokenHash,
+  existsForDevice,
+  deleteById,
+  deleteByTokenHash,
+  deleteForDevice,
+  deleteForUser,
+};

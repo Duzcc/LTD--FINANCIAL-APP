@@ -20,21 +20,16 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
         border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.border)),
+            borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
         enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.border)),
+            borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.border)),
       ),
       segmentedButtonTheme: SegmentedButtonThemeData(
           style: ButtonStyle(
-        backgroundColor: WidgetStateProperty.resolveWith((s) =>
-            s.contains(WidgetState.selected)
-                ? const Color(0xFFD9BEA9)
-                : Colors.white),
+        backgroundColor: WidgetStateProperty.resolveWith(
+            (s) => s.contains(WidgetState.selected) ? const Color(0xFFD9BEA9) : Colors.white),
         foregroundColor: const WidgetStatePropertyAll(AppColors.textPrimary),
         side: const WidgetStatePropertyAll(BorderSide(color: AppColors.border)),
       )),

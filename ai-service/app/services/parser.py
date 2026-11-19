@@ -60,11 +60,17 @@ class QuickEntryParser:
         f = fold(text)
         if "trả lãi" in low or "đóng lãi" in low:
             return "interestExpense", 0.97, []
-        if re.search(r"\btra lai\b", f) and "trả lại" not in low and re.search(r"\btra lai\s+(vay|the|ngan hang|thang|khoan)", f):
+        if (
+            re.search(r"\btra lai\b", f)
+            and "trả lại" not in low
+            and re.search(r"\btra lai\s+(vay|the|ngan hang|thang|khoan)", f)
+        ):
             return "interestExpense", 0.9, []
         if re.search(r"(nhận|thu)\s+lãi|lãi\s+(tiết kiệm|cho vay|gửi)", low):
             return "interestIncome", 0.95, []
-        if re.search(r"\bcho\s+(mình|tôi|em|tao|tớ)\s+(mượn|vay)\b", low) or re.search(r"\bcho\s+(toi|tao|to)\s+(muon|vay)\b", f):
+        if re.search(r"\bcho\s+(mình|tôi|em|tao|tớ)\s+(mượn|vay)\b", low) or re.search(
+            r"\bcho\s+(toi|tao|to)\s+(muon|vay)\b", f
+        ):
             return "borrow", 0.95, []
         if _PRONOUN_START.search(f) and re.search(r"\btra\b", f):
             return "repay", 0.95, []
@@ -99,8 +105,16 @@ class QuickEntryParser:
             source = wallets[0].id
         return source, dest
 
-    def parse(self, text: str, *, now: datetime, categories: list[Category], people: list[Person],
-              wallets: list[Wallet], history: list[LabeledText] | None = None) -> ParseResult:
+    def parse(
+        self,
+        text: str,
+        *,
+        now: datetime,
+        categories: list[Category],
+        people: list[Person],
+        wallets: list[Wallet],
+        history: list[LabeledText] | None = None,
+    ) -> ParseResult:
         amount = find_amount(text)
         date, mentioned = find_date(text, now)
         kind, kind_conf, alts = self.classify_kind(text)
@@ -117,10 +131,19 @@ class QuickEntryParser:
         note = re.sub(r"\s+", " ", note).strip()
         note = note[:1].upper() + note[1:] if note else note
 
-        result = ParseResult(kind=kind, kind_confidence=round(kind_conf, 3), amount=amount.value if amount else None,
-                             date=date, date_mentioned=mentioned, note=note, person_id=person_id,
-                             new_person_name=new_name, wallet_id=wallet_id,
-                             destination_id=dest_id if kind == "transfer" else None, alternatives=alts)
+        result = ParseResult(
+            kind=kind,
+            kind_confidence=round(kind_conf, 3),
+            amount=amount.value if amount else None,
+            date=date,
+            date_mentioned=mentioned,
+            note=note,
+            person_id=person_id,
+            new_person_name=new_name,
+            wallet_id=wallet_id,
+            destination_id=dest_id if kind == "transfer" else None,
+            alternatives=alts,
+        )
         if kind in INCOME_KINDS | EXPENSE_KINDS and categories:
             preds, _ = get_categorizer().predict(note or text, categories, history, income=kind in INCOME_KINDS)
             if preds:

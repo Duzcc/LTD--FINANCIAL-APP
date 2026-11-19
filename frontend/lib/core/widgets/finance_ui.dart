@@ -9,8 +9,7 @@ export 'package:finance_app/core/theme/app_colors.dart';
 String money(num value, [String unit = 'VND']) =>
     '${NumberFormat('#,##0.##', 'vi_VN').format(value)} ${unit == 'VND' ? '₫' : unit}';
 
-String secret(bool hidden, num value, [String unit = 'VND']) =>
-    hidden ? '••••••' : money(value, unit);
+String secret(bool hidden, num value, [String unit = 'VND']) => hidden ? '••••••' : money(value, unit);
 
 String compactMoney(num value) {
   final v = value.abs();
@@ -21,11 +20,10 @@ String compactMoney(num value) {
 }
 
 String dayLabel(DateTime date) => DateFormat('dd/MM/yyyy').format(date);
-String errorText(Object error) =>
-    error is ArgumentError ? '${error.message}' : '$error';
+String errorText(Object error) => error is ArgumentError ? '${error.message}' : '$error';
 
-void message(BuildContext context, Object error) => ScaffoldMessenger.of(context)
-    .showSnackBar(SnackBar(content: Text(errorText(error))));
+void message(BuildContext context, Object error) =>
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorText(error))));
 
 // chỉ bắt lỗi người dùng gặp (nhập sai, mất mạng), lỗi code thì để văng ra
 Future<Object?> failureOf(FutureOr<void> Function() action) async {
@@ -102,12 +100,9 @@ String formatAmountInput(num value) {
 
 class AmountInputFormatter extends TextInputFormatter {
   @override
-  TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
     var input = newValue.text;
-    if (input.length == oldValue.text.length + 1 &&
-        input.endsWith('.') &&
-        !input.contains(',')) {
+    if (input.length == oldValue.text.length + 1 && input.endsWith('.') && !input.contains(',')) {
       input = '${input.substring(0, input.length - 1)},';
     }
     var raw = input.replaceAll(RegExp(r'[^0-9,]'), '');
@@ -124,8 +119,7 @@ class AmountInputFormatter extends TextInputFormatter {
     }
     var text = buffer.toString();
     if (decPart != null) text = '${text.isEmpty ? '0' : text},$decPart';
-    return TextEditingValue(
-        text: text, selection: TextSelection.collapsed(offset: text.length));
+    return TextEditingValue(text: text, selection: TextSelection.collapsed(offset: text.length));
   }
 }
 
@@ -137,32 +131,19 @@ Future<bool> confirmAction(BuildContext context,
         bool danger = false}) async =>
     await showDialog<bool>(
         context: context,
-        builder: (ctx) => AlertDialog(
-                title: Text(title),
-                content: Text(content),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(ctx, false),
-                      child: Text(cancel)),
-                  FilledButton(
-                      style: danger
-                          ? FilledButton.styleFrom(
-                              backgroundColor: AppColors.accentRed)
-                          : null,
-                      onPressed: () => Navigator.pop(ctx, true),
-                      child: Text(confirm)),
-                ])) ??
+        builder: (ctx) => AlertDialog(title: Text(title), content: Text(content), actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(cancel)),
+              FilledButton(
+                  style: danger ? FilledButton.styleFrom(backgroundColor: AppColors.accentRed) : null,
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text(confirm)),
+            ])) ??
     false;
 Future<T?> openPage<T>(BuildContext context, Widget page) =>
     Navigator.of(context).push<T>(MaterialPageRoute(builder: (_) => page));
 
 class FinancePage extends StatelessWidget {
-  const FinancePage(
-      {super.key,
-      required this.title,
-      required this.child,
-      this.actions,
-      this.bottom});
+  const FinancePage({super.key, required this.title, required this.child, this.actions, this.bottom});
   final String title;
   final Widget child;
   final List<Widget>? actions;
@@ -172,28 +153,17 @@ class FinancePage extends StatelessWidget {
         appBar: AppBar(title: Text(title), actions: actions),
         body: SafeArea(
             top: false,
-            child: Center(
-                child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 600),
-                    child: child))),
+            child: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 600), child: child))),
         bottomNavigationBar: bottom == null
             ? null
             : Padding(
-                padding: EdgeInsets.only(
-                    bottom: MediaQuery.viewInsetsOf(context).bottom),
-                child: SafeArea(
-                    top: false,
-                    minimum: const EdgeInsets.all(16),
-                    child: bottom!)),
+                padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+                child: SafeArea(top: false, minimum: const EdgeInsets.all(16), child: bottom!)),
       );
 }
 
 class Panel extends StatelessWidget {
-  const Panel(
-      {super.key,
-      required this.child,
-      this.padding = const EdgeInsets.all(16),
-      this.color});
+  const Panel({super.key, required this.child, this.padding = const EdgeInsets.all(16), this.color});
   final Widget child;
   final EdgeInsetsGeometry padding;
   final Color? color;
@@ -202,8 +172,7 @@ class Panel extends StatelessWidget {
       color: color ?? Colors.white,
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-          side: const BorderSide(color: AppColors.divider)),
+          borderRadius: BorderRadius.circular(18), side: const BorderSide(color: AppColors.divider)),
       child: Padding(padding: padding, child: child));
 }
 
@@ -213,9 +182,7 @@ class RoundIcon extends StatelessWidget {
   final Color color;
   @override
   Widget build(BuildContext context) => CircleAvatar(
-      radius: 20,
-      backgroundColor: color.withValues(alpha: .12),
-      child: Icon(icon, color: color, size: 21));
+      radius: 20, backgroundColor: color.withValues(alpha: .12), child: Icon(icon, color: color, size: 21));
 }
 
 class SectionTitle extends StatelessWidget {
@@ -227,10 +194,7 @@ class SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(children: [
-        Expanded(
-            child: Text(title,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w700, fontSize: 15))),
+        Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15))),
         if (action != null) TextButton(onPressed: onTap, child: Text(action!)),
       ]));
 }
@@ -256,16 +220,10 @@ class EmptyView extends StatelessWidget {
             backgroundColor: AppColors.cardBeige,
             child: Icon(icon, size: 38, color: const Color(0xFFA58A76))),
         const SizedBox(height: 20),
-        Text(title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
+        Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17)),
         const SizedBox(height: 8),
-        Text(subtitle,
-            textAlign: TextAlign.center, style: const TextStyle(height: 1.5)),
-        if (action != null) ...[
-          const SizedBox(height: 18),
-          FilledButton.tonal(onPressed: onTap, child: Text(action!))
-        ],
+        Text(subtitle, textAlign: TextAlign.center, style: const TextStyle(height: 1.5)),
+        if (action != null) ...[const SizedBox(height: 18), FilledButton.tonal(onPressed: onTap, child: Text(action!))],
       ]));
 }
 
@@ -274,16 +232,14 @@ class MonthPicker extends StatelessWidget {
   final DateTime value;
   final ValueChanged<DateTime> onChanged;
   @override
-  Widget build(BuildContext context) =>
-      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+  Widget build(BuildContext context) => Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         IconButton(
             tooltip: 'Tháng trước',
             onPressed: () => onChanged(DateTime(value.year, value.month - 1)),
             icon: const Icon(Icons.chevron_left)),
         Expanded(
             child: Text('Tháng ${DateFormat('MM/yyyy').format(value)}',
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.w600))),
+                textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w600))),
         IconButton(
             tooltip: 'Tháng sau',
             onPressed: () => onChanged(DateTime(value.year, value.month + 1)),
@@ -294,25 +250,17 @@ class MonthPicker extends StatelessWidget {
 Future<bool> confirmDelete(BuildContext context, String title) async =>
     await showDialog<bool>(
         context: context,
-        builder: (ctx) => AlertDialog(
-                title: Text(title),
-                content: const Text('Thao tác này không thể hoàn tác.'),
-                actions: [
-                  TextButton(
-                      onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Hủy')),
-                  TextButton(
-                      onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('Xóa',
-                          style: TextStyle(color: AppColors.accentRed))),
-                ])) ??
+        builder: (ctx) =>
+            AlertDialog(title: Text(title), content: const Text('Thao tác này không thể hoàn tác.'), actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Xóa', style: TextStyle(color: AppColors.accentRed))),
+            ])) ??
     false;
 
 Future<String?> editText(BuildContext context, String title,
-    {String initial = '',
-    bool numeric = false,
-    bool obscure = false,
-    String? Function(String?)? validator}) async {
+    {String initial = '', bool numeric = false, bool obscure = false, String? Function(String?)? validator}) async {
   final controller = TextEditingController(text: initial);
   final key = GlobalKey<FormState>();
   final value = await showDialog<String>(
@@ -326,19 +274,11 @@ Future<String?> editText(BuildContext context, String title,
                       controller: controller,
                       autofocus: true,
                       obscureText: obscure,
-                      inputFormatters:
-                          numeric ? [AmountInputFormatter()] : null,
-                      keyboardType: numeric
-                          ? const TextInputType.numberWithOptions(decimal: true)
-                          : TextInputType.text,
-                      validator: validator ??
-                          (v) => v == null || v.trim().isEmpty
-                              ? 'Vui lòng nhập thông tin'
-                              : null)),
+                      inputFormatters: numeric ? [AmountInputFormatter()] : null,
+                      keyboardType: numeric ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
+                      validator: validator ?? (v) => v == null || v.trim().isEmpty ? 'Vui lòng nhập thông tin' : null)),
               actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text('Hủy')),
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
                 FilledButton(
                     onPressed: () {
                       if (key.currentState!.validate()) {

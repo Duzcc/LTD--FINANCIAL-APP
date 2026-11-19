@@ -20,7 +20,7 @@ const userSchema = new Schema(
     sepayKeyHint: { type: String, default: null },
     rates: { type: Map, of: Number, default: undefined },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 userSchema.index({ sepayKeyHash: 1 }, { unique: true, partialFilterExpression: { sepayKeyHash: { $type: 'string' } } });
 userSchema.set('toJSON', {

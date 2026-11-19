@@ -89,7 +89,9 @@ class _ReceiptScanScreenState extends State<ReceiptScanScreen> with BusyState {
     final p = context.read<FinanceProvider>();
     final now = DateTime.now();
     final d = r.date;
-    final date = d == null || DateUtils.isSameDay(d, now) ? now : DateTime(d.year, d.month, d.day, d.hour == 0 ? 12 : d.hour, d.minute);
+    final date = d == null || DateUtils.isSameDay(d, now)
+        ? now
+        : DateTime(d.year, d.month, d.day, d.hour == 0 ? 12 : d.hour, d.minute);
     await openParsedEntry(
         context,
         ParsedEntry(
@@ -120,7 +122,8 @@ class _ReceiptScanScreenState extends State<ReceiptScanScreen> with BusyState {
           Panel(
               color: AppColors.primaryGreenSurface,
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Chụp thẳng, đủ sáng, thấy rõ dòng TỔNG CỘNG.', style: TextStyle(fontWeight: FontWeight.w600)),
+                const Text('Chụp thẳng, đủ sáng, thấy rõ dòng TỔNG CỘNG.',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
                 const SizedBox(height: 4),
                 const Text('Chữ được nhận dạng ngay trên điện thoại; ảnh được đính kèm vào giao dịch.',
                     style: TextStyle(fontSize: 12)),
@@ -160,7 +163,10 @@ class _ReceiptScanScreenState extends State<ReceiptScanScreen> with BusyState {
             const SizedBox(height: 12),
             ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.file(File(imagePath!), height: 220, fit: BoxFit.cover, width: double.infinity,
+                child: Image.file(File(imagePath!),
+                    height: 220,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
                     cacheWidth: (MediaQuery.sizeOf(context).width * MediaQuery.devicePixelRatioOf(context)).round(),
                     errorBuilder: (_, __, ___) => const SizedBox.shrink())),
           ],
@@ -186,8 +192,8 @@ class _ReceiptScanScreenState extends State<ReceiptScanScreen> with BusyState {
                         style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16))),
                 Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                        color: level.$1.withValues(alpha: .12), borderRadius: BorderRadius.circular(20)),
+                    decoration:
+                        BoxDecoration(color: level.$1.withValues(alpha: .12), borderRadius: BorderRadius.circular(20)),
                     child: Text('${level.$2} • ${(r.confidence * 100).round()}%',
                         style: TextStyle(fontSize: 11, color: level.$1, fontWeight: FontWeight.w600))),
               ]),
@@ -214,7 +220,9 @@ class _ReceiptScanScreenState extends State<ReceiptScanScreen> with BusyState {
                     ButtonSegment(value: EntryKind.expense, label: Text('Khoản chi'), icon: Icon(Icons.arrow_upward)),
                     ButtonSegment(value: EntryKind.income, label: Text('Khoản thu'), icon: Icon(Icons.arrow_downward)),
                   ],
-                  selected: {r.kind},
+                  selected: {
+                    r.kind
+                  },
                   showSelectedIcon: false,
                   onSelectionChanged: (s) => setState(() => result = repo.categorize(r, s.first))),
               const SizedBox(height: 12),
@@ -248,7 +256,9 @@ class _ReceiptScanScreenState extends State<ReceiptScanScreen> with BusyState {
               SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(
-                      onPressed: create, icon: const Icon(Icons.add), label: Text(r.kind == EntryKind.income ? 'Tạo giao dịch thu' : 'Tạo giao dịch chi'))),
+                      onPressed: create,
+                      icon: const Icon(Icons.add),
+                      label: Text(r.kind == EntryKind.income ? 'Tạo giao dịch thu' : 'Tạo giao dịch chi'))),
             ])),
           ],
         ]));

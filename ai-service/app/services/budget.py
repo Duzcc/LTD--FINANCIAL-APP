@@ -29,8 +29,13 @@ def _month_key(d: date) -> tuple[int, int]:
     return d.year, d.month
 
 
-def recommend(transactions: list[Transaction], categories: list[Category], now: datetime,
-              monthly_income: float | None = None, savings_rate: float = 0.2) -> dict:
+def recommend(
+    transactions: list[Transaction],
+    categories: list[Category],
+    now: datetime,
+    monthly_income: float | None = None,
+    savings_rate: float = 0.2,
+) -> dict:
     current = _month_key(now.date())
     months: list[tuple[int, int]] = []
     y, m = current
@@ -90,10 +95,14 @@ def recommend(transactions: list[Transaction], categories: list[Category], now: 
                     s.note += f"; giảm để đạt mục tiêu tiết kiệm {int(savings_rate * 100)}%"
             total = sum(s.amount for s in suggestions)
         plan = {
-            "income": round(monthly_income), "needs": round(needs),
+            "income": round(monthly_income),
+            "needs": round(needs),
             "wants": round(sum(s.amount for s in suggestions if s.group == "wants")),
-            "savings": round(monthly_income - total), "target": {"needs": round(monthly_income * 0.5),
-                                                                 "wants": round(monthly_income * 0.3),
-                                                                 "savings": round(monthly_income * savings_rate)},
+            "savings": round(monthly_income - total),
+            "target": {
+                "needs": round(monthly_income * 0.5),
+                "wants": round(monthly_income * 0.3),
+                "savings": round(monthly_income * savings_rate),
+            },
         }
     return {"suggestions": suggestions, "total": round(total), "plan": plan, "months": len(months)}

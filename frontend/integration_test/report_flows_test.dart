@@ -22,8 +22,8 @@ void main() {
   var shots = 0;
 
   Future<void> settle(WidgetTester t, [int ms = 400]) async {
-    await t.pumpAndSettle(const Duration(milliseconds: 100), EnginePhase.sendSemanticsUpdate,
-        const Duration(seconds: 20));
+    await t.pumpAndSettle(
+        const Duration(milliseconds: 100), EnginePhase.sendSemanticsUpdate, const Duration(seconds: 20));
     await Future<void>.delayed(Duration(milliseconds: ms));
     await t.pump();
   }
@@ -171,9 +171,11 @@ void main() {
     await type(t, find.widgetWithText(TextFormField, 'Tên danh mục'), 'Thưởng KPI');
     await tapText(t, 'Lưu');
     expect(p.category(bonus.id)!.name, 'Thưởng KPI');
-    await tap(t, find.descendant(
-        of: find.ancestor(of: find.text('Thưởng KPI'), matching: find.byType(ListTile)),
-        matching: find.byType(PopupMenuButton<String>)));
+    await tap(
+        t,
+        find.descendant(
+            of: find.ancestor(of: find.text('Thưởng KPI'), matching: find.byType(ListTile)),
+            matching: find.byType(PopupMenuButton<String>)));
     await tapText(t, 'Xóa');
     await confirmDelete(t);
     expect(p.category(bonus.id), isNull);
@@ -198,10 +200,8 @@ void main() {
     await tapText(t, '+50k');
     final amountField = find.byKey(const ValueKey('transaction-amount'));
     await reveal(t, amountField);
-    final amountText = t
-        .widget<EditableText>(find.descendant(of: amountField, matching: find.byType(EditableText)))
-        .controller
-        .text;
+    final amountText =
+        t.widget<EditableText>(find.descendant(of: amountField, matching: find.byType(EditableText))).controller.text;
     expect(parseAmount(amountText), 70000, reason: 'nút cộng nhanh cộng dồn vào số tiền');
     await tapText(t, 'Cà phê');
     await pickWallet('Ngân hàng ACB');
@@ -301,8 +301,8 @@ void main() {
     await reveal(t, over);
     expect(over, findsOneWidget, reason: 'chi 120.000 trên hạn mức 100.000');
     await shot(t, 'ngan_sach_vuot');
-    await tap(t, find.descendant(
-        of: find.byKey(ValueKey(coffeeBudget.id)), matching: find.byType(PopupMenuButton<String>)));
+    await tap(
+        t, find.descendant(of: find.byKey(ValueKey(coffeeBudget.id)), matching: find.byType(PopupMenuButton<String>)));
     await tapText(t, 'Xóa');
     await confirmDelete(t);
     expect(p.budgets.where((b) => b.categoryId == coffee.id), isEmpty);

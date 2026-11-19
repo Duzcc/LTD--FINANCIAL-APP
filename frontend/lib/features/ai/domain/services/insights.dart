@@ -15,11 +15,7 @@ class Insight {
 
 class SpendForecast {
   const SpendForecast(
-      {required this.spent,
-      required this.projected,
-      required this.dailyAverage,
-      required this.daysLeft,
-      this.target});
+      {required this.spent, required this.projected, required this.dailyAverage, required this.daysLeft, this.target});
   final double spent, projected, dailyAverage;
   final int daysLeft;
   final double? target;
@@ -34,8 +30,7 @@ class FinanceInsights {
   final ForecastResult? server;
 
   String _m(double v) {
-    final s = v.round().toString().replaceAllMapped(
-        RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.');
+    final s = v.round().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.');
     return p.currency == 'VND' ? '$s ₫' : '$s ${p.currency}';
   }
 
@@ -48,8 +43,8 @@ class FinanceInsights {
       return SpendForecast(
           spent: srv.spent,
           projected: srv.projected,
-          dailyAverage: (srv.daysLeft > 0 ? (srv.projected - srv.spent) / srv.daysLeft : srv.spent / now.day)
-              .roundToDouble(),
+          dailyAverage:
+              (srv.daysLeft > 0 ? (srv.projected - srv.spent) / srv.daysLeft : srv.spent / now.day).roundToDouble(),
           daysLeft: srv.daysLeft,
           target: p.overallBudget(now, income: false)?.amount);
     }
@@ -88,9 +83,7 @@ class FinanceInsights {
           'Cần thêm vài ngày ghi chép để dự báo cuối tháng chính xác. Đến nay bạn đã chi ${_m(f.spent)}.'));
     } else if (f.spent > 0) {
       if (f.overBudget) {
-        out.add(Insight(
-            InsightLevel.danger,
-            'Dự kiến vượt ngân sách tháng',
+        out.add(Insight(InsightLevel.danger, 'Dự kiến vượt ngân sách tháng',
             'Với tốc độ hiện tại (${_m(f.dailyAverage)}/ngày), tháng này bạn sẽ chi khoảng ${_m(f.projected)}, vượt mục tiêu ${_m(f.target!)} khoảng ${_m(f.projected - f.target!)}.'));
       } else {
         out.add(Insight(
@@ -117,9 +110,7 @@ class FinanceInsights {
       if (n == 0) continue;
       final expected = sum / n * ratio;
       if (expected > 0 && current > expected * 1.5 && current - expected > 100000) {
-        out.add(Insight(
-            InsightLevel.warning,
-            '${c.name} tăng ${((current / expected - 1) * 100).round()}%',
+        out.add(Insight(InsightLevel.warning, '${c.name} tăng ${((current / expected - 1) * 100).round()}%',
             'Từ đầu tháng bạn đã chi ${_m(current)} cho ${c.name}, trong khi cùng kỳ các tháng trước trung bình ${_m(expected)}.',
             categoryId: c.id));
       }
@@ -134,29 +125,26 @@ class FinanceInsights {
       final used = p.used(b) / b.amount;
       final name = p.category(b.categoryId)?.name ?? '';
       if (used > 1) {
-        out.add(Insight(InsightLevel.danger, 'Đã vượt ngân sách $name',
-            'Đã dùng ${(used * 100).round()}% hạn mức ${_m(b.amount)}.',
+        out.add(Insight(
+            InsightLevel.danger, 'Đã vượt ngân sách $name', 'Đã dùng ${(used * 100).round()}% hạn mức ${_m(b.amount)}.',
             categoryId: b.categoryId));
       } else if (used > ratio + .2 && used > .5) {
-        out.add(Insight(
-            InsightLevel.warning,
-            'Ngân sách $name đang tiêu nhanh',
+        out.add(Insight(InsightLevel.warning, 'Ngân sách $name đang tiêu nhanh',
             'Đã dùng ${(used * 100).round()}% hạn mức trong khi mới qua ${(ratio * 100).round()}% tháng. Có thể chi tối đa ${_m((b.amount - p.used(b)) / math.max(1, _daysInMonth - now.day))}/ngày.',
             categoryId: b.categoryId));
       }
     }
 
-    final recent = p.between(now.subtract(const Duration(days: 90)), now.add(const Duration(days: 1)), unit: p.currency)
+    final recent = p
+        .between(now.subtract(const Duration(days: 90)), now.add(const Duration(days: 1)), unit: p.currency)
         .where((e) => e.kind.isExpense && !e.excluded)
         .toList();
     if (recent.length >= 8) {
       final mean = recent.fold(0.0, (s, e) => s + e.amount) / recent.length;
       final sd = math.sqrt(recent.fold(0.0, (s, e) => s + math.pow(e.amount - mean, 2)) / recent.length);
-      for (final e in recent.where((e) =>
-          e.date.isAfter(now.subtract(const Duration(days: 30))) && e.amount > mean + 3 * sd)) {
-        out.add(Insight(
-            InsightLevel.info,
-            'Khoản chi lớn: ${_m(e.amount)}',
+      for (final e
+          in recent.where((e) => e.date.isAfter(now.subtract(const Duration(days: 30))) && e.amount > mean + 3 * sd)) {
+        out.add(Insight(InsightLevel.info, 'Khoản chi lớn: ${_m(e.amount)}',
             '${p.category(e.categoryId)?.name ?? e.kind.label}${e.note.isEmpty ? '' : ' – ${e.note}'} ngày ${e.date.day}/${e.date.month}, cao hơn nhiều so với mức thường ngày (${_m(mean)}).',
             categoryId: e.categoryId));
       }
@@ -171,7 +159,11 @@ class FinanceInsights {
     if (income > 0) {
       final rate = (income - expense) / income;
       out.add(Insight(
-          rate >= .2 ? InsightLevel.good : rate >= 0 ? InsightLevel.info : InsightLevel.danger,
+          rate >= .2
+              ? InsightLevel.good
+              : rate >= 0
+                  ? InsightLevel.info
+                  : InsightLevel.danger,
           'Tỷ lệ tiết kiệm tháng này: ${(rate * 100).round()}%',
           rate >= .2
               ? 'Rất tốt! Bạn đang để dành hơn 20% thu nhập.'
@@ -207,8 +199,7 @@ class FinanceInsights {
   Map<String, Object> summary() {
     final f = forecast();
     final byCat = [
-      for (final c in p.categories.where((c) => !c.income))
-        (c.name, p.total(now, income: false, categoryId: c.id))
+      for (final c in p.categories.where((c) => !c.income)) (c.name, p.total(now, income: false, categoryId: c.id))
     ].where((x) => x.$2 > 0).toList()
       ..sort((a, b) => b.$2.compareTo(a.$2));
     return {

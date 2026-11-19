@@ -1,6 +1,13 @@
 const { Wallet, Category, Person, Transaction, Budget, Recurring } = require('../models');
 
-const MODELS = { wallets: Wallet, categories: Category, people: Person, entries: Transaction, budgets: Budget, recurring: Recurring };
+const MODELS = {
+  wallets: Wallet,
+  categories: Category,
+  people: Person,
+  entries: Transaction,
+  budgets: Budget,
+  recurring: Recurring,
+};
 const KEYS = Object.keys(MODELS);
 
 async function loadState(user) {
@@ -21,16 +28,18 @@ const oldestBankWallet = (user) => Wallet.findOne({ user, bankAccount: { $ne: nu
 
 const remove = (user, key, id) => MODELS[key].deleteOne({ user, clientId: id });
 
-const removeWalletDependents = (user, walletId) => Promise.all([
-  Transaction.deleteMany({ user, $or: [{ walletId }, { destinationId: walletId }] }),
-  Budget.deleteMany({ user, walletId }),
-  Recurring.deleteMany({ user, $or: [{ walletId }, { destinationId: walletId }] }),
-]);
+const removeWalletDependents = (user, walletId) =>
+  Promise.all([
+    Transaction.deleteMany({ user, $or: [{ walletId }, { destinationId: walletId }] }),
+    Budget.deleteMany({ user, walletId }),
+    Recurring.deleteMany({ user, $or: [{ walletId }, { destinationId: walletId }] }),
+  ]);
 
-const seed = (user, { wallets, categories, people }) => Promise.all([
-  Wallet.insertMany(wallets.map((w) => ({ ...w, user }))),
-  Category.insertMany(categories.map((c) => ({ ...c, user }))),
-  Person.insertMany(people.map((p) => ({ ...p, user }))),
-]);
+const seed = (user, { wallets, categories, people }) =>
+  Promise.all([
+    Wallet.insertMany(wallets.map((w) => ({ ...w, user }))),
+    Category.insertMany(categories.map((c) => ({ ...c, user }))),
+    Person.insertMany(people.map((p) => ({ ...p, user }))),
+  ]);
 
 module.exports = { KEYS, loadState, upsert, remove, removeWalletDependents, seed, oldestBankWallet };

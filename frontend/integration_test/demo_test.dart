@@ -22,11 +22,19 @@ import 'package:path_provider/path_provider.dart';
 
 Future<String> renderReceipt() async {
   const lines = [
-    'CIRCLE K', '12 Lê Lợi, Q.1', 'HÓA ĐƠN BÁN HÀNG', 'Ngày: 18/10/2026 19:32', '',
-    'Nước suối Aquafina      2 x 6.000      12.000', 'Bánh mì sandwich        1 x 25.000     25.000',
-    'Mì ly Hảo Hảo           1 x 9.000       9.000', '',
-    'Tổng tiền hàng:                         46.000', 'TỔNG CỘNG:                              46.000',
-    'Tiền khách đưa:                        100.000', 'Tiền thừa:                              54.000',
+    'CIRCLE K',
+    '12 Lê Lợi, Q.1',
+    'HÓA ĐƠN BÁN HÀNG',
+    'Ngày: 18/10/2026 19:32',
+    '',
+    'Nước suối Aquafina      2 x 6.000      12.000',
+    'Bánh mì sandwich        1 x 25.000     25.000',
+    'Mì ly Hảo Hảo           1 x 9.000       9.000',
+    '',
+    'Tổng tiền hàng:                         46.000',
+    'TỔNG CỘNG:                              46.000',
+    'Tiền khách đưa:                        100.000',
+    'Tiền thừa:                              54.000',
     'Cảm ơn quý khách!',
   ];
   const w = 900.0, lineH = 44.0;
@@ -39,7 +47,8 @@ Future<String> renderReceipt() async {
   canvas.translate(-w / 2, -h / 2);
   for (var i = 0; i < lines.length; i++) {
     final tp = TextPainter(
-        text: TextSpan(text: lines[i], style: const TextStyle(color: Color(0xFF222222), fontSize: 26, fontFamily: 'Courier')),
+        text: TextSpan(
+            text: lines[i], style: const TextStyle(color: Color(0xFF222222), fontSize: 26, fontFamily: 'Courier')),
         textDirection: TextDirection.ltr)
       ..layout();
     final x = i < 4 || i == lines.length - 1 ? (w - tp.width) / 2 : 30.0;
@@ -56,8 +65,8 @@ void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   Future<void> settle(WidgetTester t, [int ms = 600]) async {
-    await t.pumpAndSettle(const Duration(milliseconds: 100), EnginePhase.sendSemanticsUpdate,
-        const Duration(seconds: 20));
+    await t.pumpAndSettle(
+        const Duration(milliseconds: 100), EnginePhase.sendSemanticsUpdate, const Duration(seconds: 20));
     await Future<void>.delayed(Duration(milliseconds: ms));
     await t.pump();
   }
@@ -187,7 +196,8 @@ void main() {
     final server = await AiRepository(p).readReceipt(path);
     expect(server.total, 46000, reason: 'OCR thiết bị + phân tích máy chủ');
     expect(server.confidence, greaterThanOrEqualTo(0.8));
-    debugPrint('Hóa đơn: ${server.merchant} ${server.total} ${server.date} nguồn=${server.source} tin cậy=${server.confidence}');
+    debugPrint(
+        'Hóa đơn: ${server.merchant} ${server.total} ${server.date} nguồn=${server.source} tin cậy=${server.confidence}');
 
     nav.push(MaterialPageRoute<void>(builder: (_) => const ReceiptScanScreen()));
     await settle(t);

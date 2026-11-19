@@ -13,7 +13,8 @@ const { badRequest, conflict, notFound, unauthorized } = require('../utils/error
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const CODE_ATTEMPTS = 5;
 
-const newCode = () => `LTD${Array.from({ length: 6 }, () => CODE_ALPHABET[crypto.randomInt(CODE_ALPHABET.length)]).join('')}`;
+const newCode = () =>
+  `LTD${Array.from({ length: 6 }, () => CODE_ALPHABET[crypto.randomInt(CODE_ALPHABET.length)]).join('')}`;
 
 const sepayStatus = (user, webhookUrl) => ({
   connected: Boolean(user.sepayKeyHash),
@@ -119,5 +120,12 @@ async function handleWebhook(authorization, body) {
 }
 
 module.exports = {
-  sepayStatus, createWebhookKey, revokeWebhookKey, listRequests, getRequest, createRequest, cancelRequest, handleWebhook,
+  sepayStatus,
+  createWebhookKey,
+  revokeWebhookKey,
+  listRequests,
+  getRequest,
+  createRequest,
+  cancelRequest,
+  handleWebhook,
 };

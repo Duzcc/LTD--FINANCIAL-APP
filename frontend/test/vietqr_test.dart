@@ -22,8 +22,7 @@ void main() {
   });
 
   test('VietQR có số tiền: QR động, đúng NAPAS, đúng CRC', () {
-    final qr = buildVietQr(
-        bin: '970422', account: '0123456789', amount: 150000, content: 'LTDAB23CD Tiền điện');
+    final qr = buildVietQr(bin: '970422', account: '0123456789', amount: 150000, content: 'LTDAB23CD Tiền điện');
     final f = tlv(qr);
     expect(f['00'], '01');
     expect(f['01'], '12');
@@ -60,8 +59,7 @@ void main() {
   test('Ví: liên kết ngân hàng phải đủ thông tin và là ví VND', () {
     final p = FinanceProvider();
     MoneyWallet w({String currency = 'VND', String? holder = 'NGUYEN AN'}) => MoneyWallet(
-        id: 'mb', name: 'MB', currency: currency,
-        bankBin: '970422', bankAccount: '0123456789', bankHolder: holder);
+        id: 'mb', name: 'MB', currency: currency, bankBin: '970422', bankAccount: '0123456789', bankHolder: holder);
     expect(() => p.saveWallet(w(holder: null)), throwsArgumentError);
     expect(() => p.saveWallet(w(currency: 'USD')), throwsArgumentError);
     expect(() => p.saveWallet(w(holder: 'nguyen an')), throwsArgumentError);

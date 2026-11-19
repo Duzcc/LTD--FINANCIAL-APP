@@ -37,10 +37,14 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     settings = get_settings()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
-    app = FastAPI(title=settings.app_name, version=__version__, lifespan=lifespan,
-                  description="Dịch vụ AI: phân loại danh mục, nhập nhanh bằng câu tự nhiên, dự báo, phát hiện bất thường, "
-                              "gợi ý ngân sách, đọc hóa đơn, tìm kiếm ngữ nghĩa và trợ lý hội thoại.",
-                  docs_url="/docs" if settings.environment != "production" else None)
+    app = FastAPI(
+        title=settings.app_name,
+        version=__version__,
+        lifespan=lifespan,
+        description="Dịch vụ AI: phân loại danh mục, nhập nhanh bằng câu tự nhiên, dự báo, phát hiện bất thường, "
+        "gợi ý ngân sách, đọc hóa đơn, tìm kiếm ngữ nghĩa và trợ lý hội thoại.",
+        docs_url="/docs" if settings.environment != "production" else None,
+    )
 
     @app.middleware("http")
     async def request_context(request: Request, call_next):
@@ -57,8 +61,10 @@ def create_app() -> FastAPI:
     @app.exception_handler(RequestValidationError)
     async def validation_error(_: Request, exc: RequestValidationError):
         details = [{"loc": e.get("loc"), "msg": e.get("msg"), "type": e.get("type")} for e in exc.errors()[:10]]
-        return JSONResponse(status_code=422, content={"error": {
-            "code": "VALIDATION_ERROR", "message": "Dữ liệu không hợp lệ.", "details": details}})
+        return JSONResponse(
+            status_code=422,
+            content={"error": {"code": "VALIDATION_ERROR", "message": "Dữ liệu không hợp lệ.", "details": details}},
+        )
 
     app.include_router(system.router)
     app.include_router(api_router)

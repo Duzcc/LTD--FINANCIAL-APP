@@ -24,16 +24,12 @@ class NotificationService {
     if (_ready || kIsWeb) return;
     tzdata.initializeTimeZones();
     final offset = DateTime.now().timeZoneOffset;
-    tz.setLocalLocation(offset == const Duration(hours: 7)
-        ? tz.getLocation('Asia/Ho_Chi_Minh')
-        : tz.UTC);
+    tz.setLocalLocation(offset == const Duration(hours: 7) ? tz.getLocation('Asia/Ho_Chi_Minh') : tz.UTC);
     await _plugin.initialize(
         settings: const InitializationSettings(
             android: AndroidInitializationSettings('@mipmap/ic_launcher'),
             iOS: DarwinInitializationSettings(
-                requestAlertPermission: false,
-                requestBadgePermission: false,
-                requestSoundPermission: false)));
+                requestAlertPermission: false, requestBadgePermission: false, requestSoundPermission: false)));
     _ready = true;
   }
 
@@ -44,15 +40,13 @@ class NotificationService {
     await init();
     if (defaultTargetPlatform == TargetPlatform.android) {
       return await _plugin
-              .resolvePlatformSpecificImplementation<
-                  AndroidFlutterLocalNotificationsPlugin>()
+              .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
               ?.requestNotificationsPermission() ??
           false;
     }
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       return await _plugin
-              .resolvePlatformSpecificImplementation<
-                  IOSFlutterLocalNotificationsPlugin>()
+              .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
               ?.requestPermissions(alert: true, badge: true, sound: true) ??
           false;
     }
@@ -121,14 +115,10 @@ class NotificationService {
     }
     if (p.debtReminders) {
       var id = _debtBase;
-      for (final e in p.entries.where((e) =>
-          (e.kind == EntryKind.lend || e.kind == EntryKind.borrow) &&
-          e.dueDate != null)) {
+      for (final e
+          in p.entries.where((e) => (e.kind == EntryKind.lend || e.kind == EntryKind.borrow) && e.dueDate != null)) {
         final unit = p.findWallet(e.walletId)?.currency ?? p.currency;
-        final left = p.debt(
-            borrowed: e.kind == EntryKind.borrow,
-            personId: e.personId,
-            unit: unit);
+        final left = p.debt(borrowed: e.kind == EntryKind.borrow, personId: e.personId, unit: unit);
         if (left <= 0) continue;
         final due = e.dueDate!;
         for (final before in [1, 0]) {

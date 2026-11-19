@@ -22,8 +22,13 @@ async def model_info(assistant: Assistant = Depends(get_assistant)) -> dict:
     return {
         "trainedAt": m.get("trained_at"),
         "assistant": assistant.mode,
-        "models": {k: {kk: v.get(kk) for kk in ("algorithm", "best_params", "train_size", "synthetic_test", "handwritten_eval")}
-                   for k, v in m.items() if isinstance(v, dict)},
+        "models": {
+            k: {
+                kk: v.get(kk) for kk in ("algorithm", "best_params", "train_size", "synthetic_test", "handwritten_eval")
+            }
+            for k, v in m.items()
+            if isinstance(v, dict)
+        },
         "forecaster": "Hồ sơ thứ-trong-tuần + Holt / Holt-Winters (numpy)",
         "anomaly": "Robust z-score (MAD) + Isolation Forest + phát hiện nhập trùng",
     }

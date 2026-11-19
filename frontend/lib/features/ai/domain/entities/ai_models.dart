@@ -1,32 +1,30 @@
 import 'package:finance_app/features/finance/domain/entities/entities.dart';
 
 double? _num(Object? v) => v is num ? v.toDouble() : null;
-DateTime? _date(Object? v) =>
-    v is String ? DateTime.tryParse(v)?.toLocal() : null;
+DateTime? _date(Object? v) => v is String ? DateTime.tryParse(v)?.toLocal() : null;
 
 class AssistantAction {
   const AssistantAction(this.type, this.data);
   final String type;
   final Map<String, dynamic> data;
-  factory AssistantAction.fromJson(Map<String, dynamic> j) => AssistantAction(
-      '${j['type']}', (j['data'] as Map? ?? {}).cast<String, dynamic>());
+  factory AssistantAction.fromJson(Map<String, dynamic> j) =>
+      AssistantAction('${j['type']}', (j['data'] as Map? ?? {}).cast<String, dynamic>());
 }
 
 class AssistantReply {
-  const AssistantReply(this.reply, this.source,
-      {this.actions = const [], this.toolsUsed = const []});
+  const AssistantReply(this.reply, this.source, {this.actions = const [], this.toolsUsed = const []});
   final String reply;
 
   final String source;
   final List<AssistantAction> actions;
   final List<String> toolsUsed;
-  factory AssistantReply.fromJson(Map<String, dynamic> j) => AssistantReply(
-      '${j['reply'] ?? ''}', '${j['source'] ?? 'server'}',
-      actions: [
+  factory AssistantReply.fromJson(Map<String, dynamic> j) =>
+      AssistantReply('${j['reply'] ?? ''}', '${j['source'] ?? 'server'}', actions: [
         for (final a in (j['actions'] as List? ?? const []))
           if (a is Map) AssistantAction.fromJson(a.cast<String, dynamic>())
-      ],
-      toolsUsed: [for (final t in (j['toolsUsed'] as List? ?? const [])) '$t']);
+      ], toolsUsed: [
+        for (final t in (j['toolsUsed'] as List? ?? const [])) '$t'
+      ]);
 }
 
 class ForecastResult {
@@ -45,17 +43,17 @@ class ForecastResult {
   final double? nextMonth;
   final Map<String, double> byCategory;
   factory ForecastResult.fromJson(Map<String, dynamic> j) => ForecastResult(
-      spent: _num(j['spent']) ?? 0,
-      projected: _num(j['projected']) ?? 0,
-      lower: _num(j['lower']) ?? 0,
-      upper: _num(j['upper']) ?? 0,
-      daysLeft: (j['daysLeft'] as num?)?.toInt() ?? 0,
-      method: '${j['method'] ?? ''}',
-      nextMonth: _num(j['nextMonth']),
-      byCategory: {
-        for (final e in ((j['byCategory'] as Map?) ?? {}).entries)
-          '${e.key}': _num((e.value as Map?)?['projected']) ?? 0
-      });
+          spent: _num(j['spent']) ?? 0,
+          projected: _num(j['projected']) ?? 0,
+          lower: _num(j['lower']) ?? 0,
+          upper: _num(j['upper']) ?? 0,
+          daysLeft: (j['daysLeft'] as num?)?.toInt() ?? 0,
+          method: '${j['method'] ?? ''}',
+          nextMonth: _num(j['nextMonth']),
+          byCategory: {
+            for (final e in ((j['byCategory'] as Map?) ?? {}).entries)
+              '${e.key}': _num((e.value as Map?)?['projected']) ?? 0
+          });
 }
 
 class AnomalyItem {
@@ -79,11 +77,7 @@ class BudgetSuggestion {
 
 class ServerInsights {
   const ServerInsights(
-      {this.forecast,
-      this.anomalies = const [],
-      this.spikes = const [],
-      this.budgets = const [],
-      this.plan});
+      {this.forecast, this.anomalies = const [], this.spikes = const [], this.budgets = const [], this.plan});
   final ForecastResult? forecast;
   final List<AnomalyItem> anomalies;
   final List<CategorySpike> spikes;
@@ -94,23 +88,19 @@ class ServerInsights {
     final a = j['anomalies'] as Map?;
     final b = j['budgets'] as Map?;
     return ServerInsights(
-        forecast: j['forecast'] is Map
-            ? ForecastResult.fromJson((j['forecast'] as Map).cast())
-            : null,
+        forecast: j['forecast'] is Map ? ForecastResult.fromJson((j['forecast'] as Map).cast()) : null,
         anomalies: [
           for (final x in (a?['anomalies'] as List? ?? const []))
-            AnomalyItem('${x['transactionId']}', _num(x['score']) ?? 0,
-                '${x['kind']}', [for (final r in x['reasons'] as List) '$r'])
+            AnomalyItem('${x['transactionId']}', _num(x['score']) ?? 0, '${x['kind']}',
+                [for (final r in x['reasons'] as List) '$r'])
         ],
         spikes: [
           for (final x in (a?['spikes'] as List? ?? const []))
-            CategorySpike('${x['categoryId']}', _num(x['recent']) ?? 0,
-                _num(x['baseline']) ?? 0, _num(x['ratio']) ?? 0)
+            CategorySpike('${x['categoryId']}', _num(x['recent']) ?? 0, _num(x['baseline']) ?? 0, _num(x['ratio']) ?? 0)
         ],
         budgets: [
           for (final x in (b?['suggestions'] as List? ?? const []))
-            BudgetSuggestion('${x['categoryId']}', _num(x['amount']) ?? 0,
-                '${x['group']}', '${x['note'] ?? ''}')
+            BudgetSuggestion('${x['categoryId']}', _num(x['amount']) ?? 0, '${x['group']}', '${x['note'] ?? ''}')
         ],
         plan: (b?['plan'] as Map?)?.cast<String, dynamic>());
   }
@@ -198,6 +188,4 @@ class ReceiptResult {
       kind: kind);
 }
 
-EntryKind kindFromName(String? name) =>
-    EntryKind.values.where((k) => k.name == name).firstOrNull ??
-    EntryKind.expense;
+EntryKind kindFromName(String? name) => EntryKind.values.where((k) => k.name == name).firstOrNull ?? EntryKind.expense;

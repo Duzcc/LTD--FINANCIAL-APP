@@ -26,7 +26,10 @@ async function applyBatch(userId, ops) {
       await applyOp(userId, state, op);
     } catch (e) {
       if (!(e instanceof ApiError)) throw e;
-      return { status: e.status, body: { applied: index, failedIndex: index, error: { code: e.code, message: e.message } } };
+      return {
+        status: e.status,
+        body: { applied: index, failedIndex: index, error: { code: e.code, message: e.message } },
+      };
     }
   }
   return { status: 200, body: { applied: ops.length } };

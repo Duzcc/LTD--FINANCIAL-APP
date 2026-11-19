@@ -15,42 +15,91 @@ DEBT_OUT = {"lend": 1, "collect": -1}
 DEBT_IN = {"borrow": 1, "repay": -1}
 
 TOOL_SPECS: list[dict[str, Any]] = [
-    {"name": "get_overview", "description": "Tổng quan: số dư các ví, thu/chi tháng này và tháng trước, số giao dịch.",
-     "input_schema": {"type": "object", "properties": {}}},
-    {"name": "get_category_spending",
-     "description": "Chi tiêu (hoặc thu nhập) theo danh mục trong một khoảng thời gian.",
-     "input_schema": {"type": "object", "properties": {
-         "period": {"type": "string", "enum": ["this_month", "last_month", "last_30_days", "this_year", "custom"]},
-         "start": {"type": "string", "description": "YYYY-MM-DD khi period=custom"},
-         "end": {"type": "string", "description": "YYYY-MM-DD (bao gồm) khi period=custom"},
-         "income": {"type": "boolean", "description": "true để xem thu nhập"}}, "required": ["period"]}},
-    {"name": "forecast_month", "description": "Dự báo tổng chi cuối tháng này (kèm khoảng tin cậy) và tháng sau.",
-     "input_schema": {"type": "object", "properties": {}}},
-    {"name": "get_spending_allowance",
-     "description": "Gợi ý mức được chi mỗi ngày từ nay đến cuối tháng để giữ ngân sách / mục tiêu tiết kiệm, "
-                    "kèm số đã chi hôm nay và các ngân sách danh mục sắp hết.",
-     "input_schema": {"type": "object", "properties": {}}},
-    {"name": "find_transactions",
-     "description": "Tìm giao dịch theo từ khóa và/hoặc khoảng thời gian. Danh sách kết quả được hiển thị "
-                    "cho người dùng dưới câu trả lời.",
-     "input_schema": {"type": "object", "properties": {
-         "query": {"type": "string"}, "days": {"type": "integer", "description": "Số ngày gần nhất, mặc định 30"},
-         "limit": {"type": "integer"}}}},
-    {"name": "get_budget_status", "description": "Tình trạng các ngân sách tháng này: hạn mức, đã dùng, còn lại.",
-     "input_schema": {"type": "object", "properties": {}}},
-    {"name": "get_debts", "description": "Các khoản cho vay / đi vay còn dư nợ theo từng người.",
-     "input_schema": {"type": "object", "properties": {}}},
-    {"name": "get_anomalies", "description": "Giao dịch bất thường và danh mục tăng đột biến trong 30 ngày.",
-     "input_schema": {"type": "object", "properties": {}}},
-    {"name": "recommend_budgets", "description": "Gợi ý ngân sách tháng cho từng danh mục dựa trên lịch sử.",
-     "input_schema": {"type": "object", "properties": {
-         "savings_rate": {"type": "number", "description": "Tỷ lệ tiết kiệm mục tiêu 0..0.6, mặc định 0.2"}}}},
-    {"name": "propose_transaction",
-     "description": "Đề xuất ghi một giao dịch từ mô tả tự nhiên (ví dụ 'ăn phở 45k sáng nay'). Người dùng sẽ xác nhận.",
-     "input_schema": {"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]}},
-    {"name": "propose_budget", "description": "Đề xuất đặt ngân sách tháng cho một danh mục. Người dùng sẽ xác nhận.",
-     "input_schema": {"type": "object", "properties": {
-         "category_id": {"type": "string"}, "amount": {"type": "number"}}, "required": ["category_id", "amount"]}},
+    {
+        "name": "get_overview",
+        "description": "Tổng quan: số dư các ví, thu/chi tháng này và tháng trước, số giao dịch.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "get_category_spending",
+        "description": "Chi tiêu (hoặc thu nhập) theo danh mục trong một khoảng thời gian.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "period": {
+                    "type": "string",
+                    "enum": ["this_month", "last_month", "last_30_days", "this_year", "custom"],
+                },
+                "start": {"type": "string", "description": "YYYY-MM-DD khi period=custom"},
+                "end": {"type": "string", "description": "YYYY-MM-DD (bao gồm) khi period=custom"},
+                "income": {"type": "boolean", "description": "true để xem thu nhập"},
+            },
+            "required": ["period"],
+        },
+    },
+    {
+        "name": "forecast_month",
+        "description": "Dự báo tổng chi cuối tháng này (kèm khoảng tin cậy) và tháng sau.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "get_spending_allowance",
+        "description": "Gợi ý mức được chi mỗi ngày từ nay đến cuối tháng để giữ ngân sách / mục tiêu tiết kiệm, "
+        "kèm số đã chi hôm nay và các ngân sách danh mục sắp hết.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "find_transactions",
+        "description": "Tìm giao dịch theo từ khóa và/hoặc khoảng thời gian. Danh sách kết quả được hiển thị "
+        "cho người dùng dưới câu trả lời.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "days": {"type": "integer", "description": "Số ngày gần nhất, mặc định 30"},
+                "limit": {"type": "integer"},
+            },
+        },
+    },
+    {
+        "name": "get_budget_status",
+        "description": "Tình trạng các ngân sách tháng này: hạn mức, đã dùng, còn lại.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "get_debts",
+        "description": "Các khoản cho vay / đi vay còn dư nợ theo từng người.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "get_anomalies",
+        "description": "Giao dịch bất thường và danh mục tăng đột biến trong 30 ngày.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "recommend_budgets",
+        "description": "Gợi ý ngân sách tháng cho từng danh mục dựa trên lịch sử.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "savings_rate": {"type": "number", "description": "Tỷ lệ tiết kiệm mục tiêu 0..0.6, mặc định 0.2"}
+            },
+        },
+    },
+    {
+        "name": "propose_transaction",
+        "description": "Đề xuất ghi một giao dịch từ mô tả tự nhiên (ví dụ 'ăn phở 45k sáng nay'). Người dùng sẽ xác nhận.",
+        "input_schema": {"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]},
+    },
+    {
+        "name": "propose_budget",
+        "description": "Đề xuất đặt ngân sách tháng cho một danh mục. Người dùng sẽ xác nhận.",
+        "input_schema": {
+            "type": "object",
+            "properties": {"category_id": {"type": "string"}, "amount": {"type": "number"}},
+            "required": ["category_id", "amount"],
+        },
+    },
 ]
 
 
@@ -60,7 +109,9 @@ class FinanceToolkit:
         self.now = snapshot.resolved_now()
         self.names = snapshot.category_names()
         self.actions: list[dict[str, Any]] = []
-        self.handlers: dict[str, Callable[..., Any]] = {spec["name"]: getattr(self, spec["name"]) for spec in TOOL_SPECS}
+        self.handlers: dict[str, Callable[..., Any]] = {
+            spec["name"]: getattr(self, spec["name"]) for spec in TOOL_SPECS
+        }
 
     def call(self, name: str, args: dict[str, Any] | None) -> Any:
         handler = self.handlers.get(name)
@@ -89,28 +140,41 @@ class FinanceToolkit:
             return today.replace(month=1, day=1), today + timedelta(days=1)
         if period == "custom" and start:
             s = datetime.fromisoformat(start).replace(tzinfo=self.now.tzinfo)
-            e = datetime.fromisoformat(end).replace(tzinfo=self.now.tzinfo) + timedelta(days=1) if end else today + timedelta(days=1)
+            e = (
+                datetime.fromisoformat(end).replace(tzinfo=self.now.tzinfo) + timedelta(days=1)
+                if end
+                else today + timedelta(days=1)
+            )
             return s, e
         return ms, today + timedelta(days=1)
 
     def _sum(self, s: datetime, e: datetime, kinds: set[str]) -> float:
-        return sum(t.amount for t in self.s.transactions
-                   if not t.excluded and t.kind in kinds and s <= self._local(t.date) < e)
+        return sum(
+            t.amount for t in self.s.transactions if not t.excluded and t.kind in kinds and s <= self._local(t.date) < e
+        )
 
     def get_overview(self) -> dict:
         ms, me = self._range("this_month")
         ls, le = self._range("last_month")
         return {
-            "today": self.now.date().isoformat(), "currency": self.s.currency,
+            "today": self.now.date().isoformat(),
+            "currency": self.s.currency,
             "wallets": [{"name": w.name, "balance": round(w.balance), "savings": w.savings} for w in self.s.wallets],
             "total_balance": round(sum(w.balance for w in self.s.wallets)),
-            "this_month": {"income": round(self._sum(ms, me, INCOME_KINDS)), "expense": round(self._sum(ms, me, EXPENSE_KINDS))},
-            "last_month": {"income": round(self._sum(ls, le, INCOME_KINDS)), "expense": round(self._sum(ls, le, EXPENSE_KINDS))},
+            "this_month": {
+                "income": round(self._sum(ms, me, INCOME_KINDS)),
+                "expense": round(self._sum(ms, me, EXPENSE_KINDS)),
+            },
+            "last_month": {
+                "income": round(self._sum(ls, le, INCOME_KINDS)),
+                "expense": round(self._sum(ls, le, EXPENSE_KINDS)),
+            },
             "transaction_count": len(self.s.transactions),
         }
 
-    def get_category_spending(self, period: str = "this_month", start: str | None = None, end: str | None = None,
-                              income: bool = False) -> dict:
+    def get_category_spending(
+        self, period: str = "this_month", start: str | None = None, end: str | None = None, income: bool = False
+    ) -> dict:
         s, e = self._range(period, start, end)
         kinds = INCOME_KINDS if income else EXPENSE_KINDS
         totals: dict[str, float] = {}
@@ -120,14 +184,26 @@ class FinanceToolkit:
                 totals[key] = totals.get(key, 0.0) + t.amount
         total = sum(totals.values())
         rows = sorted(totals.items(), key=lambda x: -x[1])
-        return {"from": s.date().isoformat(), "to": (e - timedelta(days=1)).date().isoformat(), "total": round(total),
-                "categories": [{"name": k, "amount": round(v), "share": round(v / total, 3) if total else 0} for k, v in rows]}
+        return {
+            "from": s.date().isoformat(),
+            "to": (e - timedelta(days=1)).date().isoformat(),
+            "total": round(total),
+            "categories": [
+                {"name": k, "amount": round(v), "share": round(v / total, 3) if total else 0} for k, v in rows
+            ],
+        }
 
     def forecast_month(self) -> dict:
         f = forecaster.forecast_month(self.s.transactions, self.now)
-        return {"spent_so_far": f.spent, "projected_month_total": f.projected, "range_80pct": [f.lower, f.upper],
-                "days_left": f.days_left, "allowed_daily_to_match_projection": f.daily_average,
-                "next_month_estimate": f.next_month, "method": f.method}
+        return {
+            "spent_so_far": f.spent,
+            "projected_month_total": f.projected,
+            "range_80pct": [f.lower, f.upper],
+            "days_left": f.days_left,
+            "allowed_daily_to_match_projection": f.daily_average,
+            "next_month_estimate": f.next_month,
+            "method": f.method,
+        }
 
     def find_transactions(self, query: str = "", days: int = 30, limit: int = 15) -> dict:
         since = self.now - timedelta(days=max(1, min(days, 3650)))
@@ -139,8 +215,16 @@ class FinanceToolkit:
             hay = fold(f"{t.note} {self.names.get(t.categoryId or '', '')}")
             if q and q not in hay:
                 continue
-            hits.append({"id": t.id, "date": self._local(t.date).date().isoformat(), "kind": t.kind,
-                         "amount": round(t.amount), "category": self.names.get(t.categoryId or ""), "note": t.note[:80]})
+            hits.append(
+                {
+                    "id": t.id,
+                    "date": self._local(t.date).date().isoformat(),
+                    "kind": t.kind,
+                    "amount": round(t.amount),
+                    "category": self.names.get(t.categoryId or ""),
+                    "note": t.note[:80],
+                }
+            )
             if len(hits) >= max(1, min(limit, 50)):
                 break
         if hits:
@@ -166,13 +250,17 @@ class FinanceToolkit:
             limit, basis = (income * 0.8, "income_minus_20pct_savings") if income else (None, "none")
         spent_before_today = spent - spent_today
         daily = round(max(0.0, limit - spent_before_today) / days_left) if limit is not None else None
-        tight = [x for x in self.get_budget_status()["budgets"]
-                 if x["category"] != "Tổng" and x["status"] != "ok"]
-        return {"basis": basis, "month_limit": round(limit) if limit is not None else None,
-                "spent_this_month": round(spent), "spent_today": round(spent_today), "days_left_incl_today": days_left,
-                "daily_allowance": daily,
-                "left_today": None if daily is None else round(daily - spent_today),
-                "tight_budgets": tight}
+        tight = [x for x in self.get_budget_status()["budgets"] if x["category"] != "Tổng" and x["status"] != "ok"]
+        return {
+            "basis": basis,
+            "month_limit": round(limit) if limit is not None else None,
+            "spent_this_month": round(spent),
+            "spent_today": round(spent_today),
+            "days_left_incl_today": days_left,
+            "daily_allowance": daily,
+            "left_today": None if daily is None else round(daily - spent_today),
+            "tight_budgets": tight,
+        }
 
     def get_budget_status(self) -> dict:
         ms, me = self._range("this_month")
@@ -181,11 +269,25 @@ class FinanceToolkit:
         out = []
         for b in self.s.budgets:
             kinds = INCOME_KINDS if b.income else EXPENSE_KINDS
-            used = sum(t.amount for t in self.s.transactions if not t.excluded and t.kind in kinds
-                       and ms <= self._local(t.date) < me and (b.categoryId is None or t.categoryId == b.categoryId))
-            out.append({"category": self.names.get(b.categoryId or "", "Tổng"), "limit": round(b.amount),
-                        "used": round(used), "remaining": round(b.amount - used),
-                        "status": "over" if used > b.amount else ("at_risk" if b.amount and used / b.amount > progress + 0.1 else "ok")})
+            used = sum(
+                t.amount
+                for t in self.s.transactions
+                if not t.excluded
+                and t.kind in kinds
+                and ms <= self._local(t.date) < me
+                and (b.categoryId is None or t.categoryId == b.categoryId)
+            )
+            out.append(
+                {
+                    "category": self.names.get(b.categoryId or "", "Tổng"),
+                    "limit": round(b.amount),
+                    "used": round(used),
+                    "remaining": round(b.amount - used),
+                    "status": "over"
+                    if used > b.amount
+                    else ("at_risk" if b.amount and used / b.amount > progress + 0.1 else "ok"),
+                }
+            )
         return {"month_progress": round(progress, 2), "budgets": out}
 
     def get_debts(self) -> dict:
@@ -205,32 +307,77 @@ class FinanceToolkit:
         found, spikes = anomaly.detect(self.s.transactions, self.now, categories=self.names)
         by_id = {t.id: t for t in self.s.transactions}
         return {
-            "anomalies": [{"date": self._local(by_id[a.transaction_id].date).date().isoformat(),
-                           "amount": round(by_id[a.transaction_id].amount), "note": by_id[a.transaction_id].note[:60],
-                           "reasons": a.reasons} for a in found[:8]],
-            "category_spikes": [{"category": self.names.get(s.category_id, "Khác"), "last_30_days": s.recent,
-                                 "monthly_baseline": s.baseline, "ratio": s.ratio} for s in spikes[:5]],
+            "anomalies": [
+                {
+                    "date": self._local(by_id[a.transaction_id].date).date().isoformat(),
+                    "amount": round(by_id[a.transaction_id].amount),
+                    "note": by_id[a.transaction_id].note[:60],
+                    "reasons": a.reasons,
+                }
+                for a in found[:8]
+            ],
+            "category_spikes": [
+                {
+                    "category": self.names.get(s.category_id, "Khác"),
+                    "last_30_days": s.recent,
+                    "monthly_baseline": s.baseline,
+                    "ratio": s.ratio,
+                }
+                for s in spikes[:5]
+            ],
         }
 
     def recommend_budgets(self, savings_rate: float = 0.2) -> dict:
-        r = budget.recommend(self.s.transactions, self.s.categories, self.now,
-                             savings_rate=max(0.0, min(0.6, float(savings_rate))))
-        return {"months_of_history": r["months"], "total": r["total"], "plan_50_30_20": r["plan"],
-                "suggestions": [{"category_id": s.category_id, "category": self.names.get(s.category_id),
-                                 "amount": s.amount, "group": s.group, "note": s.note} for s in r["suggestions"]]}
+        r = budget.recommend(
+            self.s.transactions, self.s.categories, self.now, savings_rate=max(0.0, min(0.6, float(savings_rate)))
+        )
+        return {
+            "months_of_history": r["months"],
+            "total": r["total"],
+            "plan_50_30_20": r["plan"],
+            "suggestions": [
+                {
+                    "category_id": s.category_id,
+                    "category": self.names.get(s.category_id),
+                    "amount": s.amount,
+                    "group": s.group,
+                    "note": s.note,
+                }
+                for s in r["suggestions"]
+            ],
+        }
 
     def propose_transaction(self, text: str) -> dict:
-        p = get_parser().parse(text, now=self.now, categories=self.s.categories, people=self.s.people,
-                               wallets=self.s.wallets, history=self.s.history())
+        p = get_parser().parse(
+            text,
+            now=self.now,
+            categories=self.s.categories,
+            people=self.s.people,
+            wallets=self.s.wallets,
+            history=self.s.history(),
+        )
         if not p.amount:
             return {"error": "Không đọc được số tiền, hãy hỏi lại người dùng số tiền."}
-        action = {"type": "create_transaction", "data": {
-            "kind": p.kind, "amount": p.amount, "date": p.date.isoformat(), "note": p.note,
-            "categoryId": p.category_id, "personId": p.person_id, "newPersonName": p.new_person_name,
-            "walletId": p.wallet_id, "toWalletId": p.destination_id}, "confidence": p.confidence}
+        action = {
+            "type": "create_transaction",
+            "data": {
+                "kind": p.kind,
+                "amount": p.amount,
+                "date": p.date.isoformat(),
+                "note": p.note,
+                "categoryId": p.category_id,
+                "personId": p.person_id,
+                "newPersonName": p.new_person_name,
+                "walletId": p.wallet_id,
+                "toWalletId": p.destination_id,
+            },
+            "confidence": p.confidence,
+        }
         self.actions.append(action)
-        return {"proposed": action["data"] | {"category": self.names.get(p.category_id or "")},
-                "note": "Đã tạo đề xuất; người dùng cần bấm xác nhận trên ứng dụng."}
+        return {
+            "proposed": action["data"] | {"category": self.names.get(p.category_id or "")},
+            "note": "Đã tạo đề xuất; người dùng cần bấm xác nhận trên ứng dụng.",
+        }
 
     def propose_budget(self, category_id: str, amount: float) -> dict:
         if category_id not in self.names:
@@ -240,5 +387,7 @@ class FinanceToolkit:
         month = self.now.date().replace(day=1).isoformat()
         action = {"type": "set_budget", "data": {"categoryId": category_id, "amount": round(amount), "month": month}}
         self.actions.append(action)
-        return {"proposed": action["data"] | {"category": self.names[category_id]},
-                "note": "Đã tạo đề xuất; người dùng cần bấm xác nhận."}
+        return {
+            "proposed": action["data"] | {"category": self.names[category_id]},
+            "note": "Đã tạo đề xuất; người dùng cần bấm xác nhận.",
+        }

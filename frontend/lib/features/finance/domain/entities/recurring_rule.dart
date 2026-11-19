@@ -47,16 +47,13 @@ class RecurringRule {
       case RepeatFrequency.daily:
         return DateTime(s.year, s.month, s.day + n * interval, s.hour, s.minute);
       case RepeatFrequency.weekly:
-        return DateTime(
-            s.year, s.month, s.day + 7 * n * interval, s.hour, s.minute);
+        return DateTime(s.year, s.month, s.day + 7 * n * interval, s.hour, s.minute);
       case RepeatFrequency.monthly:
       case RepeatFrequency.yearly:
-        final months =
-            n * interval * (frequency == RepeatFrequency.yearly ? 12 : 1);
+        final months = n * interval * (frequency == RepeatFrequency.yearly ? 12 : 1);
         final first = DateTime(s.year, s.month + months);
         final last = DateTime(first.year, first.month + 1, 0).day;
-        return DateTime(first.year, first.month, s.day > last ? last : s.day,
-            s.hour, s.minute);
+        return DateTime(first.year, first.month, s.day > last ? last : s.day, s.hour, s.minute);
     }
   }
 
@@ -71,8 +68,7 @@ class RecurringRule {
   String occurrenceId(DateTime d) =>
       '${id}_r${d.year.toString().padLeft(4, '0')}${d.month.toString().padLeft(2, '0')}${d.day.toString().padLeft(2, '0')}';
 
-  String get describe =>
-      interval == 1 ? frequency.label : 'Mỗi $interval ${frequency.unit}';
+  String get describe => interval == 1 ? frequency.label : 'Mỗi $interval ${frequency.unit}';
 
   RecurringRule copyWith({DateTime? nextDate, bool? active}) => RecurringRule(
       id: id,

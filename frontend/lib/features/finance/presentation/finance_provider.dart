@@ -477,8 +477,8 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
   }
 
   int copyBudgets(DateTime from, DateTime to, {String? unit}) {
-    final source = _budgets.where((b) =>
-        b.month.year == from.year && b.month.month == from.month && b.currency == (unit ?? currency));
+    final source = _budgets
+        .where((b) => b.month.year == from.year && b.month.month == from.month && b.currency == (unit ?? currency));
     var count = 0;
     for (final b in source.toList()) {
       final copy = MoneyBudget(
@@ -752,9 +752,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
     _syncTimer?.cancel();
     final current = session;
     if (revoke && current != null) {
-      await _auth
-          .logout(everywhere: everywhere, refreshToken: current.refreshToken)
-          .onError<ApiException>((_, __) {});
+      await _auth.logout(everywhere: everywhere, refreshToken: current.refreshToken).onError<ApiException>((_, __) {});
     }
     session = null;
     _pendingSnapshot = null;

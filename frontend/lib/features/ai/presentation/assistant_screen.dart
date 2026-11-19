@@ -152,7 +152,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
     setState(() => savedReceipts.add(m));
     final names = {for (final e in entries) p.category(e.categoryId)?.name ?? ''}.where((n) => n.isNotEmpty).join(', ');
     final income = entries.first.kind == EntryKind.income;
-    final warnings = income ? const <String>[] : SpendingCoach(p).budgetWarnings({for (final e in entries) e.categoryId!});
+    final warnings =
+        income ? const <String>[] : SpendingCoach(p).budgetWarnings({for (final e in entries) e.categoryId!});
     _add(ChatMessage(
         false,
         [
@@ -315,8 +316,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
   @override
   Widget build(BuildContext context) {
     final p = context.watch<FinanceProvider>();
-    final greeting =
-        ChatMessage(false, SpendingCoach(p, reminders: p.reminders).greeting(p.displayName));
+    final greeting = ChatMessage(false, SpendingCoach(p, reminders: p.reminders).greeting(p.displayName));
     return FinancePage(
         title: 'Trợ lý AI',
         actions: [
@@ -364,9 +364,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
         ]),
         child: ListView(controller: scroll, padding: const EdgeInsets.all(16), children: [
           if (messages.isEmpty)
-            const Padding(
-                padding: EdgeInsets.only(top: 8, bottom: 16),
-                child: Center(child: BrandLogo.ai(size: 72))),
+            const Padding(padding: EdgeInsets.only(top: 8, bottom: 16), child: Center(child: BrandLogo.ai(size: 72))),
           _withAvatar(greeting, _bubble(p, greeting)),
           for (final m in messages) _withAvatar(m, _bubble(p, m)),
           if (busy)

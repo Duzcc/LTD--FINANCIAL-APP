@@ -10,10 +10,13 @@ function requiredText(value, field, max = 500) {
 
 function chatMessages(messages) {
   if (!Array.isArray(messages) || messages.length === 0) throw badRequest('Thiếu nội dung câu hỏi.');
-  const list = messages.slice(-12).map((m) => ({
-    role: m?.role === 'assistant' ? 'assistant' : 'user',
-    content: String(m?.content || '').slice(0, 2000),
-  })).filter((m) => m.content.trim());
+  const list = messages
+    .slice(-12)
+    .map((m) => ({
+      role: m?.role === 'assistant' ? 'assistant' : 'user',
+      content: String(m?.content || '').slice(0, 2000),
+    }))
+    .filter((m) => m.content.trim());
   while (list.length && list[0].role !== 'user') list.shift();
   if (!list.length || list[list.length - 1].role !== 'user') throw badRequest('Tin nhắn cuối phải là câu hỏi.');
   return list;

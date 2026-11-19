@@ -8,11 +8,10 @@ const { unauthorized } = require('../utils/errors');
 
 const EXPIRED = 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại.';
 
-const signAccessToken = (user, sid) => jwt.sign(
-  { sub: String(user._id), v: user.tokenVersion, ...(sid ? { sid } : {}) },
-  config.jwtSecret,
-  { expiresIn: config.jwtExpiresIn },
-);
+const signAccessToken = (user, sid) =>
+  jwt.sign({ sub: String(user._id), v: user.tokenVersion, ...(sid ? { sid } : {}) }, config.jwtSecret, {
+    expiresIn: config.jwtExpiresIn,
+  });
 
 function verifyAccessToken(token) {
   try {

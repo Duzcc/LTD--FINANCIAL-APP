@@ -37,8 +37,7 @@ class MainBottomNav extends StatelessWidget {
               _buildNavItem(0, Icons.home_rounded, 'Tổng quan'),
               _buildNavItem(1, Icons.receipt_long_rounded, 'Sổ giao dịch'),
               _buildCenterButton(),
-              _buildNavItem(3, Icons.auto_awesome_outlined, 'Trợ lý AI',
-                  logo: true),
+              _buildNavItem(3, Icons.auto_awesome_outlined, 'Trợ lý AI', logo: true),
               _buildNavItem(4, Icons.track_changes_rounded, 'Ngân sách'),
               _buildNavItem(5, Icons.person_outline_rounded, 'Tài khoản'),
             ],
@@ -48,8 +47,7 @@ class MainBottomNav extends StatelessWidget {
     );
   }
 
-  Widget _buildNavItem(int index, IconData icon, String label,
-      {bool logo = false}) {
+  Widget _buildNavItem(int index, IconData icon, String label, {bool logo = false}) {
     final isSelected = currentIndex == index;
     return Expanded(
       child: InkWell(
@@ -61,8 +59,7 @@ class MainBottomNav extends StatelessWidget {
           children: [
             if (isSelected)
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.primaryGreenSurface,
                   borderRadius: BorderRadius.circular(16),

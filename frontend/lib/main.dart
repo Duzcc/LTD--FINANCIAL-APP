@@ -18,14 +18,12 @@ Future<SharedPreferences?> _openStorage() async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark));
+  SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(statusBarColor: Colors.transparent, statusBarIconBrightness: Brightness.dark));
   final storage = await _openStorage();
   final finance = FinanceProvider(storage: storage)..restore();
   if (storage == null) {
-    finance.storageError =
-        'Không mở được bộ nhớ thiết bị. Dữ liệu hiện chỉ lưu trong phiên sử dụng này.';
+    finance.storageError = 'Không mở được bộ nhớ thiết bị. Dữ liệu hiện chỉ lưu trong phiên sử dụng này.';
   }
   finance.onScheduleChanged = NotificationService.instance.apply;
   finance.onWalletActivity = NotificationService.instance.walletActivity;

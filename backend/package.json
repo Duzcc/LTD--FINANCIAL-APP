@@ -10,10 +10,12 @@
     "test": "node --test --test-concurrency=1 test/*.test.js",
     "test:e2e": "E2E_AI_URL=${E2E_AI_URL:-http://127.0.0.1:8000} node --test test/ai.test.js",
     "dev:mem": "node src/dev-memory.js",
-    "db:migrate": "node scripts/migrate-db.js"
+    "db:migrate": "node scripts/migrate-db.js",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write . && eslint --fix ."
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "license": "UNLICENSED",
   "private": true,
@@ -30,7 +32,11 @@
     "nodemailer": "^6.10.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "globals": "^15.15.0",
     "mongodb-memory-server": "^10.4.3",
+    "prettier": "^3.10.1",
     "supertest": "^7.3.1"
   }
 }

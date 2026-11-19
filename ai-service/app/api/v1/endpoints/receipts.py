@@ -28,11 +28,29 @@ def _to_response(r: receipt.ReceiptResult, categories: list[Category]) -> Receip
     income = r.kind == "income"
     matching = [c for c in categories if c.income == income]
     category_id = _suggest(r.note or r.merchant or "", matching, income)
-    items = [ReceiptLine(name=i.name, amount=i.amount, quantity=i.quantity, unit_price=i.unit_price,
-                         category_id=_suggest(i.name, matching, income) or category_id) for i in r.items]
-    return ReceiptResponse(merchant=r.merchant, total=r.total, date=r.date, note=r.note, source=r.source,
-                           items=items, category_id=category_id, kind=r.kind,
-                           confidence=r.confidence, checks=r.checks, raw_text=r.raw_text[:5000])
+    items = [
+        ReceiptLine(
+            name=i.name,
+            amount=i.amount,
+            quantity=i.quantity,
+            unit_price=i.unit_price,
+            category_id=_suggest(i.name, matching, income) or category_id,
+        )
+        for i in r.items
+    ]
+    return ReceiptResponse(
+        merchant=r.merchant,
+        total=r.total,
+        date=r.date,
+        note=r.note,
+        source=r.source,
+        items=items,
+        category_id=category_id,
+        kind=r.kind,
+        confidence=r.confidence,
+        checks=r.checks,
+        raw_text=r.raw_text[:5000],
+    )
 
 
 @router.post("/parse-text", response_model=ReceiptResponse, summary="Trích xuất hóa đơn từ văn bản OCR")
@@ -47,8 +65,9 @@ async def engines(assistant: Assistant = Depends(get_assistant)) -> dict:
 
 
 @router.post("/scan", response_model=ReceiptResponse, summary="Đọc hóa đơn từ ảnh")
-async def scan(image: UploadFile = File(...), categories: str = Form("[]"),
-               assistant: Assistant = Depends(get_assistant)) -> ReceiptResponse:
+async def scan(
+    image: UploadFile = File(...), categories: str = Form("[]"), assistant: Assistant = Depends(get_assistant)
+) -> ReceiptResponse:
     data = await image.read()
     if len(data) > MAX_IMAGE:
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Ảnh quá lớn (tối đa 6MB).")
@@ -79,5 +98,7 @@ async def scan(image: UploadFile = File(...), categories: str = Form("[]"),
             pass
     if ocr_result is not None:
         return _to_response(ocr_result, cats)
-    raise HTTPException(status.HTTP_501_NOT_IMPLEMENTED,
-                        "Máy chủ chưa có engine OCR (Apple Vision/Tesseract) hay mô hình thị giác. Hãy dùng nhận dạng chữ trên điện thoại.")
+    raise HTTPException(
+        status.HTTP_501_NOT_IMPLEMENTED,
+        "Máy chủ chưa có engine OCR (Apple Vision/Tesseract) hay mô hình thị giác. Hãy dùng nhận dạng chữ trên điện thoại.",
+    )

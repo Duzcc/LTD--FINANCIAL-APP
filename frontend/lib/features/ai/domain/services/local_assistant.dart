@@ -11,8 +11,7 @@ class LocalAssistant {
 
   String _m(double v, [String? unit]) {
     final u = unit ?? p.currency;
-    final s = v.abs().round().toString().replaceAllMapped(
-        RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.');
+    final s = v.abs().round().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.');
     return '${v < 0 ? '-' : ''}$s ${u == 'VND' ? '₫' : u}';
   }
 
@@ -27,14 +26,45 @@ class LocalAssistant {
     'Làm sao để tiết kiệm hơn?',
   ];
 
-  bool _has(String f, List<String> words) =>
-      words.any((w) => RegExp('\\b$w\\b').hasMatch(f));
+  bool _has(String f, List<String> words) => words.any((w) => RegExp('\\b$w\\b').hasMatch(f));
 
   static const _searchWords = ['tim', 'liet ke', 'cac khoan', 'nhung khoan', 'giao dich nao', 'xem lai'];
   static const _filler = {
-    'tim', 'liet', 'ke', 'cac', 'nhung', 'khoan', 'giao', 'dich', 'nao', 'xem', 'lai', 'cho', 'toi', 'minh', 'cua',
-    'da', 'trong', 've', 'the', 'chi', 'tieu', 'hom', 'nay', 'qua', 'tuan', 'thang', 'truoc', 'gan', 'day', 'o',
-    'tien', 'mua', 'giup', 'em', 'voi'
+    'tim',
+    'liet',
+    'ke',
+    'cac',
+    'nhung',
+    'khoan',
+    'giao',
+    'dich',
+    'nao',
+    'xem',
+    'lai',
+    'cho',
+    'toi',
+    'minh',
+    'cua',
+    'da',
+    'trong',
+    've',
+    'the',
+    'chi',
+    'tieu',
+    'hom',
+    'nay',
+    'qua',
+    'tuan',
+    'thang',
+    'truoc',
+    'gan',
+    'day',
+    'o',
+    'tien',
+    'mua',
+    'giup',
+    'em',
+    'voi'
   };
 
   AssistantReply reply(String question) {
@@ -50,14 +80,26 @@ class LocalAssistant {
         : _has(f, ['hom qua'])
             ? (today.subtract(const Duration(days: 1)), today, 'hôm qua')
             : _has(f, ['tuan truoc'])
-                ? (today.subtract(Duration(days: today.weekday + 6)), today.subtract(Duration(days: today.weekday - 1)), 'tuần trước')
+                ? (
+                    today.subtract(Duration(days: today.weekday + 6)),
+                    today.subtract(Duration(days: today.weekday - 1)),
+                    'tuần trước'
+                  )
                 : _has(f, ['tuan nay'])
-                    ? (today.subtract(Duration(days: today.weekday - 1)), today.add(const Duration(days: 1)), 'tuần này')
+                    ? (
+                        today.subtract(Duration(days: today.weekday - 1)),
+                        today.add(const Duration(days: 1)),
+                        'tuần này'
+                      )
                     : _has(f, ['thang truoc'])
                         ? (DateTime(now.year, now.month - 1), DateTime(now.year, now.month), 'tháng trước')
                         : _has(f, ['thang nay'])
                             ? (DateTime(now.year, now.month), today.add(const Duration(days: 1)), 'tháng này')
-                            : (today.subtract(const Duration(days: 29)), today.add(const Duration(days: 1)), '30 ngày qua');
+                            : (
+                                today.subtract(const Duration(days: 29)),
+                                today.add(const Duration(days: 1)),
+                                '30 ngày qua'
+                              );
     var rest = f;
     String? categoryId;
     for (final c in p.categories) {
@@ -68,7 +110,8 @@ class LocalAssistant {
         break;
       }
     }
-    final words = rest.split(' ').where((w) => w.isNotEmpty && !_filler.contains(w) && !RegExp(r'^\d+$').hasMatch(w)).toList();
+    final words =
+        rest.split(' ').where((w) => w.isNotEmpty && !_filler.contains(w) && !RegExp(r'^\d+$').hasMatch(w)).toList();
     final hits = p.between(from, to).where((e) {
       if (categoryId != null && e.categoryId != categoryId) return false;
       if (words.isEmpty) return categoryId != null || e.kind.isExpense;
@@ -82,10 +125,12 @@ class LocalAssistant {
     final spent = hits.where((e) => e.kind.isExpense).fold(0.0, (s, e) => s + e.amount);
     return AssistantReply(
         'Tìm thấy ${hits.length} giao dịch${topic.isEmpty ? '' : ' về "$topic"'} trong $label'
-        '${spent > 0 ? ', tổng chi ${_m(spent)}' : ''}.',
+            '${spent > 0 ? ', tổng chi ${_m(spent)}' : ''}.',
         'device',
         actions: [
-          AssistantAction('show_transactions', {'ids': [for (final e in hits.take(20)) e.id]})
+          AssistantAction('show_transactions', {
+            'ids': [for (final e in hits.take(20)) e.id]
+          })
         ]);
   }
 
@@ -115,7 +160,9 @@ class LocalAssistant {
       final list = p.budgets
           .where((b) => b.month.year == now.year && b.month.month == now.month && b.currency == p.currency)
           .toList();
-      if (list.isEmpty) return 'Bạn chưa đặt ngân sách cho tháng này. Vào mục Ngân sách để đặt mục tiêu tổng và theo từng danh mục.';
+      if (list.isEmpty) {
+        return 'Bạn chưa đặt ngân sách cho tháng này. Vào mục Ngân sách để đặt mục tiêu tổng và theo từng danh mục.';
+      }
       return [
         'Tình hình ngân sách tháng ${now.month}:',
         for (final b in list)

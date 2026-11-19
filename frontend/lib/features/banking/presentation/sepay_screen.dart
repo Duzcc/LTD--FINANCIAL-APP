@@ -42,8 +42,7 @@ class _SepayScreenState extends State<SepayScreen> with BusyState {
     if (status?.connected == true &&
         !await confirmAction(context,
             title: 'Tạo khóa mới?',
-            content:
-                'Khóa cũ sẽ ngừng hoạt động. Bạn cần dán khóa mới vào cấu hình webhook trên SePay.',
+            content: 'Khóa cũ sẽ ngừng hoạt động. Bạn cần dán khóa mới vào cấu hình webhook trên SePay.',
             confirm: 'Tạo khóa mới')) {
       return;
     }
@@ -81,8 +80,7 @@ class _SepayScreenState extends State<SepayScreen> with BusyState {
         child: RefreshIndicator(
             onRefresh: load,
             child: ListView(padding: const EdgeInsets.all(16), children: [
-              const Text('Tài khoản đã liên kết',
-                  style: TextStyle(fontWeight: FontWeight.w700)),
+              const Text('Tài khoản đã liên kết', style: TextStyle(fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
               for (final w in linked)
                 Panel(
@@ -90,18 +88,15 @@ class _SepayScreenState extends State<SepayScreen> with BusyState {
                     child: ListTile(
                         leading: const RoundIcon(Icons.account_balance_outlined),
                         title: Text(w.name),
-                        subtitle: Text(
-                            '${bankByBin(w.bankBin)?.name} • ${w.bankAccount}\n${w.bankHolder}'),
+                        subtitle: Text('${bankByBin(w.bankBin)?.name} • ${w.bankAccount}\n${w.bankHolder}'),
                         trailing: const Icon(Icons.edit_outlined, size: 18),
-                        onTap: () =>
-                            openPage(context, CreateWalletScreen(wallet: w)))),
+                        onTap: () => openPage(context, CreateWalletScreen(wallet: w)))),
               if (linked.isEmpty)
                 const Text(
                     'Chưa có ví nào liên kết ngân hàng. Mở một ví VND → Chỉnh sửa → "Liên kết tài khoản ngân hàng".',
                     style: TextStyle(height: 1.5)),
               const SizedBox(height: 20),
-              const Text('Tự ghi giao dịch qua SePay',
-                  style: TextStyle(fontWeight: FontWeight.w700)),
+              const Text('Tự ghi giao dịch qua SePay', style: TextStyle(fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
               if (!p.signedIn)
                 const Text(
@@ -124,23 +119,17 @@ class _SepayScreenState extends State<SepayScreen> with BusyState {
                                 style: const TextStyle(height: 1.4))),
                       ])),
                   const SizedBox(height: 12),
-                  const Text('Webhook (tùy chọn, báo nhanh hơn)',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  const Text('Webhook (tùy chọn, báo nhanh hơn)', style: TextStyle(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                 ],
                 Panel(
                     padding: EdgeInsets.zero,
                     child: Column(children: [
                       ListTile(
-                          leading: Icon(
-                              s.connected ? Icons.link : Icons.link_off,
-                              color: s.connected
-                                  ? AppColors.primaryGreen
-                                  : AppColors.textSecondary),
+                          leading: Icon(s.connected ? Icons.link : Icons.link_off,
+                              color: s.connected ? AppColors.primaryGreen : AppColors.textSecondary),
                           title: Text(s.connected ? 'Đã tạo khóa webhook' : 'Webhook chưa bật'),
-                          subtitle: s.keyHint == null
-                              ? null
-                              : Text('Khóa kết thúc bằng …${s.keyHint}')),
+                          subtitle: s.keyHint == null ? null : Text('Khóa kết thúc bằng …${s.keyHint}')),
                       ListTile(
                           title: const Text('URL webhook'),
                           subtitle: Text(s.webhookUrl),
@@ -162,13 +151,10 @@ class _SepayScreenState extends State<SepayScreen> with BusyState {
                 Row(children: [
                   Expanded(
                       child: FilledButton(
-                          onPressed: createKey,
-                          child: Text(s.connected ? 'Tạo khóa mới' : 'Tạo khóa webhook'))),
+                          onPressed: createKey, child: Text(s.connected ? 'Tạo khóa mới' : 'Tạo khóa webhook'))),
                   if (s.connected) ...[
                     const SizedBox(width: 10),
-                    Expanded(
-                        child: OutlinedButton(
-                            onPressed: revoke, child: const Text('Tắt webhook'))),
+                    Expanded(child: OutlinedButton(onPressed: revoke, child: const Text('Tắt webhook'))),
                   ],
                 ]),
                 const SizedBox(height: 16),
@@ -183,8 +169,7 @@ class _SepayScreenState extends State<SepayScreen> with BusyState {
                         style: TextStyle(height: 1.5))),
                 if (requests.isNotEmpty) ...[
                   const SizedBox(height: 20),
-                  const Text('Yêu cầu nhận tiền gần đây',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
+                  const Text('Yêu cầu nhận tiền gần đây', style: TextStyle(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 8),
                   for (final r in requests.take(20))
                     ListTile(
@@ -194,8 +179,7 @@ class _SepayScreenState extends State<SepayScreen> with BusyState {
                           'pending' => Icons.schedule,
                           _ => Icons.block,
                         }),
-                        title: Text(
-                            '${r.code} • ${r.amount == null ? 'Tùy số tiền' : money(r.amount!)}'),
+                        title: Text('${r.code} • ${r.amount == null ? 'Tùy số tiền' : money(r.amount!)}'),
                         subtitle: Text([
                           switch (r.status) {
                             'paid' => 'Đã nhận ${money(r.paidAmount ?? 0)}',

@@ -22,14 +22,25 @@ after(async () => {
 });
 
 test('Ràng buộc dữ liệu khi đăng ký', async () => {
-  const reg = (body) => api().post('/api/auth/register').send({ name: 'Nguyễn An', email: 'x@test.vn', password: 'Matkhau1', ...body });
+  const reg = (body) =>
+    api()
+      .post('/api/auth/register')
+      .send({ name: 'Nguyễn An', email: 'x@test.vn', password: 'Matkhau1', ...body });
   const cases = [
-    [{ name: '' }, 'Vui lòng nhập họ tên'], [{ name: 'A' }, 'ít nhất 2'], [{ name: 'a'.repeat(51) }, 'tối đa 50'],
-    [{ name: 'An123' }, 'chữ cái'], [{ email: '' }, 'nhập email'], [{ email: 'sai' }, 'không hợp lệ'],
-    [{ email: 'a..b@test.vn' }, 'không hợp lệ'], [{ email: `${'a'.repeat(65)}@test.vn` }, 'quá dài'],
-    [{ password: 'Ab1' }, 'ít nhất 8'], [{ password: 'abcdefgh' }, 'chữ cái và chữ số'],
-    [{ password: '12345678' }, 'chữ cái và chữ số'], [{ password: 'Mat khau1' }, 'khoảng trắng'],
-    [{ password: `A1${'a'.repeat(71)}` }, 'tối đa 72'], [{ email: 'abc12345@x.vn', password: 'abc12345@x.vn' }, 'trùng email'],
+    [{ name: '' }, 'Vui lòng nhập họ tên'],
+    [{ name: 'A' }, 'ít nhất 2'],
+    [{ name: 'a'.repeat(51) }, 'tối đa 50'],
+    [{ name: 'An123' }, 'chữ cái'],
+    [{ email: '' }, 'nhập email'],
+    [{ email: 'sai' }, 'không hợp lệ'],
+    [{ email: 'a..b@test.vn' }, 'không hợp lệ'],
+    [{ email: `${'a'.repeat(65)}@test.vn` }, 'quá dài'],
+    [{ password: 'Ab1' }, 'ít nhất 8'],
+    [{ password: 'abcdefgh' }, 'chữ cái và chữ số'],
+    [{ password: '12345678' }, 'chữ cái và chữ số'],
+    [{ password: 'Mat khau1' }, 'khoảng trắng'],
+    [{ password: `A1${'a'.repeat(71)}` }, 'tối đa 72'],
+    [{ email: 'abc12345@x.vn', password: 'abc12345@x.vn' }, 'trùng email'],
   ];
   for (const [body, msg] of cases) {
     const r = await reg(body);
@@ -39,7 +50,9 @@ test('Ràng buộc dữ liệu khi đăng ký', async () => {
 });
 
 test('Đăng ký, đăng nhập bằng OTP gửi qua email, bảo vệ API', async () => {
-  let r = await api().post('/api/auth/register').send({ name: '  Nguyễn   An ', email: 'an@test.vn', password: 'Matkhau1' });
+  let r = await api()
+    .post('/api/auth/register')
+    .send({ name: '  Nguyễn   An ', email: 'an@test.vn', password: 'Matkhau1' });
   assert.equal(r.status, 201);
   assert.equal(r.body.otpRequired, true);
   assert.equal(r.body.token, undefined, 'chưa cấp token khi chưa nhập OTP');
@@ -47,7 +60,10 @@ test('Đăng ký, đăng nhập bằng OTP gửi qua email, bảo vệ API', asy
   const first = r.body;
   r = await api().post('/api/auth/register').send({ name: 'An', email: 'an@test.vn', password: 'Matkhau1' });
   assert.equal(r.status, 201);
-  assert.equal((await api().post('/api/auth/verify-otp').send({ otpToken: first.otpToken, code: first.devCode })).status, 400);
+  assert.equal(
+    (await api().post('/api/auth/verify-otp').send({ otpToken: first.otpToken, code: first.devCode })).status,
+    400,
+  );
   r = await api().post('/api/auth/verify-otp').send({ otpToken: r.body.otpToken, code: r.body.devCode });
   assert.equal(r.status, 200);
   assert.ok(r.body.token);
@@ -65,7 +81,9 @@ test('Đăng ký, đăng nhập bằng OTP gửi qua email, bảo vệ API', asy
   const step = r.body;
   r = await api().post('/api/auth/verify-otp').send({ otpToken: step.otpToken, code: '12ab56' });
   assert.equal(r.status, 400);
-  r = await api().post('/api/auth/verify-otp').send({ otpToken: step.otpToken, code: step.devCode === '000000' ? '111111' : '000000' });
+  r = await api()
+    .post('/api/auth/verify-otp')
+    .send({ otpToken: step.otpToken, code: step.devCode === '000000' ? '111111' : '000000' });
   assert.equal(r.status, 400);
   assert.match(r.body.error.message, /còn 4 lần/);
   r = await api().post('/api/auth/resend-otp').send({ otpToken: step.otpToken });
@@ -85,22 +103,49 @@ test('Đăng ký, đăng nhập bằng OTP gửi qua email, bảo vệ API', asy
 });
 
 test('Ví: thêm, trùng tên, sửa, số dư tính từ giao dịch, xóa có ràng buộc', async () => {
-  let r = await auth(api().post('/api/wallets')).send({ id: 'bank', name: 'Ngân hàng', opening: 1000000, currency: 'VND' });
+  let r = await auth(api().post('/api/wallets')).send({
+    id: 'bank',
+    name: 'Ngân hàng',
+    opening: 1000000,
+    currency: 'VND',
+  });
   assert.equal(r.status, 201);
   assert.equal(r.body.balance, 1000000);
   r = await auth(api().post('/api/wallets')).send({ name: 'ngân hàng', opening: 0 });
   assert.equal(r.status, 409);
   r = await auth(api().post('/api/wallets')).send({ name: '', opening: 0 });
   assert.equal(r.status, 400);
-  r = await auth(api().post('/api/wallets')).send({ id: 'save', name: 'Heo đất', savings: true, target: 5000000, startDate: '2026-10-01', deadline: '2026-09-01' });
+  r = await auth(api().post('/api/wallets')).send({
+    id: 'save',
+    name: 'Heo đất',
+    savings: true,
+    target: 5000000,
+    startDate: '2026-10-01',
+    deadline: '2026-09-01',
+  });
   assert.equal(r.status, 400, 'ngày kết thúc trước ngày bắt đầu');
-  r = await auth(api().put('/api/wallets/save')).send({ name: 'Heo đất', savings: true, target: 5000000, startDate: '2026-10-01', deadline: '2027-10-01', symbol: 5, notify: true });
+  r = await auth(api().put('/api/wallets/save')).send({
+    name: 'Heo đất',
+    savings: true,
+    target: 5000000,
+    startDate: '2026-10-01',
+    deadline: '2027-10-01',
+    symbol: 5,
+    notify: true,
+  });
   assert.equal(r.body.symbol, 5);
   assert.equal(r.body.notify, true);
   const badSymbol = await auth(api().put('/api/wallets/save')).send({ name: 'Heo đất', savings: true, symbol: 99 });
   assert.equal(badSymbol.status, 400);
   assert.equal(r.status, 201);
-  r = await auth(api().post('/api/transactions')).send({ id: 't1', kind: 'expense', amount: 50000, walletId: 'bank', categoryId: 'food', date: '2026-10-05T08:00:00Z' });
+  r = await auth(api().post('/api/transactions')).send({
+    id: 't1',
+    kind: 'expense',
+    amount: 50000,
+    walletId: 'bank',
+    categoryId: 'food',
+    date: '2026-10-05T08:00:00Z',
+  });
   assert.equal(r.status, 201);
   r = await auth(api().get('/api/wallets/bank'));
   assert.equal(r.body.balance, 950000);
@@ -113,47 +158,136 @@ test('Ví: thêm, trùng tên, sửa, số dư tính từ giao dịch, xóa có 
 });
 
 test('Giao dịch: sửa, chuyển tiền, vay nợ, lọc và sắp xếp', async () => {
-  let r = await auth(api().put('/api/transactions/t1')).send({ kind: 'expense', amount: 80000, walletId: 'cash', categoryId: 'food', date: '2026-10-05T08:00:00Z' });
+  let r = await auth(api().put('/api/transactions/t1')).send({
+    kind: 'expense',
+    amount: 80000,
+    walletId: 'cash',
+    categoryId: 'food',
+    date: '2026-10-05T08:00:00Z',
+  });
   assert.equal(r.status, 200);
   r = await auth(api().get('/api/wallets'));
   const bal = Object.fromEntries(r.body.items.map((w) => [w.id, w.balance]));
   assert.equal(bal.bank, 1000000);
   assert.equal(bal.cash, -80000);
-  r = await auth(api().post('/api/transactions')).send({ kind: 'expense', amount: 10, walletId: 'cash', categoryId: 'salary', date: '2026-10-05' });
+  r = await auth(api().post('/api/transactions')).send({
+    kind: 'expense',
+    amount: 10,
+    walletId: 'cash',
+    categoryId: 'salary',
+    date: '2026-10-05',
+  });
   assert.equal(r.status, 400, 'danh mục thu cho khoản chi');
-  r = await auth(api().post('/api/transactions')).send({ kind: 'expense', amount: 0, walletId: 'cash', categoryId: 'food', date: '2026-10-05' });
+  r = await auth(api().post('/api/transactions')).send({
+    kind: 'expense',
+    amount: 0,
+    walletId: 'cash',
+    categoryId: 'food',
+    date: '2026-10-05',
+  });
   assert.equal(r.status, 400);
-  r = await auth(api().post('/api/transactions')).send({ id: 'tr', kind: 'transfer', amount: 200000, walletId: 'bank', destinationId: 'cash', date: '2026-10-06' });
+  r = await auth(api().post('/api/transactions')).send({
+    id: 'tr',
+    kind: 'transfer',
+    amount: 200000,
+    walletId: 'bank',
+    destinationId: 'cash',
+    date: '2026-10-06',
+  });
   assert.equal(r.status, 201);
-  r = await auth(api().post('/api/transactions')).send({ kind: 'transfer', amount: 800001, walletId: 'bank', destinationId: 'cash', date: '2026-10-06' });
+  r = await auth(api().post('/api/transactions')).send({
+    kind: 'transfer',
+    amount: 800001,
+    walletId: 'bank',
+    destinationId: 'cash',
+    date: '2026-10-06',
+  });
   assert.equal(r.status, 400, 'chuyển vượt số dư ví nguồn');
   assert.match(r.body.error.message, /Số dư ví Ngân hàng không đủ \(còn 800\.000 VND\)/);
-  r = await auth(api().put('/api/transactions/tr')).send({ kind: 'transfer', amount: 1000001, walletId: 'bank', destinationId: 'cash', date: '2026-10-06' });
+  r = await auth(api().put('/api/transactions/tr')).send({
+    kind: 'transfer',
+    amount: 1000001,
+    walletId: 'bank',
+    destinationId: 'cash',
+    date: '2026-10-06',
+  });
   assert.equal(r.status, 400, 'sửa chuyển tiền vượt số dư');
-  r = await auth(api().put('/api/transactions/tr')).send({ kind: 'transfer', amount: 1000000, walletId: 'bank', destinationId: 'cash', date: '2026-10-06' });
+  r = await auth(api().put('/api/transactions/tr')).send({
+    kind: 'transfer',
+    amount: 1000000,
+    walletId: 'bank',
+    destinationId: 'cash',
+    date: '2026-10-06',
+  });
   assert.equal(r.status, 200, 'sửa trong số dư, tính lại phần giao dịch cũ');
-  r = await auth(api().put('/api/transactions/tr')).send({ kind: 'transfer', amount: 200000, walletId: 'bank', destinationId: 'cash', date: '2026-10-06' });
+  r = await auth(api().put('/api/transactions/tr')).send({
+    kind: 'transfer',
+    amount: 200000,
+    walletId: 'bank',
+    destinationId: 'cash',
+    date: '2026-10-06',
+  });
   assert.equal(r.status, 200);
   r = await auth(api().post('/api/people')).send({ id: 'binh', name: 'Bình', group: 'Bạn bè & Đồng nghiệp' });
   assert.equal(r.status, 201);
-  r = await auth(api().post('/api/transactions')).send({ kind: 'lend', amount: 100000, walletId: 'bank', date: '2026-10-07' });
+  r = await auth(api().post('/api/transactions')).send({
+    kind: 'lend',
+    amount: 100000,
+    walletId: 'bank',
+    date: '2026-10-07',
+  });
   assert.equal(r.status, 400, 'vay nợ bắt buộc đối tượng');
-  r = await auth(api().post('/api/transactions')).send({ id: 'l1', kind: 'lend', amount: 100000, walletId: 'bank', personId: 'binh', date: '2026-10-07', dueDate: '2026-10-01' });
+  r = await auth(api().post('/api/transactions')).send({
+    id: 'l1',
+    kind: 'lend',
+    amount: 100000,
+    walletId: 'bank',
+    personId: 'binh',
+    date: '2026-10-07',
+    dueDate: '2026-10-01',
+  });
   assert.equal(r.status, 400, 'hạn trước ngày giao dịch');
-  r = await auth(api().post('/api/transactions')).send({ id: 'l1', kind: 'lend', amount: 100000, walletId: 'bank', personId: 'binh', date: '2026-10-07', dueDate: '2026-11-01' });
+  r = await auth(api().post('/api/transactions')).send({
+    id: 'l1',
+    kind: 'lend',
+    amount: 100000,
+    walletId: 'bank',
+    personId: 'binh',
+    date: '2026-10-07',
+    dueDate: '2026-11-01',
+  });
   assert.equal(r.status, 201);
-  r = await auth(api().post('/api/transactions')).send({ kind: 'collect', amount: 150000, walletId: 'bank', personId: 'binh', date: '2026-10-08' });
+  r = await auth(api().post('/api/transactions')).send({
+    kind: 'collect',
+    amount: 150000,
+    walletId: 'bank',
+    personId: 'binh',
+    date: '2026-10-08',
+  });
   assert.equal(r.status, 400, 'thu nợ vượt số còn lại');
-  r = await auth(api().post('/api/transactions')).send({ id: 'c1', kind: 'collect', amount: 40000, walletId: 'bank', personId: 'binh', date: '2026-10-08' });
+  r = await auth(api().post('/api/transactions')).send({
+    id: 'c1',
+    kind: 'collect',
+    amount: 40000,
+    walletId: 'bank',
+    personId: 'binh',
+    date: '2026-10-08',
+  });
   assert.equal(r.status, 201);
   r = await auth(api().get('/api/reports/debts'));
   assert.equal(r.body.people[0].receivable, 60000);
   r = await auth(api().get('/api/transactions?type=debt&sort=amount&order=desc'));
-  assert.deepEqual(r.body.items.map((e) => e.id), ['l1', 'c1']);
+  assert.deepEqual(
+    r.body.items.map((e) => e.id),
+    ['l1', 'c1'],
+  );
   r = await auth(api().get('/api/transactions?q=Bình'));
   assert.equal(r.body.total, 2);
   r = await auth(api().get('/api/transactions?from=2026-10-06&to=2026-10-06T23:59:59'));
-  assert.deepEqual(r.body.items.map((e) => e.id), ['tr']);
+  assert.deepEqual(
+    r.body.items.map((e) => e.id),
+    ['tr'],
+  );
   r = await auth(api().delete('/api/people/binh'));
   assert.equal(r.status, 409);
 });
@@ -163,12 +297,30 @@ test('Danh mục, ngân sách và báo cáo', async () => {
   assert.equal(r.status, 201);
   r = await auth(api().post('/api/categories')).send({ name: 'cà phê', income: false });
   assert.equal(r.status, 409);
-  r = await auth(api().post('/api/budgets')).send({ id: 'b1', categoryId: 'food', month: '2026-10-01', amount: 200000, currency: 'VND' });
+  r = await auth(api().post('/api/budgets')).send({
+    id: 'b1',
+    categoryId: 'food',
+    month: '2026-10-01',
+    amount: 200000,
+    currency: 'VND',
+  });
   assert.equal(r.status, 201);
   assert.equal(r.body.used, 80000);
-  r = await auth(api().post('/api/budgets')).send({ categoryId: 'food', walletId: 'cash', month: '2026-10-15', amount: 100000, currency: 'VND' });
+  r = await auth(api().post('/api/budgets')).send({
+    categoryId: 'food',
+    walletId: 'cash',
+    month: '2026-10-15',
+    amount: 100000,
+    currency: 'VND',
+  });
   assert.equal(r.status, 409, 'ngân sách chồng lấn');
-  r = await auth(api().post('/api/budgets')).send({ id: 'total', categoryId: null, month: '2026-10-01', amount: 3000000, currency: 'VND' });
+  r = await auth(api().post('/api/budgets')).send({
+    id: 'total',
+    categoryId: null,
+    month: '2026-10-01',
+    amount: 3000000,
+    currency: 'VND',
+  });
   assert.equal(r.status, 201, 'mục tiêu tổng tháng');
   r = await auth(api().delete('/api/categories/food'));
   assert.equal(r.status, 409);
@@ -183,12 +335,24 @@ test('Danh mục, ngân sách và báo cáo', async () => {
 });
 
 test('Đồng bộ hàng loạt và ảnh chụp dữ liệu', async () => {
-  let r = await auth(api().post('/api/sync/batch')).send({ ops: [
-    { entity: 'wallets', action: 'upsert', id: 'momo', data: { name: 'Ví điện tử', opening: 300000 } },
-    { entity: 'entries', action: 'upsert', id: 'm1', data: { kind: 'income', amount: 1000, walletId: 'momo', categoryId: 'bonus', date: '2026-10-09' } },
-    { entity: 'entries', action: 'delete', id: 'khong-ton-tai' },
-    { entity: 'entries', action: 'upsert', id: 'bad', data: { kind: 'income', amount: -1, walletId: 'momo', categoryId: 'bonus', date: '2026-10-09' } },
-  ] });
+  let r = await auth(api().post('/api/sync/batch')).send({
+    ops: [
+      { entity: 'wallets', action: 'upsert', id: 'momo', data: { name: 'Ví điện tử', opening: 300000 } },
+      {
+        entity: 'entries',
+        action: 'upsert',
+        id: 'm1',
+        data: { kind: 'income', amount: 1000, walletId: 'momo', categoryId: 'bonus', date: '2026-10-09' },
+      },
+      { entity: 'entries', action: 'delete', id: 'khong-ton-tai' },
+      {
+        entity: 'entries',
+        action: 'upsert',
+        id: 'bad',
+        data: { kind: 'income', amount: -1, walletId: 'momo', categoryId: 'bonus', date: '2026-10-09' },
+      },
+    ],
+  });
   assert.equal(r.status, 400);
   assert.equal(r.body.applied, 3);
   assert.equal(r.body.failedIndex, 3);
@@ -214,7 +378,9 @@ test('Đổi mật khẩu, quên mật khẩu, đăng xuất thu hồi token', a
   assert.equal(r.status, 200);
   assert.match(r.body.devCode, /^\d{6}$/);
   const code = r.body.devCode;
-  r = await api().post('/api/auth/reset-password').send({ email: 'an@test.vn', code: '000000' === code ? '111111' : '000000', newPassword: 'Moi12345' });
+  r = await api()
+    .post('/api/auth/reset-password')
+    .send({ email: 'an@test.vn', code: '000000' === code ? '111111' : '000000', newPassword: 'Moi12345' });
   assert.equal(r.status, 400);
   r = await api().post('/api/auth/reset-password').send({ email: 'an@test.vn', code, newPassword: 'moi123' });
   assert.equal(r.status, 400, 'mật khẩu mới yếu');
@@ -252,7 +418,10 @@ test('Đăng xuất chỉ thu hồi phiên của thiết bị đó; { all: true 
   const b2 = (await api().post('/api/auth/refresh').send({ refreshToken: b.refreshToken })).body;
   assert.equal((await me(b2.token)).status, 200);
   const c = await login(app, 'da@test.vn', 'Matkhau1');
-  assert.equal((await api().post('/api/auth/logout').set('Authorization', `Bearer ${c.token}`).send({ all: true })).status, 204);
+  assert.equal(
+    (await api().post('/api/auth/logout').set('Authorization', `Bearer ${c.token}`).send({ all: true })).status,
+    204,
+  );
   assert.equal((await me(b2.token)).status, 401, 'đăng xuất mọi thiết bị');
 });
 
@@ -263,8 +432,11 @@ test('Refresh token chỉ dùng được một lần kể cả khi gửi song so
   const results = await Promise.all([refresh(), refresh(), refresh()]);
   assert.deepEqual(results.map((r) => r.status).sort(), [200, 401, 401]);
   const won = results.find((r) => r.status === 200).body;
-  assert.equal((await api().get('/api/auth/me').set('Authorization', `Bearer ${a.token}`)).status, 200,
-    'access token cũ của cùng thiết bị vẫn dùng được trong lúc xoay vòng');
+  assert.equal(
+    (await api().get('/api/auth/me').set('Authorization', `Bearer ${a.token}`)).status,
+    200,
+    'access token cũ của cùng thiết bị vẫn dùng được trong lúc xoay vòng',
+  );
   assert.equal((await api().post('/api/auth/refresh').send({ refreshToken: won.refreshToken })).status, 200);
 });
 
@@ -275,7 +447,9 @@ test('Đăng xuất bằng token cũ (chưa có sid) không đăng xuất thiế
   const { User } = require('../src/models');
   const { signAccessToken } = require('../src/services/session.service');
   const legacy = signAccessToken(await User.findOne({ email: 'cu@test.vn' }));
-  const r = await api().post('/api/auth/logout').set('Authorization', `Bearer ${legacy}`)
+  const r = await api()
+    .post('/api/auth/logout')
+    .set('Authorization', `Bearer ${legacy}`)
     .send({ refreshToken: a.refreshToken });
   assert.equal(r.status, 204);
   assert.equal((await api().post('/api/auth/refresh').send({ refreshToken: a.refreshToken })).status, 401);
@@ -306,23 +480,41 @@ test('Đăng ký lại email chưa xác thực không đổi được mật kh�
   const { User } = require('../src/models');
   const bcrypt = require('bcryptjs');
   await User.create({ name: 'Cũ', email: 'old_user@corp.com', passwordHash: await bcrypt.hash('cu123456', 10) });
-  let r = await api().post('/api/auth/register').send({ name: 'Ke Gian', email: 'victim@test.vn', password: 'Matkhau1' });
+  let r = await api()
+    .post('/api/auth/register')
+    .send({ name: 'Ke Gian', email: 'victim@test.vn', password: 'Matkhau1' });
   await api().post('/api/auth/verify-otp').send({ otpToken: r.body.otpToken, code: r.body.devCode });
   await User.updateOne({ email: 'victim@test.vn' }, { emailVerified: false });
-  r = await api().post('/api/auth/register').send({ name: 'Ke Gian', email: 'victim@test.vn', password: 'Chiemquyen9' });
+  r = await api()
+    .post('/api/auth/register')
+    .send({ name: 'Ke Gian', email: 'victim@test.vn', password: 'Chiemquyen9' });
   assert.equal(r.status, 201);
-  assert.equal((await api().post('/api/auth/login').send({ email: 'victim@test.vn', password: 'Matkhau1' })).status, 200,
-    'mật khẩu cũ vẫn dùng được khi chưa nhập OTP');
-  assert.equal((await api().post('/api/auth/login').send({ email: 'victim@test.vn', password: 'Chiemquyen9' })).status, 401);
-  assert.equal((await api().post('/api/auth/login').send({ email: 'Old_User@corp.com', password: 'cu123456' })).status, 200);
+  assert.equal(
+    (await api().post('/api/auth/login').send({ email: 'victim@test.vn', password: 'Matkhau1' })).status,
+    200,
+    'mật khẩu cũ vẫn dùng được khi chưa nhập OTP',
+  );
+  assert.equal(
+    (await api().post('/api/auth/login').send({ email: 'victim@test.vn', password: 'Chiemquyen9' })).status,
+    401,
+  );
+  assert.equal(
+    (await api().post('/api/auth/login').send({ email: 'Old_User@corp.com', password: 'cu123456' })).status,
+    200,
+  );
 });
 
 test('Đoán OTP song song không vượt quá số lần cho phép', async () => {
   await signup(app, 'Song Song', 'race@test.vn', 'Matkhau1');
   const step = (await api().post('/api/auth/login').send({ email: 'race@test.vn', password: 'Matkhau1' })).body;
   const guesses = Array.from({ length: 12 }, (_, i) => String(100000 + i)).filter((c) => c !== step.devCode);
-  const rs = await Promise.all(guesses.map((code) => api().post('/api/auth/verify-otp').send({ otpToken: step.otpToken, code })));
+  const rs = await Promise.all(
+    guesses.map((code) => api().post('/api/auth/verify-otp').send({ otpToken: step.otpToken, code })),
+  );
   assert.ok(rs.filter((x) => x.body.error?.code === 'INVALID_CODE').length <= config.otp.maxAttempts - 1);
-  assert.equal((await api().post('/api/auth/verify-otp').send({ otpToken: step.otpToken, code: step.devCode })).status, 400,
-    'phiên OTP đã bị hủy sau khi hết lượt');
+  assert.equal(
+    (await api().post('/api/auth/verify-otp').send({ otpToken: step.otpToken, code: step.devCode })).status,
+    400,
+    'phiên OTP đã bị hủy sau khi hết lượt',
+  );
 });

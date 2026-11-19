@@ -13,7 +13,10 @@ const config = {
   jwtSecret: process.env.JWT_SECRET || (env === 'production' ? '' : 'dev-only-secret-change-me'),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1h',
   refreshDays: Number(process.env.REFRESH_TOKEN_DAYS) || 30,
-  corsOrigins: (process.env.CORS_ORIGINS || '*').split(',').map((s) => s.trim()).filter(Boolean),
+  corsOrigins: (process.env.CORS_ORIGINS || '*')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean),
   publicUrl: trimSlash(process.env.PUBLIC_URL),
   paymentRequestDays: Number(process.env.PAYMENT_REQUEST_DAYS) || 7,
   resetCodeMinutes: Number(process.env.RESET_CODE_MINUTES) || 15,

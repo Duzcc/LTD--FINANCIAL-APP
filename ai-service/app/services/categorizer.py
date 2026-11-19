@@ -27,8 +27,14 @@ class Categorizer:
     def global_proba(self, texts: list[str]) -> np.ndarray:
         return self.model.predict_proba(texts)
 
-    def predict(self, text: str, categories: list[Category], history: list[LabeledText] | None = None,
-                income: bool | None = None, top_k: int = 3) -> tuple[list[Prediction], dict]:
+    def predict(
+        self,
+        text: str,
+        categories: list[Category],
+        history: list[LabeledText] | None = None,
+        income: bool | None = None,
+        top_k: int = 3,
+    ) -> tuple[list[Prediction], dict]:
         allowed = [c for c in categories if income is None or c.income == income]
         if not allowed:
             return [], {"personal_weight": 0.0}

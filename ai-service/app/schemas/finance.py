@@ -34,8 +34,11 @@ class FinanceSnapshot(BaseModel):
                 t.date = t.date.astimezone(tz)
 
     def history(self) -> list[LabeledText]:
-        return [LabeledText(text=t.note[:500], categoryId=t.categoryId)
-                for t in self.transactions if t.note.strip() and t.categoryId][-2000:]
+        return [
+            LabeledText(text=t.note[:500], categoryId=t.categoryId)
+            for t in self.transactions
+            if t.note.strip() and t.categoryId
+        ][-2000:]
 
     def category_names(self) -> dict[str, str]:
         return {c.id: c.name for c in self.categories}

@@ -26,14 +26,10 @@ void main() {
     if (fontDir.isNotEmpty) {
       await tester.runAsync(() async {
         final loader = FontLoader('Roboto')
-          ..addFont(File('$fontDir/Roboto-Regular.ttf')
-              .readAsBytes()
-              .then((v) => ByteData.sublistView(v)));
+          ..addFont(File('$fontDir/Roboto-Regular.ttf').readAsBytes().then((v) => ByteData.sublistView(v)));
         await loader.load();
         final icons = FontLoader('MaterialIcons')
-          ..addFont(File('$fontDir/MaterialIcons-Regular.otf')
-              .readAsBytes()
-              .then((v) => ByteData.sublistView(v)));
+          ..addFont(File('$fontDir/MaterialIcons-Regular.otf').readAsBytes().then((v) => ByteData.sublistView(v)));
         await icons.load();
       });
     }
@@ -48,21 +44,11 @@ void main() {
     final p = FinanceProvider();
     final now = DateTime.now();
     p.preferences(name: 'Đức');
+    p.saveWallet(const MoneyWallet(id: 'cash', name: 'Tiền mặt', opening: 2500000));
     p.saveWallet(
-        const MoneyWallet(id: 'cash', name: 'Tiền mặt', opening: 2500000));
-    p.saveWallet(const MoneyWallet(
-        id: 'saving',
-        name: 'Mua MacBook',
-        opening: 3000000,
-        savings: true,
-        target: 25000000));
+        const MoneyWallet(id: 'saving', name: 'Mua MacBook', opening: 3000000, savings: true, target: 25000000));
     p.saveEntry(MoneyEntry(
-        id: 'salary',
-        kind: EntryKind.income,
-        amount: 12000000,
-        walletId: 'cash',
-        categoryId: 'salary',
-        date: now));
+        id: 'salary', kind: EntryKind.income, amount: 12000000, walletId: 'cash', categoryId: 'salary', date: now));
     p.saveEntry(MoneyEntry(
         id: 'food',
         kind: EntryKind.expense,
@@ -72,18 +58,10 @@ void main() {
         date: now,
         note: 'Bữa trưa cùng bạn bè'));
     p.saveEntry(MoneyEntry(
-        id: 'home',
-        kind: EntryKind.expense,
-        amount: 3200000,
-        walletId: 'cash',
-        categoryId: 'house',
-        date: now));
-    p.saveBudget(MoneyBudget(
-        id: 'food', categoryId: 'food', month: now, amount: 2000000));
-    p.saveBudget(MoneyBudget(
-        id: 'home', categoryId: 'house', month: now, amount: 4000000));
-    p.saveBudget(MoneyBudget(
-        id: 'all', categoryId: null, month: now, amount: 6000000));
+        id: 'home', kind: EntryKind.expense, amount: 3200000, walletId: 'cash', categoryId: 'house', date: now));
+    p.saveBudget(MoneyBudget(id: 'food', categoryId: 'food', month: now, amount: 2000000));
+    p.saveBudget(MoneyBudget(id: 'home', categoryId: 'house', month: now, amount: 4000000));
+    p.saveBudget(MoneyBudget(id: 'all', categoryId: null, month: now, amount: 6000000));
     p.savePerson(const MoneyPerson('an', 'Anh Tuấn', 'Bạn bè & Đồng nghiệp'));
     p.saveEntry(MoneyEntry(
         id: 'lend',
@@ -94,12 +72,7 @@ void main() {
         date: now.subtract(const Duration(days: 20)),
         dueDate: now.add(const Duration(days: 3))));
     p.saveEntry(MoneyEntry(
-        id: 'collect',
-        kind: EntryKind.collect,
-        amount: 500000,
-        walletId: 'cash',
-        personId: 'an',
-        date: now));
+        id: 'collect', kind: EntryKind.collect, amount: 500000, walletId: 'cash', personId: 'an', date: now));
     p.saveEntry(MoneyEntry(
         id: 'last',
         kind: EntryKind.expense,
@@ -111,29 +84,26 @@ void main() {
     Future<void> capture(String name) async {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
-      final boundary = tester.renderObject<RenderRepaintBoundary>(
-          find.byKey(const ValueKey('capture')));
+      final boundary = tester.renderObject<RenderRepaintBoundary>(find.byKey(const ValueKey('capture')));
       await tester.runAsync(() async {
         final image = await boundary.toImage(pixelRatio: 2);
         final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
         await Directory('build/previews').create(recursive: true);
-        await File('build/previews/$name.png')
-            .writeAsBytes(bytes!.buffer.asUint8List());
+        await File('build/previews/$name.png').writeAsBytes(bytes!.buffer.asUint8List());
         image.dispose();
       });
     }
 
     final lock = AppLock();
     Widget wrap(Widget child) => MultiProvider(
-        providers: [
-          ChangeNotifierProvider.value(value: p),
-          ChangeNotifierProvider.value(value: lock),
-        ],
-        child: MaterialApp(
-            theme: AppTheme.lightTheme,
-            debugShowCheckedModeBanner: false,
-            home:
-                RepaintBoundary(key: const ValueKey('capture'), child: child)));
+            providers: [
+              ChangeNotifierProvider.value(value: p),
+              ChangeNotifierProvider.value(value: lock),
+            ],
+            child: MaterialApp(
+                theme: AppTheme.lightTheme,
+                debugShowCheckedModeBanner: false,
+                home: RepaintBoundary(key: const ValueKey('capture'), child: child)));
     await tester.pumpWidget(wrap(const AuthScreen()));
     await capture('auth');
     await tester.pumpWidget(wrap(const MainScreen()));

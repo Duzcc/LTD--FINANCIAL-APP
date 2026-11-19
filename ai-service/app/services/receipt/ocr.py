@@ -76,7 +76,8 @@ class AppleVisionOcr:
         img.save(buf, "JPEG", quality=92)
         payload, (W, H) = buf.getvalue(), img.size
         handler = Vision.VNImageRequestHandler.alloc().initWithData_options_(
-            NSData.dataWithBytes_length_(payload, len(payload)), None)
+            NSData.dataWithBytes_length_(payload, len(payload)), None
+        )
         req = Vision.VNRecognizeTextRequest.alloc().init()
         req.setRecognitionLevel_(Vision.VNRequestTextRecognitionLevelAccurate)
         req.setUsesLanguageCorrection_(True)
@@ -96,8 +97,17 @@ class AppleVisionOcr:
             bb = obs.boundingBox()
             tl, tr = obs.topLeft(), obs.topRight()
             angle = math.atan2(-(tr.y - tl.y) * H, (tr.x - tl.x) * W)
-            boxes.append(OcrBox(str(c.string()), bb.origin.x * W, (1 - bb.origin.y - bb.size.height) * H,
-                                bb.size.width * W, bb.size.height * H, float(c.confidence()), angle))
+            boxes.append(
+                OcrBox(
+                    str(c.string()),
+                    bb.origin.x * W,
+                    (1 - bb.origin.y - bb.size.height) * H,
+                    bb.size.width * W,
+                    bb.size.height * H,
+                    float(c.confidence()),
+                    angle,
+                )
+            )
         return group_rows(boxes)
 
 
@@ -132,8 +142,9 @@ class TesseractOcr:
         import pytesseract  # type: ignore
 
         img, _ = self.preprocess(data)
-        d = pytesseract.image_to_data(img, lang=self._langs(), config="--psm 4 --oem 1",
-                                      output_type=pytesseract.Output.DICT)
+        d = pytesseract.image_to_data(
+            img, lang=self._langs(), config="--psm 4 --oem 1", output_type=pytesseract.Output.DICT
+        )
         groups: dict[tuple[int, int, int], list[int]] = {}
         for i, word in enumerate(d["text"]):
             if word.strip() and float(d["conf"][i]) > 10:

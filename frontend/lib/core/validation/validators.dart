@@ -1,7 +1,6 @@
 library;
 
-final _emailPattern =
-    RegExp(r'^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$');
+final _emailPattern = RegExp(r'^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$');
 final _namePattern = RegExp(r"^\p{L}[\p{L} .'-]*$", unicode: true);
 final _letter = RegExp(r'\p{L}', unicode: true);
 final _digit = RegExp(r'\d');
@@ -21,10 +20,7 @@ String? validateEmail(String? v) {
   final e = (v ?? '').trim().toLowerCase();
   if (e.isEmpty) return 'Vui lòng nhập email';
   if (e.length > 254 || e.split('@').first.length > 64) return 'Email quá dài';
-  if (!_emailPattern.hasMatch(e) ||
-      e.contains('..') ||
-      e.startsWith('.') ||
-      e.contains('.@')) {
+  if (!_emailPattern.hasMatch(e) || e.contains('..') || e.startsWith('.') || e.contains('.@')) {
     return 'Email không hợp lệ';
   }
   return null;
@@ -37,8 +33,7 @@ String? validateLoginEmail(String? v) {
   return null;
 }
 
-String? validateLoginPassword(String? v) =>
-    (v ?? '').isEmpty ? 'Vui lòng nhập mật khẩu' : null;
+String? validateLoginPassword(String? v) => (v ?? '').isEmpty ? 'Vui lòng nhập mật khẩu' : null;
 
 String? validatePassword(String? v, {String? email}) {
   final p = v ?? '';
@@ -57,8 +52,7 @@ String? validatePassword(String? v, {String? email}) {
 
 const passwordRules = 'Ít nhất 8 ký tự, gồm cả chữ cái và chữ số';
 
-String? validateOtp(String? v) =>
-    _otpPattern.hasMatch((v ?? '').trim()) ? null : 'Mã OTP gồm đúng 6 chữ số';
+String? validateOtp(String? v) => _otpPattern.hasMatch((v ?? '').trim()) ? null : 'Mã OTP gồm đúng 6 chữ số';
 
 String? validateBankAccount(String? v) {
   final a = (v ?? '').replaceAll(RegExp(r'\s+'), '');

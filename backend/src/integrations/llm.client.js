@@ -36,7 +36,11 @@ async function askAnthropic(system, messages) {
     { 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
     { model, max_tokens: maxTokens, system, messages },
   );
-  return (data.content || []).filter((c) => c.type === 'text').map((c) => c.text).join('\n').trim();
+  return (data.content || [])
+    .filter((c) => c.type === 'text')
+    .map((c) => c.text)
+    .join('\n')
+    .trim();
 }
 
 async function askOpenAi(system, messages) {

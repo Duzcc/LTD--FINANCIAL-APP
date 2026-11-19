@@ -10,7 +10,10 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
   });
   process.env.MONGODB_URI = mongod.getUri('finance_app');
   console.log(`MongoDB nhúng: ${process.env.MONGODB_URI} (dữ liệu: ${dbPath})`);
-  const stop = async () => { await mongod.stop(); process.exit(0); };
+  const stop = async () => {
+    await mongod.stop();
+    process.exit(0);
+  };
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
   require('./server');

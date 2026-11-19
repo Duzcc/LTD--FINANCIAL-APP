@@ -11,19 +11,39 @@ const app = require('../src/app');
 const config = require('../src/config');
 const sepayService = require('../src/services/sepay.service');
 
-let token; let apiKey;
+let token;
+let apiKey;
 const auth = (r) => r.set('Authorization', `Bearer ${token}`);
-const hook = (body, key = apiKey) => request(app).post('/api/bank/sepay/webhook')
-  .set('Authorization', `Apikey ${key}`).send(body);
+const hook = (body, key = apiKey) =>
+  request(app).post('/api/bank/sepay/webhook').set('Authorization', `Apikey ${key}`).send(body);
 let seq = 1000;
 const sepay_payload = (code) => ({
-  id: 9001, gateway: 'MBBank', transactionDate: '2026-11-02 15:00:00', accountNumber: '0123456789', code: null,
-  content: code, transferType: 'in', description: '', transferAmount: 75000, accumulated: 0, referenceCode: 'FT9',
+  id: 9001,
+  gateway: 'MBBank',
+  transactionDate: '2026-11-02 15:00:00',
+  accountNumber: '0123456789',
+  code: null,
+  content: code,
+  transferType: 'in',
+  description: '',
+  transferAmount: 75000,
+  accumulated: 0,
+  referenceCode: 'FT9',
 });
 const sepay = (extra) => ({
-  id: (seq += 1), gateway: 'MBBank', transactionDate: '2026-11-02 10:15:00', accountNumber: '0123456789',
-  subAccount: null, code: null, content: '', transferType: 'in', description: '', transferAmount: 0,
-  accumulated: 0, referenceCode: 'FT1', ...extra,
+  id: (seq += 1),
+  gateway: 'MBBank',
+  transactionDate: '2026-11-02 10:15:00',
+  accountNumber: '0123456789',
+  subAccount: null,
+  code: null,
+  content: '',
+  transferType: 'in',
+  description: '',
+  transferAmount: 0,
+  accumulated: 0,
+  referenceCode: 'FT1',
+  ...extra,
 });
 
 before(async () => {
@@ -35,12 +55,16 @@ after(async () => {
 });
 
 test('Liên kết ngân hàng với ví: ràng buộc dữ liệu', async () => {
-  const put = (body) => auth(request(app).put('/api/wallets/mb')).send({ name: 'MB', opening: 0, currency: 'VND', ...body });
+  const put = (body) =>
+    auth(request(app).put('/api/wallets/mb')).send({ name: 'MB', opening: 0, currency: 'VND', ...body });
   assert.equal((await put({ bankBin: '000000', bankAccount: '0123456789', bankHolder: 'NGUYEN AN' })).status, 400);
   assert.equal((await put({ bankBin: '970422', bankAccount: '12', bankHolder: 'NGUYEN AN' })).status, 400);
   assert.equal((await put({ bankBin: '970422', bankAccount: '0123456789', bankHolder: 'Nguyễn An' })).status, 400);
   assert.equal((await put({ bankBin: '970422', bankAccount: '0123456789' })).status, 400, 'thiếu tên chủ tài khoản');
-  assert.equal((await put({ currency: 'USD', bankBin: '970422', bankAccount: '0123456789', bankHolder: 'NGUYEN AN' })).status, 400);
+  assert.equal(
+    (await put({ currency: 'USD', bankBin: '970422', bankAccount: '0123456789', bankHolder: 'NGUYEN AN' })).status,
+    400,
+  );
   const r = await put({ bankBin: '970422', bankAccount: '0123 456 789', bankHolder: ' nguyen  an ' });
   assert.equal(r.status, 201);
   assert.equal(r.body.bankAccount, '0123456789');
@@ -54,7 +78,11 @@ test('Tạo yêu cầu nhận tiền: ràng buộc', async () => {
   assert.equal((await post({ walletId: 'cash', amount: 1000 })).status, 400, 'ví chưa liên kết ngân hàng');
   assert.equal((await post({ walletId: 'mb', amount: -5 })).status, 400);
   assert.equal((await post({ walletId: 'mb', amount: 10.5 })).status, 400);
-  assert.equal((await post({ walletId: 'mb', kind: 'collect', personId: 'self', amount: 1000 })).status, 400, 'không có nợ');
+  assert.equal(
+    (await post({ walletId: 'mb', kind: 'collect', personId: 'self', amount: 1000 })).status,
+    400,
+    'không có nợ',
+  );
   const r = await post({ walletId: 'mb', note: 'Bán đồ cũ' });
   assert.equal(r.status, 201);
   assert.match(r.body.code, /^LTD[A-Z2-9]{6}$/);
@@ -72,11 +100,27 @@ test('Webhook SePay: xác thực, chống trùng, khớp mã → ghi giao dịch
   assert.equal(cfg.body.connected, true);
   assert.equal(JSON.stringify(cfg.body).includes(apiKey), false, 'không trả lại khóa');
 
-  const req1 = (await auth(request(app).post('/api/bank/requests')).send({ walletId: 'mb', amount: 150000, note: 'Tiền điện' })).body;
-  assert.equal((await hook(sepay({ transferType: 'out', transferAmount: 5000, content: req1.code }))).body.result, 'recorded', 'tiền ra của tài khoản đã liên kết');
-  assert.equal((await hook(sepay({ transferAmount: 5000, content: 'chuyen tien' }))).body.result, 'recorded', 'tiền vào không có mã');
-  assert.equal((await hook(sepay({ accountNumber: '999999', transferAmount: 150000, content: req1.code }))).body.result, 'unmatched');
-  assert.equal((await hook(sepay({ accountNumber: '999999', transferType: 'out', transferAmount: 1000 }))).body.result, 'ignored');
+  const req1 = (
+    await auth(request(app).post('/api/bank/requests')).send({ walletId: 'mb', amount: 150000, note: 'Tiền điện' })
+  ).body;
+  assert.equal(
+    (await hook(sepay({ transferType: 'out', transferAmount: 5000, content: req1.code }))).body.result,
+    'recorded',
+    'tiền ra của tài khoản đã liên kết',
+  );
+  assert.equal(
+    (await hook(sepay({ transferAmount: 5000, content: 'chuyen tien' }))).body.result,
+    'recorded',
+    'tiền vào không có mã',
+  );
+  assert.equal(
+    (await hook(sepay({ accountNumber: '999999', transferAmount: 150000, content: req1.code }))).body.result,
+    'unmatched',
+  );
+  assert.equal(
+    (await hook(sepay({ accountNumber: '999999', transferType: 'out', transferAmount: 1000 }))).body.result,
+    'ignored',
+  );
   const spaced = `MBVCB.123 ${req1.code.slice(0, 4)} ${req1.code.slice(4)} tien dien`;
   const payload = sepay({ transferAmount: 150000, content: spaced, description: `NGUYEN VAN B ${spaced}` });
   const r = await hook(payload);
@@ -90,18 +134,34 @@ test('Webhook SePay: xác thực, chống trùng, khớp mã → ghi giao dịch
   assert.equal(paid.status, 'paid');
   assert.equal(paid.paidAmount, 150000);
   const tx = (await auth(request(app).get('/api/transactions?walletId=mb'))).body.items;
-  assert.deepEqual(tx.map((e) => [e.kind, e.amount]).sort(), [['expense', 5000], ['income', 150000], ['income', 5000]]);
+  assert.deepEqual(tx.map((e) => [e.kind, e.amount]).sort(), [
+    ['expense', 5000],
+    ['income', 150000],
+    ['income', 5000],
+  ]);
   assert.equal(tx.find((e) => e.id === r.body.entryId).categoryId, 'other_income');
   assert.match(tx.find((e) => e.kind === 'expense').note, /^Chuyển khoản đi/);
   assert.equal((await auth(request(app).get('/api/wallets/mb'))).body.balance, 150000);
-  assert.equal((await hook(sepay({ transferAmount: 150000, content: req1.code }))).body.result, 'recorded', 'mã đã thanh toán: vẫn là tiền vào tài khoản');
+  assert.equal(
+    (await hook(sepay({ transferAmount: 150000, content: req1.code }))).body.result,
+    'recorded',
+    'mã đã thanh toán: vẫn là tiền vào tài khoản',
+  );
   assert.equal((await auth(request(app).delete(`/api/bank/requests/${req1.id}`))).status, 400);
 });
 
 test('Thu nợ qua VietQR; trả dư thì ghi thành thu nhập; hủy yêu cầu', async () => {
   await auth(request(app).post('/api/people')).send({ id: 'lan', name: 'Lan' });
-  await auth(request(app).post('/api/transactions')).send({ id: 'l1', kind: 'lend', amount: 200000, walletId: 'mb', personId: 'lan', date: '2026-10-01' });
-  const post = (body) => auth(request(app).post('/api/bank/requests')).send({ walletId: 'mb', kind: 'collect', personId: 'lan', ...body });
+  await auth(request(app).post('/api/transactions')).send({
+    id: 'l1',
+    kind: 'lend',
+    amount: 200000,
+    walletId: 'mb',
+    personId: 'lan',
+    date: '2026-10-01',
+  });
+  const post = (body) =>
+    auth(request(app).post('/api/bank/requests')).send({ walletId: 'mb', kind: 'collect', personId: 'lan', ...body });
   assert.equal((await post({ amount: 300000 })).status, 400, 'vượt số còn nợ');
   assert.equal((await post({})).status, 400, 'thu nợ phải có số tiền');
   const req2 = (await post({ amount: 200000 })).body;
@@ -109,9 +169,23 @@ test('Thu nợ qua VietQR; trả dư thì ghi thành thu nhập; hủy yêu cầ
   let tx = (await auth(request(app).get('/api/transactions?personId=lan'))).body.items;
   assert.ok(tx.some((e) => e.kind === 'collect' && e.amount === 200000));
 
-  await auth(request(app).post('/api/transactions')).send({ id: 'l2', kind: 'lend', amount: 50000, walletId: 'mb', personId: 'lan', date: '2026-10-02' });
+  await auth(request(app).post('/api/transactions')).send({
+    id: 'l2',
+    kind: 'lend',
+    amount: 50000,
+    walletId: 'mb',
+    personId: 'lan',
+    date: '2026-10-02',
+  });
   const req3 = (await post({ amount: 50000 })).body;
-  await auth(request(app).post('/api/transactions')).send({ id: 'c2', kind: 'collect', amount: 50000, walletId: 'mb', personId: 'lan', date: '2026-10-03' });
+  await auth(request(app).post('/api/transactions')).send({
+    id: 'c2',
+    kind: 'collect',
+    amount: 50000,
+    walletId: 'mb',
+    personId: 'lan',
+    date: '2026-10-03',
+  });
   const r = await hook(sepay({ transferAmount: 50000, content: req3.code }));
   assert.equal(r.body.result, 'matched');
   tx = (await auth(request(app).get('/api/transactions?personId=lan'))).body.items;
@@ -129,8 +203,23 @@ test('Thu nợ qua VietQR; trả dư thì ghi thành thu nhập; hủy yêu cầ
 test('Giao dịch ngân hàng trùng khoản đã ghi tay thì gộp, không ghi hai lần', async () => {
   apiKey = (await auth(request(app).post('/api/bank/sepay/key'))).body.apiKey;
   await auth(request(app).post('/api/wallets')).send({ id: 'tm', name: 'Ví tay', opening: 100000 });
-  await auth(request(app).post('/api/transactions')).send({ id: 'hand', kind: 'expense', amount: 42000, walletId: 'mb', categoryId: 'food', date: '2026-11-02T09:00:00+07:00', note: 'Ăn trưa' });
-  await auth(request(app).post('/api/transactions')).send({ id: 'move', kind: 'transfer', amount: 64000, walletId: 'tm', destinationId: 'mb', date: '2026-11-02T08:00:00+07:00' });
+  await auth(request(app).post('/api/transactions')).send({
+    id: 'hand',
+    kind: 'expense',
+    amount: 42000,
+    walletId: 'mb',
+    categoryId: 'food',
+    date: '2026-11-02T09:00:00+07:00',
+    note: 'Ăn trưa',
+  });
+  await auth(request(app).post('/api/transactions')).send({
+    id: 'move',
+    kind: 'transfer',
+    amount: 64000,
+    walletId: 'tm',
+    destinationId: 'mb',
+    date: '2026-11-02T08:00:00+07:00',
+  });
   const before = (await auth(request(app).get('/api/transactions?walletId=mb'))).body.items.length;
   let r = await hook(sepay({ transferType: 'out', transferAmount: 42000, content: 'QR thanh toan' }));
   assert.deepEqual(r.body, { success: true, result: 'linked', entryId: 'hand' });
@@ -151,22 +240,54 @@ test('Đối soát qua SePay User API (không cần webhook): khớp mã, chốn
   const realFetch = global.fetch;
   global.fetch = async (url, opts) => {
     calls.push({ url: String(url), auth: opts.headers.Authorization });
-    return new Response(JSON.stringify({ status: 200, error: null, messages: { success: true }, transactions: rows }), { status: 200 });
+    return new Response(JSON.stringify({ status: 200, error: null, messages: { success: true }, transactions: rows }), {
+      status: 200,
+    });
   };
   config.sepay.apiToken = 'token-thu';
   config.sepay.minGapMs = 0;
   sepayService.resetCursor();
   try {
-    await auth(request(app).post('/api/bank/requests')).send({ walletId: 'mb', amount: 1 })
+    await auth(request(app).post('/api/bank/requests'))
+      .send({ walletId: 'mb', amount: 1 })
       .then((r) => auth(request(app).delete(`/api/bank/requests/${r.body.id}`)));
     await sepayService.syncFromApi();
     const pendingBefore = calls.length;
 
-    const req5 = (await auth(request(app).post('/api/bank/requests')).send({ walletId: 'mb', amount: 75000, note: 'Ve xem phim' })).body;
+    const req5 = (
+      await auth(request(app).post('/api/bank/requests')).send({ walletId: 'mb', amount: 75000, note: 'Ve xem phim' })
+    ).body;
     rows = [
-      { id: '9001', transaction_date: '2026-11-02 15:00:00', account_number: '0123456789', amount_in: '75000.00', amount_out: '0.00', code: null, transaction_content: `MBVCB ${req5.code} VE XEM PHIM`, bank_brand_name: 'MBBank' },
-      { id: '9002', transaction_date: '2026-11-02 15:01:00', account_number: '0123456789', amount_in: '0.00', amount_out: '20000.00', code: null, transaction_content: 'thanh toan', bank_brand_name: 'MBBank' },
-      { id: '9003', transaction_date: '2026-11-02 15:02:00', account_number: '0123456789', amount_in: '30000.00', amount_out: '0.00', code: null, transaction_content: 'chuyen tien khong ma', bank_brand_name: 'MBBank' },
+      {
+        id: '9001',
+        transaction_date: '2026-11-02 15:00:00',
+        account_number: '0123456789',
+        amount_in: '75000.00',
+        amount_out: '0.00',
+        code: null,
+        transaction_content: `MBVCB ${req5.code} VE XEM PHIM`,
+        bank_brand_name: 'MBBank',
+      },
+      {
+        id: '9002',
+        transaction_date: '2026-11-02 15:01:00',
+        account_number: '0123456789',
+        amount_in: '0.00',
+        amount_out: '20000.00',
+        code: null,
+        transaction_content: 'thanh toan',
+        bank_brand_name: 'MBBank',
+      },
+      {
+        id: '9003',
+        transaction_date: '2026-11-02 15:02:00',
+        account_number: '0123456789',
+        amount_in: '30000.00',
+        amount_out: '0.00',
+        code: null,
+        transaction_content: 'chuyen tien khong ma',
+        bank_brand_name: 'MBBank',
+      },
     ];
     const r = await auth(request(app).get(`/api/bank/requests/${req5.id}`));
     assert.equal(r.body.status, 'paid');
@@ -200,20 +321,54 @@ test('Đối soát định kỳ: chỉ chủ tài khoản SePay được ghi gia
   await PaymentRequest.updateMany({ status: 'pending' }, { status: 'cancelled' });
   try {
     rows = [
-      { id: '9101', transaction_date: '2026-11-03 09:00:00', account_number: '0123456789', amount_in: '30000.00', amount_out: '0.00', code: null, transaction_content: 'TRAN VAN A chuyen tien' },
-      { id: '9102', transaction_date: '2026-11-03 09:05:00', account_number: '0123456789', amount_in: '0.00', amount_out: '12000.00', code: null, transaction_content: 'thanh toan QR' },
-      { id: '9103', transaction_date: '2026-11-03 09:06:00', account_number: '5555555555', amount_in: '9000.00', amount_out: '0.00', code: null, transaction_content: 'tai khoan khac' },
+      {
+        id: '9101',
+        transaction_date: '2026-11-03 09:00:00',
+        account_number: '0123456789',
+        amount_in: '30000.00',
+        amount_out: '0.00',
+        code: null,
+        transaction_content: 'TRAN VAN A chuyen tien',
+      },
+      {
+        id: '9102',
+        transaction_date: '2026-11-03 09:05:00',
+        account_number: '0123456789',
+        amount_in: '0.00',
+        amount_out: '12000.00',
+        code: null,
+        transaction_content: 'thanh toan QR',
+      },
+      {
+        id: '9103',
+        transaction_date: '2026-11-03 09:06:00',
+        account_number: '5555555555',
+        amount_in: '9000.00',
+        amount_out: '0.00',
+        code: null,
+        transaction_content: 'tai khoan khac',
+      },
     ];
     sepayService.resetCursor();
-    assert.deepEqual(await sepayService.syncFromApi(), { checked: 0, matched: 0 }, 'chưa chỉ định chủ tài khoản thì không đọc');
+    assert.deepEqual(
+      await sepayService.syncFromApi(),
+      { checked: 0, matched: 0 },
+      'chưa chỉ định chủ tài khoản thì không đọc',
+    );
     config.sepay.ownerEmail = 'bank@test.vn';
     assert.deepEqual(await sepayService.syncFromApi(), { checked: 3, matched: 2 });
     const tx = (await auth(request(app).get('/api/transactions?walletId=mb'))).body.items;
-    assert.ok(tx.some((e) => e.id === 'bank_9101' && e.kind === 'income' && e.amount === 30000 && /TRAN VAN A/.test(e.note)));
+    assert.ok(
+      tx.some((e) => e.id === 'bank_9101' && e.kind === 'income' && e.amount === 30000 && /TRAN VAN A/.test(e.note)),
+    );
     assert.ok(tx.some((e) => e.id === 'bank_9102' && e.kind === 'expense' && e.amount === 12000));
     sepayService.resetCursor();
     assert.deepEqual(await sepayService.syncFromApi(), { checked: 3, matched: 0 });
-    assert.equal((await auth(request(app).get('/api/transactions?walletId=mb'))).body.items.length, tx.length, 'quét lại không ghi trùng');
+    assert.equal(
+      (await auth(request(app).get('/api/transactions?walletId=mb'))).body.items.length,
+      tx.length,
+      'quét lại không ghi trùng',
+    );
   } finally {
     global.fetch = realFetch;
     config.sepay.apiToken = '';
@@ -224,7 +379,9 @@ test('Đối soát định kỳ: chỉ chủ tài khoản SePay được ghi gia
 
 test('Chuyển thiếu: ghi đúng số tiền nhận, yêu cầu chỉ xong khi đủ; mã giả "LTD…" trong nội dung không che mã thật', async () => {
   apiKey = (await auth(request(app).post('/api/bank/sepay/key'))).body.apiKey;
-  const req6 = (await auth(request(app).post('/api/bank/requests')).send({ walletId: 'mb', amount: 100000, note: 'Tien hoc' })).body;
+  const req6 = (
+    await auth(request(app).post('/api/bank/requests')).send({ walletId: 'mb', amount: 100000, note: 'Tien hoc' })
+  ).body;
   let r = await hook(sepay({ transferAmount: 40000, content: `CONG TY ABC LTD CHUYEN TIEN ${req6.code}` }));
   assert.equal(r.body.result, 'matched');
   let st = (await auth(request(app).get(`/api/bank/requests/${req6.id}`))).body;

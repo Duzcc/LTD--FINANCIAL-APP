@@ -94,9 +94,8 @@ mixin LedgerRules on LedgerQueries {
     final left = debt(borrowed: repay, personId: value.personId, unit: source.currency, excludeId: value.id);
     if (value.amount <= left + 1e-9) return;
     if (left <= 0) {
-      throw ArgumentError(repay
-          ? 'Bạn không còn khoản vay nào với đối tượng này.'
-          : 'Đối tượng này không còn khoản nợ cần thu.');
+      throw ArgumentError(
+          repay ? 'Bạn không còn khoản vay nào với đối tượng này.' : 'Đối tượng này không còn khoản nợ cần thu.');
     }
     throw ArgumentError(repay ? 'Số tiền trả nợ vượt số còn phải trả.' : 'Số tiền thu nợ vượt số còn phải thu.');
   }

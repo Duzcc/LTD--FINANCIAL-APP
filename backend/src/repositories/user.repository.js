@@ -1,8 +1,29 @@
 const {
-  User, Wallet, Category, Person, Transaction, Budget, Recurring, RefreshToken, OtpChallenge, PaymentRequest, BankEvent,
+  User,
+  Wallet,
+  Category,
+  Person,
+  Transaction,
+  Budget,
+  Recurring,
+  RefreshToken,
+  OtpChallenge,
+  PaymentRequest,
+  BankEvent,
 } = require('../models');
 
-const OWNED_MODELS = [Wallet, Category, Person, Transaction, Budget, Recurring, RefreshToken, OtpChallenge, PaymentRequest, BankEvent];
+const OWNED_MODELS = [
+  Wallet,
+  Category,
+  Person,
+  Transaction,
+  Budget,
+  Recurring,
+  RefreshToken,
+  OtpChallenge,
+  PaymentRequest,
+  BankEvent,
+];
 
 const findById = (id) => User.findById(id);
 const findByEmail = (email) => User.findOne({ email });

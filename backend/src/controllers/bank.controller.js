@@ -16,5 +16,6 @@ module.exports = {
   getRequest: async (req, res) => res.json(await bank.getRequest(req.user, req.params.id)),
   createRequest: async (req, res) => res.status(201).json(await bank.createRequest(req.user, req.body)),
   cancelRequest: async (req, res) => res.json(await bank.cancelRequest(req.user, req.params.id)),
-  webhook: async (req, res) => res.json({ success: true, ...(await bank.handleWebhook(req.headers.authorization, req.body)) }),
+  webhook: async (req, res) =>
+    res.json({ success: true, ...(await bank.handleWebhook(req.headers.authorization, req.body)) }),
 };

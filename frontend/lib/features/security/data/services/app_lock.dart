@@ -21,8 +21,7 @@ class AppLock extends ChangeNotifier {
 
   bool get enabled => _stored != null;
 
-  static String _hash(String salt, String pin) =>
-      sha256.convert(utf8.encode('$salt:$pin')).toString();
+  static String _hash(String salt, String pin) => sha256.convert(utf8.encode('$salt:$pin')).toString();
 
   static bool validPin(String pin) => RegExp(r'^\d{4,6}$').hasMatch(pin);
 

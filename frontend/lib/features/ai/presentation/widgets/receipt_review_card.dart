@@ -92,15 +92,16 @@ class _ReceiptReviewCardState extends State<ReceiptReviewCard> {
       });
 
   Future<void> _pickDate() async {
-    final day = await showDatePicker(
-        context: context, initialDate: date, firstDate: DateTime(2000), lastDate: DateTime.now());
+    final day =
+        await showDatePicker(context: context, initialDate: date, firstDate: DateTime(2000), lastDate: DateTime.now());
     if (day == null || !mounted) return;
     final time = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(date));
     if (!mounted) return;
     setState(() => date = DateTime(day.year, day.month, day.day, time?.hour ?? date.hour, time?.minute ?? date.minute));
   }
 
-  List<ReceiptGroup> _groups() => fallback == null ? const [] : splitReceipt(items, parseAmount(total.text) ?? 0, fallback!);
+  List<ReceiptGroup> _groups() =>
+      fallback == null ? const [] : splitReceipt(items, parseAmount(total.text) ?? 0, fallback!);
 
   Future<void> _save(FinanceProvider p) async {
     final groups = _groups();
@@ -204,14 +205,12 @@ class _ReceiptReviewCardState extends State<ReceiptReviewCard> {
                     style: TextStyle(fontSize: 11, color: level.$1, fontWeight: FontWeight.w600))),
           ]),
           const SizedBox(height: 12),
-          SegmentedButton<EntryKind>(
-              segments: const [
-                ButtonSegment(value: EntryKind.expense, label: Text('Khoản chi'), icon: Icon(Icons.arrow_upward)),
-                ButtonSegment(value: EntryKind.income, label: Text('Khoản thu'), icon: Icon(Icons.arrow_downward)),
-              ],
-              selected: {kind},
-              showSelectedIcon: false,
-              onSelectionChanged: widget.saved ? null : (s) => _switchKind(s.first)),
+          SegmentedButton<EntryKind>(segments: const [
+            ButtonSegment(value: EntryKind.expense, label: Text('Khoản chi'), icon: Icon(Icons.arrow_upward)),
+            ButtonSegment(value: EntryKind.income, label: Text('Khoản thu'), icon: Icon(Icons.arrow_downward)),
+          ], selected: {
+            kind
+          }, showSelectedIcon: false, onSelectionChanged: widget.saved ? null : (s) => _switchKind(s.first)),
           const SizedBox(height: 12),
           if (items.isEmpty) ...[
             Text('Không tách được từng món, sẽ ghi thành một $entryWord.', style: const TextStyle(fontSize: 13)),

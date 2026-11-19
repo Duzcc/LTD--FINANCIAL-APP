@@ -56,8 +56,8 @@ void main() {
     expect(await p.checkServer(), isNull, reason: 'backend phải chạy');
     final signup = await p.register(name: 'Kiểm Thử', email: email, password: pass1);
     expect(p.signedIn, isFalse, reason: 'chưa nhập OTP thì chưa đăng nhập');
-    await expectLater(p.verifyOtp(signup, signup.devCode == '000000' ? '111111' : '000000'),
-        throwsA(isA<ApiException>()));
+    await expectLater(
+        p.verifyOtp(signup, signup.devCode == '000000' ? '111111' : '000000'), throwsA(isA<ApiException>()));
     await p.verifyOtp(signup, signup.devCode!);
     expect(p.signedIn, isTrue);
     expect(p.emailVerified, isTrue, reason: 'nhập đúng OTP là đã xác thực email');
@@ -78,7 +78,11 @@ void main() {
 
     p.saveWallet(const MoneyWallet(id: 'bank', name: 'Vietcombank', opening: 10000000));
     p.saveWallet(MoneyWallet(
-        id: 'save', name: 'Tiết kiệm Laptop', savings: true, target: 20000000, startDate: month,
+        id: 'save',
+        name: 'Tiết kiệm Laptop',
+        savings: true,
+        target: 20000000,
+        startDate: month,
         deadline: DateTime(now.year + 1, now.month)));
     expectRejected(() => p.saveWallet(const MoneyWallet(id: 'dup', name: 'vietcombank')), 'trùng tên ví');
     p.saveWallet(const MoneyWallet(id: 'usd', name: 'Ví USD', currency: 'USD', opening: 100));
@@ -96,8 +100,16 @@ void main() {
     void add(EntryKind k, double amount, String wallet,
             {int day = 0, String? cat, String? person, String? to, String note = '', DateTime? due}) =>
         p.saveEntry(MoneyEntry(
-            id: id(), kind: k, amount: amount, walletId: wallet, date: ago(day), categoryId: cat,
-            personId: person, destinationId: to, note: note, dueDate: due));
+            id: id(),
+            kind: k,
+            amount: amount,
+            walletId: wallet,
+            date: ago(day),
+            categoryId: cat,
+            personId: person,
+            destinationId: to,
+            note: note,
+            dueDate: due));
     add(EntryKind.income, 18000000, 'bank', day: 1, cat: 'salary', note: 'Lương tháng');
     add(EntryKind.expense, 45000, 'cash', cat: 'food', note: 'Phở bò');
     add(EntryKind.expense, 35000, 'cash', cat: 'coffee', note: 'Highlands');
@@ -124,8 +136,14 @@ void main() {
     expect(p.debt(borrowed: true, personId: 'lan'), 600000, reason: 'còn nợ Lan');
 
     final pho = p.entries.firstWhere((e) => e.note == 'Phở bò');
-    p.saveEntry(MoneyEntry(id: pho.id, kind: pho.kind, amount: 50000, walletId: 'cash', date: pho.date,
-        categoryId: 'food', note: 'Phở bò tái'));
+    p.saveEntry(MoneyEntry(
+        id: pho.id,
+        kind: pho.kind,
+        amount: 50000,
+        walletId: 'cash',
+        date: pho.date,
+        categoryId: 'food',
+        note: 'Phở bò tái'));
     expect(p.entries.firstWhere((e) => e.id == pho.id).amount, 50000);
 
     p.saveBudget(MoneyBudget(id: 'b_all', categoryId: null, month: month, amount: 8000000));
@@ -140,8 +158,14 @@ void main() {
     expect(p.copyBudgets(month, nextMonth), 0, reason: 'không sao chép trùng');
 
     p.saveRecurring(RecurringRule(
-        id: 'r_cf', kind: EntryKind.expense, amount: 29000, walletId: 'cash',
-        frequency: RepeatFrequency.daily, startDate: ago(3), categoryId: 'coffee', note: 'Cà phê sáng'));
+        id: 'r_cf',
+        kind: EntryKind.expense,
+        amount: 29000,
+        walletId: 'cash',
+        frequency: RepeatFrequency.daily,
+        startDate: ago(3),
+        categoryId: 'coffee',
+        note: 'Cà phê sáng'));
     final created = p.runRecurring();
     expect(created, greaterThanOrEqualTo(3), reason: 'tự ghi các lần đến hạn');
     expect(p.runRecurring(), 0, reason: 'không ghi trùng');
@@ -152,7 +176,8 @@ void main() {
     expect(earned, 18000000 + 20000, reason: 'thu = lương + lãi (chuyển tiền, gốc vay không tính)');
     expect(spent, greaterThan(5000000 + 50000 + 35000 + 10000));
     expect(p.total(month, income: false) + p.total(DateTime(month.year, month.month - 1), income: false),
-        greaterThanOrEqualTo(spent - 1e-6), reason: 'tổng theo tháng khớp tổng theo khoảng');
+        greaterThanOrEqualTo(spent - 1e-6),
+        reason: 'tổng theo tháng khớp tổng theo khoảng');
     expect(p.sumBetween(ago(400), now.add(const Duration(days: 1)), income: false, categoryId: 'coffee'),
         35000 + 29000 * created);
 
@@ -199,7 +224,9 @@ void main() {
     expect(parsed.personId, 'lan', reason: 'nhận ra đối tượng đã có');
     final insights = await ai.insights();
     expect(insights?.forecast, isNotNull);
-    final reply = await ai.chat([{'role': 'user', 'content': 'ai đang nợ mình?'}]);
+    final reply = await ai.chat([
+      {'role': 'user', 'content': 'ai đang nợ mình?'}
+    ]);
     expect(reply.reply, contains('Minh'));
     final (ids, _) = await ai.search('cà phê tháng này');
     expect(ids, isNotEmpty);
@@ -218,19 +245,41 @@ void main() {
   testWidgets('Giao diện: mở mọi màn hình không lỗi', (t) async {
     final p = FinanceProvider(storage: null, api: ApiClient());
     p.saveWallet(const MoneyWallet(id: 'bank', name: 'Vietcombank', opening: 10000000));
-    p.saveWallet(MoneyWallet(id: 'save', name: 'Tiết kiệm', savings: true, target: 20000000, deadline: DateTime(now.year + 1)));
+    p.saveWallet(
+        MoneyWallet(id: 'save', name: 'Tiết kiệm', savings: true, target: 20000000, deadline: DateTime(now.year + 1)));
     p.savePerson(const MoneyPerson('minh', 'Minh', 'Bạn bè & Đồng nghiệp'));
     var i = 0;
     for (var d = 0; d < 40; d++) {
-      p.saveEntry(MoneyEntry(id: 'u${i++}', kind: EntryKind.expense, amount: 30000.0 + d * 1000, walletId: 'cash',
-          date: ago(d), categoryId: d.isEven ? 'food' : 'transport', note: d.isEven ? 'Cơm trưa' : 'Grab'));
+      p.saveEntry(MoneyEntry(
+          id: 'u${i++}',
+          kind: EntryKind.expense,
+          amount: 30000.0 + d * 1000,
+          walletId: 'cash',
+          date: ago(d),
+          categoryId: d.isEven ? 'food' : 'transport',
+          note: d.isEven ? 'Cơm trưa' : 'Grab'));
     }
-    p.saveEntry(MoneyEntry(id: 'u${i++}', kind: EntryKind.income, amount: 15000000, walletId: 'bank', date: ago(2), categoryId: 'salary'));
-    p.saveEntry(MoneyEntry(id: 'u${i++}', kind: EntryKind.lend, amount: 500000, walletId: 'cash', date: ago(3), personId: 'minh', dueDate: ago(-2)));
+    p.saveEntry(MoneyEntry(
+        id: 'u${i++}', kind: EntryKind.income, amount: 15000000, walletId: 'bank', date: ago(2), categoryId: 'salary'));
+    p.saveEntry(MoneyEntry(
+        id: 'u${i++}',
+        kind: EntryKind.lend,
+        amount: 500000,
+        walletId: 'cash',
+        date: ago(3),
+        personId: 'minh',
+        dueDate: ago(-2)));
     p.saveBudget(MoneyBudget(id: 'b1', categoryId: null, month: month, amount: 6000000));
     p.saveBudget(MoneyBudget(id: 'b2', categoryId: 'food', month: month, amount: 1500000));
-    p.saveRecurring(RecurringRule(id: 'r1', kind: EntryKind.expense, amount: 5000000, walletId: 'bank',
-        frequency: RepeatFrequency.monthly, startDate: DateTime(now.year, now.month, 5), categoryId: 'house', note: 'Tiền nhà'));
+    p.saveRecurring(RecurringRule(
+        id: 'r1',
+        kind: EntryKind.expense,
+        amount: 5000000,
+        walletId: 'bank',
+        frequency: RepeatFrequency.monthly,
+        startDate: DateTime(now.year, now.month, 5),
+        categoryId: 'house',
+        note: 'Tiền nhà'));
 
     await t.pumpWidget(FinanceApp(finance: p, lock: AppLock(), returning: true));
     await t.pumpAndSettle();
@@ -239,7 +288,8 @@ void main() {
     var shot = 0;
     Future<void> visit(String name, Widget page) async {
       nav.push(MaterialPageRoute<void>(builder: (_) => page));
-      await t.pumpAndSettle(const Duration(milliseconds: 100), EnginePhase.sendSemanticsUpdate, const Duration(seconds: 15));
+      await t.pumpAndSettle(
+          const Duration(milliseconds: 100), EnginePhase.sendSemanticsUpdate, const Duration(seconds: 15));
       await Future<void>.delayed(const Duration(milliseconds: 300));
       await t.pump();
       expect(t.takeException(), isNull, reason: 'màn $name dựng lỗi');

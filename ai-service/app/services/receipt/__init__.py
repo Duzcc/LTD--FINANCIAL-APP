@@ -11,8 +11,20 @@ from .layout import OcrBox, group_rows
 from .ocr import available_engines, ocr_image
 from .parser import ReceiptItem, ReceiptResult, amounts, clean_ocr_numbers, parse_receipt_text
 
-__all__ = ["OcrBox", "group_rows", "available_engines", "ocr_image", "ReceiptItem", "ReceiptResult", "amounts",
-           "clean_ocr_numbers", "parse_receipt_text", "RECEIPT_PROMPT", "from_llm_json", "b64"]
+__all__ = [
+    "OcrBox",
+    "group_rows",
+    "available_engines",
+    "ocr_image",
+    "ReceiptItem",
+    "ReceiptResult",
+    "amounts",
+    "clean_ocr_numbers",
+    "parse_receipt_text",
+    "RECEIPT_PROMPT",
+    "from_llm_json",
+    "b64",
+]
 
 RECEIPT_PROMPT = (
     "Đây là ảnh hóa đơn, biên lai hoặc ảnh chụp giao dịch ngân hàng tại Việt Nam. Trả về DUY NHẤT một đối tượng JSON: "
@@ -55,14 +67,21 @@ def from_llm_json(text: str) -> ReceiptResult | None:
     except json.JSONDecodeError:
         return None
     kind = "income" if data.get("kind") == "income" else "expense"
-    r = ReceiptResult(merchant=data.get("merchant"), source="vision-llm", confidence=0.85, kind=kind,
-                      total=_number(data.get("total")), date=_date(data.get("date")))
+    r = ReceiptResult(
+        merchant=data.get("merchant"),
+        source="vision-llm",
+        confidence=0.85,
+        kind=kind,
+        total=_number(data.get("total")),
+        date=_date(data.get("date")),
+    )
     for it in data.get("items") or []:
         amount = _number(it.get("amount")) if isinstance(it, dict) else None
         if amount is None or it.get("name") is None:
             continue
-        r.items.append(ReceiptItem(str(it["name"])[:60], amount, _number(it.get("quantity")),
-                                   _number(it.get("unitPrice"))))
+        r.items.append(
+            ReceiptItem(str(it["name"])[:60], amount, _number(it.get("quantity")), _number(it.get("unitPrice")))
+        )
     return r
 
 

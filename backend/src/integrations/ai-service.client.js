@@ -29,8 +29,13 @@ async function request(path, { method = 'POST', body, form, requestId } = {}) {
     payload = JSON.stringify(body);
   }
   const res = await fetch(config.aiService.url + path, {
-    method, headers, body: payload, signal: AbortSignal.timeout(config.aiService.timeoutMs),
-  }).catch((e) => { throw new AiUnavailableError(undefined, e); });
+    method,
+    headers,
+    body: payload,
+    signal: AbortSignal.timeout(config.aiService.timeoutMs),
+  }).catch((e) => {
+    throw new AiUnavailableError(undefined, e);
+  });
   if (res.status >= 500 && res.status !== 501) throw new AiUnavailableError(undefined, new Error(`HTTP ${res.status}`));
   const data = await res.json().catch(() => null);
   if (!res.ok) throw clientError(res.status, data);

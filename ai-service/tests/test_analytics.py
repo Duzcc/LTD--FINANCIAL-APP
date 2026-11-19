@@ -7,6 +7,7 @@ from tests.conftest import CATEGORIES, NOW
 
 def test_holt_tracks_trend():
     import numpy as np
+
     y = np.arange(10, 30, dtype=float)
     fc, _ = forecaster.holt_forecast(y, 2)
     assert abs(fc[0] - 30) < 1.5 and abs(fc[1] - 31) < 2
@@ -14,6 +15,7 @@ def test_holt_tracks_trend():
 
 def test_holt_winters_seasonality():
     import numpy as np
+
     season = np.array([0, 5, 10, 5, 0, -5, -10, -5, 0, 5, 10, 5], dtype=float)
     y = np.concatenate([100 + season] * 3)
     fc, _ = forecaster.holt_winters_forecast(y, 12, 3)
@@ -34,9 +36,15 @@ def test_forecast_empty():
 
 
 def test_anomaly_large_and_duplicate(transactions):
-    big = Transaction(id="big", kind="expense", amount=2_500_000, date=NOW - timedelta(days=2), categoryId="food", note="Nhà hàng")
-    d1 = Transaction(id="d1", kind="expense", amount=123_000, date=NOW - timedelta(days=1), categoryId="self", note="áo")
-    d2 = Transaction(id="d2", kind="expense", amount=123_000, date=NOW - timedelta(days=1, minutes=-3), categoryId="self", note="áo")
+    big = Transaction(
+        id="big", kind="expense", amount=2_500_000, date=NOW - timedelta(days=2), categoryId="food", note="Nhà hàng"
+    )
+    d1 = Transaction(
+        id="d1", kind="expense", amount=123_000, date=NOW - timedelta(days=1), categoryId="self", note="áo"
+    )
+    d2 = Transaction(
+        id="d2", kind="expense", amount=123_000, date=NOW - timedelta(days=1, minutes=-3), categoryId="self", note="áo"
+    )
     found, _ = anomaly.detect(transactions + [big, d1, d2], NOW, categories={"food": "Ăn uống"})
     ids = {a.transaction_id: a for a in found}
     assert "big" in ids and "Ăn uống" in ids["big"].reasons[0]
@@ -45,8 +53,17 @@ def test_anomaly_large_and_duplicate(transactions):
 
 
 def test_category_spike(transactions):
-    extra = [Transaction(id=f"s{i}", kind="expense", amount=400_000, date=NOW - timedelta(days=i), categoryId="transport",
-                         note="taxi") for i in range(1, 8)]
+    extra = [
+        Transaction(
+            id=f"s{i}",
+            kind="expense",
+            amount=400_000,
+            date=NOW - timedelta(days=i),
+            categoryId="transport",
+            note="taxi",
+        )
+        for i in range(1, 8)
+    ]
     _, spikes = anomaly.detect(transactions + extra, NOW)
     assert spikes and spikes[0].category_id == "transport"
 
@@ -64,9 +81,11 @@ def test_budget_cuts_wants_when_over():
     txs = []
     for m in range(1, 7):
         d = NOW.replace(month=NOW.month - m, day=10)
-        txs += [Transaction(id=f"i{m}", kind="income", amount=10_000_000, date=d, categoryId="salary"),
-                Transaction(id=f"h{m}", kind="expense", amount=6_000_000, date=d, categoryId="house"),
-                Transaction(id=f"s{m}", kind="expense", amount=4_000_000, date=d, categoryId="self")]
+        txs += [
+            Transaction(id=f"i{m}", kind="income", amount=10_000_000, date=d, categoryId="salary"),
+            Transaction(id=f"h{m}", kind="expense", amount=6_000_000, date=d, categoryId="house"),
+            Transaction(id=f"s{m}", kind="expense", amount=4_000_000, date=d, categoryId="self"),
+        ]
     r = budget.recommend(txs, CATEGORIES, NOW, savings_rate=0.2)
     by = {s.category_id: s.amount for s in r["suggestions"]}
     assert by["house"] == 6_000_000 and by["self"] == 2_000_000
@@ -95,8 +114,10 @@ def test_receipt_text():
 
 
 def test_receipt_llm_json():
-    r = receipt.from_llm_json('Kết quả: {"merchant":"Highlands","date":"2026-10-01","total":59000,'
-                              '"items":[{"name":"Phin sữa","amount":59000}]}')
+    r = receipt.from_llm_json(
+        'Kết quả: {"merchant":"Highlands","date":"2026-10-01","total":59000,'
+        '"items":[{"name":"Phin sữa","amount":59000}]}'
+    )
     assert r.total == 59_000 and r.items[0].name == "Phin sữa"
 
 

@@ -8,12 +8,21 @@ def parse(text):
     return get_parser().parse(text, now=NOW, categories=CATEGORIES, people=PEOPLE, wallets=WALLETS)
 
 
-@pytest.mark.parametrize("text,kind", [
-    ("ăn phở 45k", "expense"), ("nhận lương 15tr", "income"), ("cho Minh mượn 500k", "lend"),
-    ("Linh cho mình mượn 200k", "borrow"), ("trả lại chị Hà 500k", "repay"), ("Hà trả nợ 300k", "collect"),
-    ("trả lãi vay ngân hàng 1tr", "interestExpense"), ("nhận lãi tiết kiệm 250k", "interestIncome"),
-    ("chuyển 2tr từ Vietcombank sang tiết kiệm", "transfer"), ("tiền lãi thẻ tín dụng 150k", "interestExpense"),
-])
+@pytest.mark.parametrize(
+    "text,kind",
+    [
+        ("ăn phở 45k", "expense"),
+        ("nhận lương 15tr", "income"),
+        ("cho Minh mượn 500k", "lend"),
+        ("Linh cho mình mượn 200k", "borrow"),
+        ("trả lại chị Hà 500k", "repay"),
+        ("Hà trả nợ 300k", "collect"),
+        ("trả lãi vay ngân hàng 1tr", "interestExpense"),
+        ("nhận lãi tiết kiệm 250k", "interestIncome"),
+        ("chuyển 2tr từ Vietcombank sang tiết kiệm", "transfer"),
+        ("tiền lãi thẻ tín dụng 150k", "interestExpense"),
+    ],
+)
 def test_kinds(text, kind):
     assert parse(text).kind == kind
 

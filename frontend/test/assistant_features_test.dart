@@ -49,10 +49,13 @@ void main() {
 
     test('Nhắc nhở hằng tháng tính lần tới và lưu cục bộ', () {
       final p = FinanceProvider();
-      final r = SpendingReminder(id: 'r', title: 'Tiền nhà', at: DateTime(2026, 1, 31, 9), repeat: ReminderRepeat.monthly);
+      final r =
+          SpendingReminder(id: 'r', title: 'Tiền nhà', at: DateTime(2026, 1, 31, 9), repeat: ReminderRepeat.monthly);
       expect(r.nextAfter(now), DateTime(2026, 10, 31, 9));
-      expect(SpendingReminder(id: 'x', title: 'a', at: DateTime(2026, 1, 31, 9), repeat: ReminderRepeat.monthly)
-          .nextAfter(DateTime(2026, 2, 5)), DateTime(2026, 2, 28, 9));
+      expect(
+          SpendingReminder(id: 'x', title: 'a', at: DateTime(2026, 1, 31, 9), repeat: ReminderRepeat.monthly)
+              .nextAfter(DateTime(2026, 2, 5)),
+          DateTime(2026, 2, 28, 9));
       p.saveReminder(r);
       expect(SpendingReminder.fromJson(p.reminders.single.toJson()).repeat, ReminderRepeat.monthly);
       expect(() => p.saveReminder(SpendingReminder(id: 'e', title: ' ', at: now)), throwsArgumentError);
@@ -64,7 +67,9 @@ void main() {
     test('Đọc số lượng và đơn giá từ dòng hàng', () {
       final r = parseReceipt('WINMART\nSữa tươi Vinamilk 1L\n3 32.000 96.000\nDầu gội Clear\n1 x 89.000 89.000\n'
           'Tổng cộng 185.000');
-      expect([for (final i in r.items) (i.name, i.quantity, i.unitPrice, i.amount)], [
+      expect([
+        for (final i in r.items) (i.name, i.quantity, i.unitPrice, i.amount)
+      ], [
         ('Sữa tươi Vinamilk 1L', 3.0, 32000.0, 96000.0),
         ('Dầu gội Clear', 1.0, 89000.0, 89000.0),
       ]);
@@ -154,8 +159,8 @@ void main() {
           value: p,
           child: MaterialApp(
               theme: AppTheme.lightTheme,
-              home: Scaffold(
-                  body: SingleChildScrollView(child: ReceiptReviewCard(receipt: receipt, onSaved: (_) {}))))));
+              home:
+                  Scaffold(body: SingleChildScrollView(child: ReceiptReviewCard(receipt: receipt, onSaved: (_) {}))))));
       expect(find.text('Ghi khoản chi'), findsOneWidget);
       await tester.tap(find.text('Khoản thu'));
       await tester.pumpAndSettle();

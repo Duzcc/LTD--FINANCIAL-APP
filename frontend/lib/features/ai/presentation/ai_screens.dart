@@ -24,9 +24,7 @@ Future<void> openParsedEntry(BuildContext context, ParsedEntry r, {String? photo
   final p = context.read<FinanceProvider>();
   var personId = r.personId;
   if (personId == null && r.newPersonName != null) {
-    final existing = p.people
-        .where((x) => x.name.toLowerCase() == r.newPersonName!.toLowerCase())
-        .firstOrNull;
+    final existing = p.people.where((x) => x.name.toLowerCase() == r.newPersonName!.toLowerCase()).firstOrNull;
     if (existing != null) {
       personId = existing.id;
     } else {
@@ -48,10 +46,7 @@ Future<void> openParsedEntry(BuildContext context, ParsedEntry r, {String? photo
 }
 
 Future<void> showQuickEntry(BuildContext context) => showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    useSafeArea: true,
-    builder: (_) => const QuickEntrySheet());
+    context: context, isScrollControlled: true, useSafeArea: true, builder: (_) => const QuickEntrySheet());
 
 class QuickEntrySheet extends StatefulWidget {
   const QuickEntrySheet({super.key});
@@ -121,8 +116,7 @@ class _QuickEntrySheetState extends State<QuickEntrySheet> {
                 const BrandLogo.ai(size: 28),
                 const SizedBox(width: 10),
                 const Expanded(
-                    child: Text('Nhập nhanh bằng AI',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
+                    child: Text('Nhập nhanh bằng AI', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700))),
                 TextButton.icon(
                     onPressed: () {
                       final nav = Navigator.of(context);
@@ -134,7 +128,8 @@ class _QuickEntrySheetState extends State<QuickEntrySheet> {
                     label: const Text('Quét hóa đơn')),
               ]),
               const SizedBox(height: 6),
-              const Text('Gõ hoặc nói như đang nhắn tin, ứng dụng tự hiểu số tiền, loại giao dịch, danh mục, người và ngày.',
+              const Text(
+                  'Gõ hoặc nói như đang nhắn tin, ứng dụng tự hiểu số tiền, loại giao dịch, danh mục, người và ngày.',
                   style: TextStyle(fontSize: 13)),
               const SizedBox(height: 14),
               TextField(
@@ -170,9 +165,7 @@ class _QuickEntrySheetState extends State<QuickEntrySheet> {
                     color: AppColors.primaryGreenSurface,
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Row(children: [
-                        Expanded(
-                            child: Text(r.kind.label,
-                                style: const TextStyle(fontWeight: FontWeight.w700))),
+                        Expanded(child: Text(r.kind.label, style: const TextStyle(fontWeight: FontWeight.w700))),
                         Text(
                             r.amount == null
                                 ? 'Chưa thấy số tiền'
@@ -185,9 +178,16 @@ class _QuickEntrySheetState extends State<QuickEntrySheet> {
                       const SizedBox(height: 8),
                       _row(Icons.category_outlined, 'Danh mục', p.category(r.categoryId)?.name),
                       _row(Icons.account_balance_wallet_outlined, 'Ví', p.findWallet(r.walletId)?.name),
-                      _row(Icons.person_outline, 'Đối tượng',
-                          r.personId != null ? p.personName(r.personId) : r.newPersonName == null ? null : '${r.newPersonName} (mới)'),
-                      _row(Icons.event_outlined, 'Ngày', '${dayLabel(r.date)} ${TimeOfDay.fromDateTime(r.date).format(context)}'),
+                      _row(
+                          Icons.person_outline,
+                          'Đối tượng',
+                          r.personId != null
+                              ? p.personName(r.personId)
+                              : r.newPersonName == null
+                                  ? null
+                                  : '${r.newPersonName} (mới)'),
+                      _row(Icons.event_outlined, 'Ngày',
+                          '${dayLabel(r.date)} ${TimeOfDay.fromDateTime(r.date).format(context)}'),
                       _row(Icons.notes, 'Ghi chú', r.note.isEmpty ? null : r.note),
                       const SizedBox(height: 6),
                       LinearProgressIndicator(
@@ -219,9 +219,7 @@ class _QuickEntrySheetState extends State<QuickEntrySheet> {
         Icon(icon, size: 16, color: AppColors.textSecondary),
         const SizedBox(width: 8),
         SizedBox(width: 80, child: Text(label, style: const TextStyle(fontSize: 13))),
-        Expanded(
-            child: Text(value ?? '—',
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
+        Expanded(child: Text(value ?? '—', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600))),
       ]));
 }
 
@@ -316,10 +314,10 @@ class _InsightsScreenState extends State<InsightsScreen> {
                           if (f != null) ...[
                             Text('Khoảng 80%: ${money(f.lower, p.currency)} – ${money(f.upper, p.currency)}'),
                             Text('Đã chi ${money(f.spent, p.currency)} • còn ${f.daysLeft} ngày'),
-                            if (f.nextMonth != null)
-                              Text('Ước tính tháng sau: ${money(f.nextMonth!, p.currency)}'),
+                            if (f.nextMonth != null) Text('Ước tính tháng sau: ${money(f.nextMonth!, p.currency)}'),
                           ] else
-                            Text('Đã chi ${money(local.spent, p.currency)} • trung bình ${money(local.dailyAverage, p.currency)}/ngày • còn ${local.daysLeft} ngày'),
+                            Text(
+                                'Đã chi ${money(local.spent, p.currency)} • trung bình ${money(local.dailyAverage, p.currency)}/ngày • còn ${local.daysLeft} ngày'),
                           if (local.target != null) ...[
                             const SizedBox(height: 10),
                             LinearProgressIndicator(
@@ -361,11 +359,16 @@ class _InsightsScreenState extends State<InsightsScreen> {
                                     padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
                                     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                                       Icon(Icons.warning_amber_rounded,
-                                          size: 16, color: a.kind == 'duplicate' ? AppColors.accentOrange : AppColors.accentRed),
+                                          size: 16,
+                                          color: a.kind == 'duplicate' ? AppColors.accentOrange : AppColors.accentRed),
                                       const SizedBox(width: 6),
                                       Expanded(
                                           child: Text(a.reasons.join(' • '),
-                                              style: TextStyle(fontSize: 12, color: a.kind == 'duplicate' ? AppColors.accentOrange : AppColors.accentRed))),
+                                              style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: a.kind == 'duplicate'
+                                                      ? AppColors.accentOrange
+                                                      : AppColors.accentRed))),
                                     ])),
                               ]))),
                     ],
@@ -378,12 +381,10 @@ class _InsightsScreenState extends State<InsightsScreen> {
                               ListTile(
                                   dense: true,
                                   title: Text(p.category(s.categoryId)!.name),
-                                  subtitle: Text(
-                                      '${s.group == 'needs' ? 'Thiết yếu' : 'Mong muốn'} • ${s.note}',
+                                  subtitle: Text('${s.group == 'needs' ? 'Thiết yếu' : 'Mong muốn'} • ${s.note}',
                                       style: const TextStyle(fontSize: 11)),
                                   trailing: TextButton(
-                                      onPressed: () => _applyBudget(p, s),
-                                      child: Text(compactMoney(s.amount)))),
+                                      onPressed: () => _applyBudget(p, s), child: Text(compactMoney(s.amount)))),
                           ])),
                       if (server.plan != null)
                         Padding(

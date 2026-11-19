@@ -52,12 +52,11 @@ mixin LedgerQueries {
   Iterable<MoneyWallet> _counted({bool spendableOnly = false}) =>
       wallets.where((w) => !w.excluded && (!spendableOnly || !w.savings));
 
-  double totalBalance(String unit, {bool spendableOnly = false}) => _counted(spendableOnly: spendableOnly)
-      .where((w) => w.currency == unit)
-      .fold(0, (sum, w) => sum + balance(w.id));
+  double totalBalance(String unit, {bool spendableOnly = false}) =>
+      _counted(spendableOnly: spendableOnly).where((w) => w.currency == unit).fold(0, (sum, w) => sum + balance(w.id));
 
-  double convertedTotal(String unit, {bool spendableOnly = false}) => _counted(spendableOnly: spendableOnly)
-      .fold(0, (sum, w) => sum + convert(balance(w.id), w.currency, unit));
+  double convertedTotal(String unit, {bool spendableOnly = false}) =>
+      _counted(spendableOnly: spendableOnly).fold(0, (sum, w) => sum + convert(balance(w.id), w.currency, unit));
 
   int walletReferences(String id) =>
       entries.where((e) => e.walletId == id || e.destinationId == id).length +
@@ -74,8 +73,7 @@ mixin LedgerQueries {
     ..sort((a, b) => b.date.compareTo(a.date));
 
   List<MoneyEntry> inMonth(DateTime month, {String? walletId, String? unit}) =>
-      between(DateTime(month.year, month.month), DateTime(month.year, month.month + 1),
-          walletId: walletId, unit: unit);
+      between(DateTime(month.year, month.month), DateTime(month.year, month.month + 1), walletId: walletId, unit: unit);
 
   double sumBetween(DateTime from, DateTime to,
           {required bool income, String? walletId, String? categoryId, String? unit}) =>
@@ -87,16 +85,14 @@ mixin LedgerQueries {
               (categoryId == null || e.categoryId == categoryId))
           .fold(0, (s, e) => s + e.amount);
 
-  double total(DateTime month,
-          {required bool income, String? walletId, String? categoryId, String? unit}) =>
+  double total(DateTime month, {required bool income, String? walletId, String? categoryId, String? unit}) =>
       sumBetween(DateTime(month.year, month.month), DateTime(month.year, month.month + 1),
           income: income, walletId: walletId, categoryId: categoryId, unit: unit);
 
-  bool budgetIncome(MoneyBudget b) =>
-      b.categoryId == null ? b.income : category(b.categoryId)?.income ?? false;
+  bool budgetIncome(MoneyBudget b) => b.categoryId == null ? b.income : category(b.categoryId)?.income ?? false;
 
-  double used(MoneyBudget b) => total(b.month,
-      income: budgetIncome(b), walletId: b.walletId, categoryId: b.categoryId, unit: b.currency);
+  double used(MoneyBudget b) =>
+      total(b.month, income: budgetIncome(b), walletId: b.walletId, categoryId: b.categoryId, unit: b.currency);
 
   MoneyBudget? overallBudget(DateTime month, {required bool income, String? unit}) {
     for (final b in budgets) {

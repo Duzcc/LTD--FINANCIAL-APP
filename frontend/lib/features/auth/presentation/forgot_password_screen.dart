@@ -8,8 +8,7 @@ import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/auth/presentation/auth_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen(
-      {super.key, this.email = '', this.fromSettings = false});
+  const ForgotPasswordScreen({super.key, this.email = '', this.fromSettings = false});
   final String email;
   final bool fromSettings;
   @override
@@ -19,9 +18,7 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with BusyState {
   final form = GlobalKey<FormState>();
   late final email = TextEditingController(text: widget.email);
-  final code = TextEditingController(),
-      password = TextEditingController(),
-      confirm = TextEditingController();
+  final code = TextEditingController(), password = TextEditingController(), confirm = TextEditingController();
   bool codeSent = false;
   String? hint;
 
@@ -50,8 +47,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with BusySt
   }
 
   Future<void> reset(FinanceProvider p) async {
-    final needs = await p.resetPassword(
-        email: email.text, code: code.text, newPassword: password.text);
+    final needs = await p.resetPassword(email: email.text, code: code.text, newPassword: password.text);
     if (!mounted) return;
     message(context, 'Đã đặt lại mật khẩu.');
     await finishSignIn(context, needs, fromSettings: widget.fromSettings);
@@ -74,14 +70,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with BusySt
                 controller: email,
                 enabled: !codeSent,
                 keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                    labelText: 'Email', prefixIcon: Icon(Icons.mail_outline)),
+                decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.mail_outline)),
                 validator: validateLoginEmail),
             if (hint != null) ...[
               const SizedBox(height: 12),
-              Panel(
-                  color: AppColors.primaryGreenSurface,
-                  child: Text(hint!, style: const TextStyle(height: 1.5))),
+              Panel(color: AppColors.primaryGreenSurface, child: Text(hint!, style: const TextStyle(height: 1.5))),
             ],
             if (codeSent) ...[
               const SizedBox(height: 12),
@@ -89,13 +82,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with BusySt
                   controller: code,
                   keyboardType: TextInputType.number,
                   maxLength: 6,
-                  decoration: const InputDecoration(
-                      labelText: 'Mã khôi phục (6 số)',
-                      prefixIcon: Icon(Icons.pin_outlined)),
+                  decoration:
+                      const InputDecoration(labelText: 'Mã khôi phục (6 số)', prefixIcon: Icon(Icons.pin_outlined)),
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: (v) => validateOtp(v) == null
-                      ? null
-                      : 'Mã khôi phục gồm đúng 6 chữ số'),
+                  validator: (v) => validateOtp(v) == null ? null : 'Mã khôi phục gồm đúng 6 chữ số'),
               const SizedBox(height: 4),
               TextFormField(
                   controller: password,
@@ -111,11 +101,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with BusySt
               TextFormField(
                   controller: confirm,
                   obscureText: true,
-                  decoration: const InputDecoration(
-                      labelText: 'Nhập lại mật khẩu mới',
-                      prefixIcon: Icon(Icons.lock_outline)),
-                  validator: (v) =>
-                      v != password.text ? 'Mật khẩu nhập lại không khớp' : null),
+                  decoration:
+                      const InputDecoration(labelText: 'Nhập lại mật khẩu mới', prefixIcon: Icon(Icons.lock_outline)),
+                  validator: (v) => v != password.text ? 'Mật khẩu nhập lại không khớp' : null),
             ],
             if (error != null) ...[
               const SizedBox(height: 12),
@@ -151,9 +139,7 @@ class ChangePasswordScreen extends StatefulWidget {
 
 class _ChangePasswordScreenState extends State<ChangePasswordScreen> with BusyState {
   final form = GlobalKey<FormState>();
-  final current = TextEditingController(),
-      next = TextEditingController(),
-      confirm = TextEditingController();
+  final current = TextEditingController(), next = TextEditingController(), confirm = TextEditingController();
   @override
   void dispose() {
     for (final c in [current, next, confirm]) {
@@ -164,8 +150,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> with BusySt
 
   Future<void> save() async {
     if (!form.currentState!.validate()) return;
-    final failure = await runBusy(() =>
-        context.read<FinanceProvider>().changePassword(current.text, next.text));
+    final failure = await runBusy(() => context.read<FinanceProvider>().changePassword(current.text, next.text));
     if (failure != null || !mounted) return;
     message(context, 'Đã đổi mật khẩu. Các thiết bị khác cần đăng nhập lại.');
     Navigator.pop(context);
@@ -181,11 +166,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> with BusySt
             TextFormField(
                 controller: current,
                 obscureText: true,
-                decoration: const InputDecoration(
-                    labelText: 'Mật khẩu hiện tại',
-                    prefixIcon: Icon(Icons.lock_outline)),
-                validator: (v) =>
-                    (v ?? '').isEmpty ? 'Nhập mật khẩu hiện tại' : null),
+                decoration: const InputDecoration(labelText: 'Mật khẩu hiện tại', prefixIcon: Icon(Icons.lock_outline)),
+                validator: (v) => (v ?? '').isEmpty ? 'Nhập mật khẩu hiện tại' : null),
             const SizedBox(height: 12),
             TextFormField(
                 controller: next,
@@ -196,20 +178,16 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> with BusySt
                     helperText: passwordRules,
                     counterText: '',
                     prefixIcon: Icon(Icons.lock_reset)),
-                validator: (v) => validatePassword(v,
-                        email: context.read<FinanceProvider>().session?.email) ??
-                    (v == current.text
-                        ? 'Mật khẩu mới phải khác mật khẩu hiện tại'
-                        : null)),
+                validator: (v) =>
+                    validatePassword(v, email: context.read<FinanceProvider>().session?.email) ??
+                    (v == current.text ? 'Mật khẩu mới phải khác mật khẩu hiện tại' : null)),
             const SizedBox(height: 12),
             TextFormField(
                 controller: confirm,
                 obscureText: true,
-                decoration: const InputDecoration(
-                    labelText: 'Nhập lại mật khẩu mới',
-                    prefixIcon: Icon(Icons.lock_reset)),
-                validator: (v) =>
-                    v != next.text ? 'Mật khẩu nhập lại không khớp' : null),
+                decoration:
+                    const InputDecoration(labelText: 'Nhập lại mật khẩu mới', prefixIcon: Icon(Icons.lock_reset)),
+                validator: (v) => v != next.text ? 'Mật khẩu nhập lại không khớp' : null),
             if (error != null) ...[
               const SizedBox(height: 12),
               Text(error!, style: const TextStyle(color: AppColors.accentRed)),
@@ -217,8 +195,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> with BusySt
             const SizedBox(height: 20),
             FilledButton(
                 onPressed: busy ? null : save,
-                child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Text(busy ? 'Đang lưu…' : 'Lưu mật khẩu mới'))),
+                child:
+                    Padding(padding: const EdgeInsets.all(14), child: Text(busy ? 'Đang lưu…' : 'Lưu mật khẩu mới'))),
           ])));
 }

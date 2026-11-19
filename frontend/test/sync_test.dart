@@ -10,10 +10,8 @@ void main() {
   test('Sai mật khẩu thì hiện đúng thông báo lỗi', () async {
     final server = FakeBackend();
     final p = FinanceProvider(api: ApiClient(client: server.client));
-    await expectLater(
-        p.signIn(email: 'an@test.vn', password: 'sai'),
-        throwsA(isA<ApiException>()
-            .having((e) => e.message, 'message', contains('không đúng'))));
+    await expectLater(p.signIn(email: 'an@test.vn', password: 'sai'),
+        throwsA(isA<ApiException>().having((e) => e.message, 'message', contains('không đúng'))));
     p.dispose();
   });
 
@@ -23,21 +21,19 @@ void main() {
     final challenge = await p.signIn(email: ' AN@test.vn ', password: '123456');
     expect(challenge.email, 'an@test.vn');
     expect(p.signedIn, isFalse, reason: 'chưa nhập OTP thì chưa đăng nhập');
-    await expectLater(p.verifyOtp(challenge, '000000'),
-        throwsA(isA<ApiException>().having((e) => e.code, 'code', 'INVALID_CODE')));
+    await expectLater(
+        p.verifyOtp(challenge, '000000'), throwsA(isA<ApiException>().having((e) => e.code, 'code', 'INVALID_CODE')));
     expect(p.signedIn, isFalse);
     await p.verifyOtp(challenge, FakeBackend.otpCode);
     expect(p.signedIn, isTrue);
     p.dispose();
   });
 
-  test('Đăng nhập, gửi thay đổi trên máy theo đúng thứ tự rồi đăng xuất',
-      () async {
+  test('Đăng nhập, gửi thay đổi trên máy theo đúng thứ tự rồi đăng xuất', () async {
     SharedPreferences.setMockInitialValues({});
     final storage = await SharedPreferences.getInstance();
     final server = FakeBackend();
-    final p = FinanceProvider(
-        storage: storage, api: ApiClient(client: server.client));
+    final p = FinanceProvider(storage: storage, api: ApiClient(client: server.client));
     expect(await signInWithOtp(p), isFalse);
     expect(p.signedIn, isTrue);
     expect(p.displayName, 'An');
@@ -55,22 +51,18 @@ void main() {
     expect(p.pendingChanges, 0);
     expect(p.syncError, isNull);
     final ops = server.batches.last['ops'] as List;
-    expect(ops.map((o) => '${o['entity']}:${o['id']}'),
-        ['wallets:bank', 'entries:e1']);
+    expect(ops.map((o) => '${o['entity']}:${o['id']}'), ['wallets:bank', 'entries:e1']);
     expect((ops[1]['data'] as Map)['date'], endsWith('Z'));
 
     p.deleteEntry('e1');
     p.deleteWallet('bank');
     await p.syncNow();
     final deletes = server.batches.last['ops'] as List;
-    expect(deletes.map((o) => '${o['action']} ${o['entity']}'),
-        ['delete entries', 'delete wallets']);
+    expect(deletes.map((o) => '${o['action']} ${o['entity']}'), ['delete entries', 'delete wallets']);
     expect(p.wallets.map((w) => w.id), ['cash']);
 
     await p.flush();
-    final again = FinanceProvider(
-        storage: storage, api: ApiClient(client: server.client))
-      ..restore();
+    final again = FinanceProvider(storage: storage, api: ApiClient(client: server.client))..restore();
     expect(again.session?.token, 'tok');
     again.dispose();
 
@@ -107,8 +99,7 @@ void main() {
     p.dispose();
   });
 
-  test('Hết phiên thì báo lỗi mà không mất thay đổi đang chờ',
-      () async {
+  test('Hết phiên thì báo lỗi mà không mất thay đổi đang chờ', () async {
     final server = FakeBackend();
     final p = FinanceProvider(api: ApiClient(client: server.client));
     await signInWithOtp(p);
@@ -122,18 +113,9 @@ void main() {
 
   test('Ô số tiền định dạng phần nghìn kiểu Việt Nam', () {
     final f = AmountInputFormatter();
-    expect(
-        f
-            .formatEditUpdate(const TextEditingValue(text: '125000'),
-                const TextEditingValue(text: '1250000'))
-            .text,
+    expect(f.formatEditUpdate(const TextEditingValue(text: '125000'), const TextEditingValue(text: '1250000')).text,
         '1.250.000');
-    expect(
-        f
-            .formatEditUpdate(const TextEditingValue(text: '12'),
-                const TextEditingValue(text: '12.'))
-            .text,
-        '12,');
+    expect(f.formatEditUpdate(const TextEditingValue(text: '12'), const TextEditingValue(text: '12.')).text, '12,');
     expect(parseAmount('1.250.000'), 1250000);
     expect(parseAmount('12,5'), 12.5);
     expect(formatAmountInput(1250000), '1.250.000');

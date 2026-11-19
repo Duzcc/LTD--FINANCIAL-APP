@@ -43,35 +43,42 @@ async function chat(user, body, requestId) {
       if (e.code !== 'AI_UNAVAILABLE') throw e;
       return null;
     });
-    if (r) return { reply: r.reply, source: 'ai-service', provider: r.provider, toolsUsed: r.toolsUsed, actions: r.actions };
+    if (r)
+      return { reply: r.reply, source: 'ai-service', provider: r.provider, toolsUsed: r.toolsUsed, actions: r.actions };
   }
   return chatWithLlm(messages, financialContext(state, user));
 }
 
 async function categorize(user, body, requestId) {
   const state = await ledger.loadState(user._id);
-  return aiService.categorize({
-    text: validate.requiredText(body.text, 'ghi chú'),
-    income: typeof body.income === 'boolean' ? body.income : null,
-    categories: categoriesOf(state),
-    history: labeledHistory(state),
-    topK: 3,
-  }, { requestId });
+  return aiService.categorize(
+    {
+      text: validate.requiredText(body.text, 'ghi chú'),
+      income: typeof body.income === 'boolean' ? body.income : null,
+      categories: categoriesOf(state),
+      history: labeledHistory(state),
+      topK: 3,
+    },
+    { requestId },
+  );
 }
 
 async function parse(user, body, requestId) {
   const s = await snapshotOf(user);
-  return aiService.parse({
-    text: validate.requiredText(body.text, 'nội dung'),
-    now: s.now,
-    categories: s.categories,
-    people: s.people,
-    wallets: s.wallets,
-    history: s.transactions
-      .filter((t) => t.note && t.categoryId)
-      .slice(-2000)
-      .map((t) => ({ text: t.note, categoryId: t.categoryId })),
-  }, { requestId });
+  return aiService.parse(
+    {
+      text: validate.requiredText(body.text, 'nội dung'),
+      now: s.now,
+      categories: s.categories,
+      people: s.people,
+      wallets: s.wallets,
+      history: s.transactions
+        .filter((t) => t.note && t.categoryId)
+        .slice(-2000)
+        .map((t) => ({ text: t.note, categoryId: t.categoryId })),
+    },
+    { requestId },
+  );
 }
 
 const forecast = async (user, requestId) => aiService.forecast(await snapshotOf(user), { requestId });
@@ -90,24 +97,32 @@ async function insights(user, requestId) {
     aiService.recommendBudgets({ snapshot }, { requestId }),
   ]);
   if (results.every((r) => r.status === 'rejected')) throw results[0].reason;
-  const [forecastResult, anomaliesResult, budgetsResult] = results.map((r) => (r.status === 'fulfilled' ? r.value : null));
+  const [forecastResult, anomaliesResult, budgetsResult] = results.map((r) =>
+    r.status === 'fulfilled' ? r.value : null,
+  );
   return { generatedAt: localIso(), forecast: forecastResult, anomalies: anomaliesResult, budgets: budgetsResult };
 }
 
 async function search(user, body, requestId) {
-  return aiService.search({
-    snapshot: await snapshotOf(user),
-    query: validate.requiredText(body.query, 'từ khóa', 200),
-    limit: 50,
-  }, { requestId });
+  return aiService.search(
+    {
+      snapshot: await snapshotOf(user),
+      query: validate.requiredText(body.query, 'từ khóa', 200),
+      limit: 50,
+    },
+    { requestId },
+  );
 }
 
 async function receiptFromText(user, body, requestId) {
   const state = await ledger.loadState(user._id);
-  return aiService.receiptText({
-    text: validate.requiredText(body.text, 'nội dung hóa đơn', 20000),
-    categories: categoriesOf(state),
-  }, { requestId });
+  return aiService.receiptText(
+    {
+      text: validate.requiredText(body.text, 'nội dung hóa đơn', 20000),
+      categories: categoriesOf(state),
+    },
+    { requestId },
+  );
 }
 
 async function receiptFromImage(user, body, requestId) {
@@ -120,5 +135,15 @@ async function receiptFromImage(user, body, requestId) {
 }
 
 module.exports = {
-  status, chat, categorize, parse, forecast, anomalies, recommendBudgets, insights, search, receiptFromText, receiptFromImage,
+  status,
+  chat,
+  categorize,
+  parse,
+  forecast,
+  anomalies,
+  recommendBudgets,
+  insights,
+  search,
+  receiptFromText,
+  receiptFromImage,
 };

@@ -3,7 +3,15 @@ import random
 
 import pytest
 
-from app.services.receipt import OcrBox, available_engines, clean_ocr_numbers, from_llm_json, group_rows, ocr_image, parse_receipt_text
+from app.services.receipt import (
+    OcrBox,
+    available_engines,
+    clean_ocr_numbers,
+    from_llm_json,
+    group_rows,
+    ocr_image,
+    parse_receipt_text,
+)
 from ml.data.receipts import make_receipt
 
 
@@ -14,8 +22,12 @@ def test_clean_ocr_numbers():
 
 
 def test_group_rows_with_skew():
-    boxes = [OcrBox("Tổng cộng:", 10, 100, 120, 20, angle=0.05), OcrBox("154.000", 500, 124, 90, 20, angle=0.05),
-             OcrBox("Tiền thừa:", 10, 130, 120, 20, angle=0.05), OcrBox("46.000", 500, 154, 80, 20, angle=0.05)]
+    boxes = [
+        OcrBox("Tổng cộng:", 10, 100, 120, 20, angle=0.05),
+        OcrBox("154.000", 500, 124, 90, 20, angle=0.05),
+        OcrBox("Tiền thừa:", 10, 130, 120, 20, angle=0.05),
+        OcrBox("46.000", 500, 154, 80, 20, angle=0.05),
+    ]
     assert group_rows(boxes) == ["Tổng cộng:  154.000", "Tiền thừa:  46.000"]
 
 
@@ -56,6 +68,7 @@ def test_end_to_end_ocr_on_synthetic_receipts():
 
 def test_items_keep_quantity_unit_price_and_time():
     from tests.test_analytics import RECEIPT
+
     r = parse_receipt_text(RECEIPT)
     water = r.items[0]
     assert (water.quantity, water.unit_price, water.amount) == (2, 6_000, 12_000)
@@ -64,9 +77,13 @@ def test_items_keep_quantity_unit_price_and_time():
 
 
 def test_quantity_on_line_below_name():
-    r = parse_receipt_text("WINMART\nSữa tươi Vinamilk 1L\n3 32.000 96.000\nDầu gội Clear\n1 x 89.000 89.000\nTổng cộng 185.000")
+    r = parse_receipt_text(
+        "WINMART\nSữa tươi Vinamilk 1L\n3 32.000 96.000\nDầu gội Clear\n1 x 89.000 89.000\nTổng cộng 185.000"
+    )
     assert [(i.name, i.quantity, i.unit_price) for i in r.items] == [
-        ("Sữa tươi Vinamilk 1L", 3, 32_000), ("Dầu gội Clear", 1, 89_000)]
+        ("Sữa tươi Vinamilk 1L", 3, 32_000),
+        ("Dầu gội Clear", 1, 89_000),
+    ]
 
 
 def test_receipt_kind():

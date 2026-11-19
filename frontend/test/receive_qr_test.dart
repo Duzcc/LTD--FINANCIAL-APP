@@ -9,20 +9,15 @@ import 'package:finance_app/features/finance/domain/entities/entities.dart';
 import 'package:finance_app/features/banking/presentation/receive_qr_screen.dart';
 import 'helpers/fake_backend.dart';
 
-const _mb = MoneyWallet(
-    id: 'mb',
-    name: 'MB',
-    bankBin: '970422',
-    bankAccount: '0123456789',
-    bankHolder: 'NGUYEN AN');
+const _mb = MoneyWallet(id: 'mb', name: 'MB', bankBin: '970422', bankAccount: '0123456789', bankHolder: 'NGUYEN AN');
 
 Future<void> _open(WidgetTester tester, FinanceProvider p, Widget page) async {
   tester.view.physicalSize = const Size(430, 1600);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
-  await tester.pumpWidget(ChangeNotifierProvider.value(
-      value: p, child: MaterialApp(theme: AppTheme.lightTheme, home: page)));
+  await tester
+      .pumpWidget(ChangeNotifierProvider.value(value: p, child: MaterialApp(theme: AppTheme.lightTheme, home: page)));
 }
 
 void main() {
@@ -46,10 +41,13 @@ void main() {
       ..saveWallet(_mb)
       ..savePerson(const MoneyPerson('lan', 'Lan', 'Bạn bè'))
       ..saveEntry(MoneyEntry(
-          id: 'l1', kind: EntryKind.lend, amount: 100000, walletId: 'mb',
-          personId: 'lan', date: DateTime(2026, 10, 1)));
-    await _open(tester, p,
-        const ReceiveQrScreen(walletId: 'mb', personId: 'lan', amount: 100000));
+          id: 'l1',
+          kind: EntryKind.lend,
+          amount: 100000,
+          walletId: 'mb',
+          personId: 'lan',
+          date: DateTime(2026, 10, 1)));
+    await _open(tester, p, const ReceiveQrScreen(walletId: 'mb', personId: 'lan', amount: 100000));
     await tester.enterText(find.byKey(const ValueKey('qr-amount')), '200000');
     await tester.tap(find.text('Tạo mã QR'));
     await tester.pump();

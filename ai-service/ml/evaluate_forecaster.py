@@ -57,13 +57,19 @@ def main() -> None:
                 fc = forecast_month(seen, now).projected
                 errs["run_rate"].setdefault(day, []).append(abs(rr - actual) / actual)
                 errs["forecaster"].setdefault(day, []).append(abs(fc - actual) / actual)
-    report = {m: {f"day_{d}": round(float(np.mean(v)) * 100, 1) for d, v in sorted(by.items())} for m, by in errs.items()}
+    report = {
+        m: {f"day_{d}": round(float(np.mean(v)) * 100, 1) for d, v in sorted(by.items())} for m, by in errs.items()
+    }
     for m in report:
         report[m]["overall"] = round(float(np.mean([x for v in errs[m].values() for x in v])) * 100, 1)
     print(json.dumps(report, indent=2))
     path = Path(__file__).resolve().parents[1] / "artifacts" / "forecast_backtest.json"
-    path.write_text(json.dumps({"metric": "MAPE (%) tổng chi cả tháng", "users": 40, "months": 6, **report}, indent=2,
-                               ensure_ascii=False), encoding="utf-8")
+    path.write_text(
+        json.dumps(
+            {"metric": "MAPE (%) tổng chi cả tháng", "users": 40, "months": 6, **report}, indent=2, ensure_ascii=False
+        ),
+        encoding="utf-8",
+    )
 
 
 if __name__ == "__main__":

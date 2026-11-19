@@ -8,28 +8,103 @@ from difflib import SequenceMatcher
 from app.nlp.text import calendar_date, fold
 
 _TOTAL_KEYS: list[tuple[str, int]] = [
-    ("tong thanh toan", 0), ("tong tien thanh toan", 0), ("khach phai tra", 0), ("khach can tra", 0),
-    ("can thanh toan", 0), ("phai thanh toan", 0), ("grand total", 0), ("amount due", 0),
-    ("tong cong", 1), ("thanh toan", 1), ("total", 1), ("phai tra", 1),
-    ("tong tien", 2), ("tong", 3), ("cong", 4),
+    ("tong thanh toan", 0),
+    ("tong tien thanh toan", 0),
+    ("khach phai tra", 0),
+    ("khach can tra", 0),
+    ("can thanh toan", 0),
+    ("phai thanh toan", 0),
+    ("grand total", 0),
+    ("amount due", 0),
+    ("tong cong", 1),
+    ("thanh toan", 1),
+    ("total", 1),
+    ("phai tra", 1),
+    ("tong tien", 2),
+    ("tong", 3),
+    ("cong", 4),
 ]
 _SUBTOTAL = ("tong tien hang", "tam tinh", "subtotal", "cong tien hang", "tien hang")
 _CASH = ("tien khach dua", "khach dua", "tien nhan", "khach tra", "cash", "tien mat")
 _CHANGE = ("tien thua", "tien thoi", "thoi lai", "tra lai khach", "tien tra lai", "change")
 _NOT_ITEM = ("giam gia", "chiet khau", "discount", "vat", "thue", "khuyen mai", "phi dich vu", "service")
 _HEADER = ("ten hang", "don gia", "thanh tien", "t.tien", "d.gia", "sl ", "mat hang", "so luong")
-_NOT_MERCHANT = ("dia chi", "dc:", "d/c", "dt:", "dt ", "tel", "hotline", "mst", "ma so thue", "hoa don",
-                 "phieu", "so hd", "ngay", "thu ngan", "nhan vien", "ban hang", "www", "http")
+_NOT_MERCHANT = (
+    "dia chi",
+    "dc:",
+    "d/c",
+    "dt:",
+    "dt ",
+    "tel",
+    "hotline",
+    "mst",
+    "ma so thue",
+    "hoa don",
+    "phieu",
+    "so hd",
+    "ngay",
+    "thu ngan",
+    "nhan vien",
+    "ban hang",
+    "www",
+    "http",
+)
 # không có "phiếu thu" vì phiếu thu đưa cho người trả tiền, vẫn là khoản chi
-INCOME_MARKERS = ("hoan tien", "tien hoan", "hoan tra", "refund", "ban da nhan", "nhan tien tu", "nhan chuyen khoan",
-                  "ghi co", "phieu luong", "bang luong", "thuc linh", "luong thuc nhan")
-KNOWN_MERCHANTS = ("circle k", "winmart", "bach hoa xanh", "highlands", "phuc long", "co.opmart", "coopmart",
-                   "co.op", "7-eleven", "gs25", "familymart", "ministop", "lotte", "aeon", "big c", "go!",
-                   "mm mega", "kfc", "lotteria", "jollibee", "pharmacity", "long chau", "an khang",
-                   "the coffee house", "starbucks", "katinat", "phuc long", "guardian", "dien may xanh",
-                   "the gioi di dong", "fahasa", "uniqlo", "pho thin", "bun cha", "gong cha")
+INCOME_MARKERS = (
+    "hoan tien",
+    "tien hoan",
+    "hoan tra",
+    "refund",
+    "ban da nhan",
+    "nhan tien tu",
+    "nhan chuyen khoan",
+    "ghi co",
+    "phieu luong",
+    "bang luong",
+    "thuc linh",
+    "luong thuc nhan",
+)
+KNOWN_MERCHANTS = (
+    "circle k",
+    "winmart",
+    "bach hoa xanh",
+    "highlands",
+    "phuc long",
+    "co.opmart",
+    "coopmart",
+    "co.op",
+    "7-eleven",
+    "gs25",
+    "familymart",
+    "ministop",
+    "lotte",
+    "aeon",
+    "big c",
+    "go!",
+    "mm mega",
+    "kfc",
+    "lotteria",
+    "jollibee",
+    "pharmacity",
+    "long chau",
+    "an khang",
+    "the coffee house",
+    "starbucks",
+    "katinat",
+    "phuc long",
+    "guardian",
+    "dien may xanh",
+    "the gioi di dong",
+    "fahasa",
+    "uniqlo",
+    "pho thin",
+    "bun cha",
+    "gong cha",
+)
 
-_NUM = re.compile(r"(?<![\w.,])(\d{1,3}(?:[.,]\d{3})+|\d{4,9})(?:[.,]0{1,2})?\s*(?:đ|d|vnd|vnđ|dong)?(?![\w])", re.IGNORECASE)
+_NUM = re.compile(
+    r"(?<![\w.,])(\d{1,3}(?:[.,]\d{3})+|\d{4,9})(?:[.,]0{1,2})?\s*(?:đ|d|vnd|vnđ|dong)?(?![\w])", re.IGNORECASE
+)
 _DATE_PATTERNS = [
     (re.compile(r"(?<!\d)(\d{1,2})\s*[/\-.]\s*(\d{1,2})\s*[/\-.]\s*(\d{4}|\d{2})(?!\d)"), "dmy"),
     (re.compile(r"(?<!\d)(\d{4})\s*[/\-.]\s*(\d{1,2})\s*[/\-.]\s*(\d{1,2})(?!\d)"), "ymd"),
@@ -69,9 +144,11 @@ def clean_ocr_numbers(line: str) -> str:
         tok = m.group(0)
         if not any(c.isdigit() for c in tok):
             return tok
-        fixed = tok.translate(str.maketrans({"O": "0", "o": "0", "D": "0", "l": "1", "I": "1", "|": "1",
-                                             "S": "5", "B": "8", "Z": "2"}))
+        fixed = tok.translate(
+            str.maketrans({"O": "0", "o": "0", "D": "0", "l": "1", "I": "1", "|": "1", "S": "5", "B": "8", "Z": "2"})
+        )
         return fixed if re.fullmatch(r"\d{1,3}(?:[.,]\d{3})+|\d{4,}", fixed) else tok
+
     line = re.sub(r"[0-9OolI|SBZD][0-9OolI|SBZD.,]{2,}[0-9OolI|SBZD]", fix, line)
     line = re.sub(r"(\d)\s+([.,])\s*(\d{3})(?!\d)", r"\1\2\3", line)
     line = re.sub(r"(\d)([.,])\s+(\d{3})(?!\d)", r"\1\2\3", line)
@@ -103,7 +180,7 @@ def _has(f: str, keys, fuzzy: bool = False) -> bool:
         if len(k) < 7:
             continue
         for i in range(len(words) - n + 1):
-            if SequenceMatcher(None, " ".join(words[i:i + n]), k).ratio() >= 0.88:
+            if SequenceMatcher(None, " ".join(words[i : i + n]), k).ratio() >= 0.88:
                 return True
     return False
 
@@ -132,7 +209,7 @@ def _parse_date(lines: list[str]) -> datetime | None:
                 dt = calendar_date(y, mth, d)
                 if dt is None:
                     continue
-                t = re.search(r"(\d{1,2})[:h](\d{2})", f[m.end():m.end() + 12])
+                t = re.search(r"(\d{1,2})[:h](\d{2})", f[m.end() : m.end() + 12])
                 if t and int(t.group(1)) < 24 and int(t.group(2)) < 60:
                     dt = dt.replace(hour=int(t.group(1)), minute=int(t.group(2)))
                 return dt
@@ -235,8 +312,13 @@ def parse_receipt_text(text: str) -> ReceiptResult:
     if cash and change is not None and cash > change:
         sources.append(("tiền khách đưa − tiền thừa", cash - change, 2.0))
     if subtotal:
-        sources.append(("tổng tiền hàng − giảm giá" if discount else "tổng tiền hàng",
-                        subtotal - (discount or 0), 2.0 if discount else 1.5))
+        sources.append(
+            (
+                "tổng tiền hàng − giảm giá" if discount else "tổng tiền hàng",
+                subtotal - (discount or 0),
+                2.0 if discount else 1.5,
+            )
+        )
     if len(r.items) >= 2:
         sources.append(("tổng các dòng hàng", items_sum - (discount or 0), 1.5))
 

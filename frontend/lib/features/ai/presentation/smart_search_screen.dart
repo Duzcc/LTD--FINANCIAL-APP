@@ -56,7 +56,10 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
     final byId = {for (final e in p.entries) e.id: e};
     final used = {for (final k in filters.keys) _filterLabels[k] ?? k};
     return (
-      [for (final id in ids) if (byId[id] != null) byId[id]!],
+      [
+        for (final id in ids)
+          if (byId[id] != null) byId[id]!
+      ],
       used.isEmpty ? 'Trợ lý AI' : 'Lọc theo ${used.join(', ')}'
     );
   }
@@ -96,9 +99,15 @@ class _SmartSearchScreenState extends State<SmartSearchScreen> {
                 }),
         ]),
         if (busy) const Padding(padding: EdgeInsets.all(16), child: LinearProgressIndicator()),
-        if (info != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text('${results!.length} kết quả • $info', style: const TextStyle(fontSize: 12))),
+        if (info != null)
+          Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Text('${results!.length} kết quả • $info', style: const TextStyle(fontSize: 12))),
         for (final e in results ?? const <MoneyEntry>[]) EntryTile(e),
         if (results != null && results!.isEmpty)
-          const EmptyView(title: 'Không tìm thấy', subtitle: 'Thử diễn đạt khác hoặc mở rộng khoảng thời gian.', icon: Icons.search_off),
+          const EmptyView(
+              title: 'Không tìm thấy',
+              subtitle: 'Thử diễn đạt khác hoặc mở rộng khoảng thời gian.',
+              icon: Icons.search_off),
       ]));
 }

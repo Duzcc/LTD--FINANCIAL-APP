@@ -11,8 +11,7 @@ import 'package:finance_app/features/finance/domain/entities/entities.dart';
 import 'package:finance_app/features/banking/data/repositories/bank_repository.dart';
 
 class ReceiveQrScreen extends StatefulWidget {
-  const ReceiveQrScreen(
-      {super.key, required this.walletId, this.personId, this.amount});
+  const ReceiveQrScreen({super.key, required this.walletId, this.personId, this.amount});
   final String walletId;
 
   final String? personId;
@@ -23,10 +22,8 @@ class ReceiveQrScreen extends StatefulWidget {
 
 class _ReceiveQrScreenState extends State<ReceiveQrScreen> {
   final form = GlobalKey<FormState>();
-  late final amount = TextEditingController(
-      text: widget.amount == null ? '' : formatAmountInput(widget.amount!));
-  late final note = TextEditingController(
-      text: widget.personId == null ? '' : 'Tra no');
+  late final amount = TextEditingController(text: widget.amount == null ? '' : formatAmountInput(widget.amount!));
+  late final note = TextEditingController(text: widget.personId == null ? '' : 'Tra no');
   String? payload, content;
   double? requested;
   PaymentRequestInfo? request;
@@ -52,9 +49,7 @@ class _ReceiveQrScreenState extends State<ReceiveQrScreen> {
     if (n != n.roundToDouble()) return 'Số tiền VND phải là số nguyên';
     if (n > 500000000) return 'Tối đa 500.000.000 ₫ mỗi mã QR';
     if (collecting) {
-      final left = context
-          .read<FinanceProvider>()
-          .debt(borrowed: false, personId: widget.personId, unit: 'VND');
+      final left = context.read<FinanceProvider>().debt(borrowed: false, personId: widget.personId, unit: 'VND');
       if (n > left) return 'Vượt số còn phải thu (${money(left)})';
     }
     return null;
@@ -88,19 +83,18 @@ class _ReceiveQrScreenState extends State<ReceiveQrScreen> {
       // mất mạng vẫn hiện mã QR, chỉ không tự ghi giao dịch được
       if (offline) offlineReason = 'Mất kết nối mạng nên chưa thể tự ghi giao dịch khi tiền về.';
     } else {
-      offlineReason = 'Bạn chưa đăng nhập: hãy tự ghi giao dịch sau khi nhận tiền. Đăng nhập và kết nối SePay để ghi tự động.';
+      offlineReason =
+          'Bạn chưa đăng nhập: hãy tự ghi giao dịch sau khi nhận tiền. Đăng nhập và kết nối SePay để ghi tự động.';
     }
     if (!mounted) return;
     final made = created;
-    final text = transferContent(
-        [if (made != null) made.code, note.text].join(' '));
+    final text = transferContent([if (made != null) made.code, note.text].join(' '));
     setState(() {
       busy = false;
       request = made;
       requested = value;
       content = text;
-      payload = buildVietQr(
-          bin: w.bankBin!, account: w.bankAccount!, amount: value, content: text);
+      payload = buildVietQr(bin: w.bankBin!, account: w.bankAccount!, amount: value, content: text);
     });
     if (made != null) {
       poller = Timer.periodic(const Duration(seconds: 4), (_) => refresh());
@@ -122,8 +116,7 @@ class _ReceiveQrScreenState extends State<ReceiveQrScreen> {
     final current = request;
     if (current == null) return;
     await attempt(context, () async {
-      final next = await BankRepository(context.read<FinanceProvider>())
-          .cancel(current.id);
+      final next = await BankRepository(context.read<FinanceProvider>()).cancel(current.id);
       poller?.cancel();
       if (mounted) setState(() => request = next);
     });
@@ -136,9 +129,7 @@ class _ReceiveQrScreenState extends State<ReceiveQrScreen> {
     if (w == null || !w.hasBank) {
       return const FinancePage(
           title: 'Nhận tiền',
-          child: EmptyView(
-              title: 'Ví chưa liên kết ngân hàng',
-              subtitle: 'Sửa ví để thêm tài khoản ngân hàng.'));
+          child: EmptyView(title: 'Ví chưa liên kết ngân hàng', subtitle: 'Sửa ví để thêm tài khoản ngân hàng.'));
     }
     return FinancePage(
         title: collecting ? 'Thu nợ bằng VietQR' : 'Nhận tiền bằng VietQR',
@@ -185,9 +176,7 @@ class _ReceiveQrScreenState extends State<ReceiveQrScreen> {
           FilledButton.icon(
               onPressed: busy ? null : generate,
               icon: const Icon(Icons.qr_code_2),
-              label: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Text(busy ? 'Đang tạo…' : 'Tạo mã QR'))),
+              label: Padding(padding: const EdgeInsets.all(12), child: Text(busy ? 'Đang tạo…' : 'Tạo mã QR'))),
           const SizedBox(height: 12),
           const Text(
               'Mã VietQR quét được bằng mọi ứng dụng ngân hàng tại Việt Nam. Khi đã kết nối SePay, tiền về sẽ tự được ghi vào ví.',
@@ -219,17 +208,13 @@ class _ReceiveQrScreenState extends State<ReceiveQrScreen> {
           Container(
               color: Colors.white,
               padding: const EdgeInsets.all(8),
-              child: QrImageView(
-                  key: const ValueKey('vietqr'),
-                  data: payload!,
-                  size: 240,
-                  backgroundColor: Colors.white)),
+              child:
+                  QrImageView(key: const ValueKey('vietqr'), data: payload!, size: 240, backgroundColor: Colors.white)),
         const SizedBox(height: 12),
         Text(bank, style: const TextStyle(fontWeight: FontWeight.w700)),
         Text(w.bankHolder ?? ''),
         if (requested != null)
-          Text(money(requested!),
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+          Text(money(requested!), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
       ])),
       const SizedBox(height: 12),
       Panel(
@@ -257,39 +242,35 @@ class _ReceiveQrScreenState extends State<ReceiveQrScreen> {
             color: AppColors.primaryGreenSurface,
             child: Row(children: [
               if (r.isPending) ...[
-                const SizedBox.square(
-                    dimension: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2)),
+                const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)),
                 const SizedBox(width: 12),
               ],
               Expanded(
-                  child: Text(switch (r.status) {
-                'pending' =>
-                  'Đang chờ tiền về… Giữ nguyên nội dung chuyển khoản (mã ${r.code}) để tự ghi giao dịch.',
-                'paid' => 'Đã đối soát qua SePay.',
-                'cancelled' => 'Đã hủy yêu cầu. Tiền chuyển vào sẽ không được tự ghi.',
-                _ => 'Yêu cầu đã hết hạn.',
-              }, style: const TextStyle(height: 1.4))),
+                  child: Text(
+                      switch (r.status) {
+                        'pending' =>
+                          'Đang chờ tiền về… Giữ nguyên nội dung chuyển khoản (mã ${r.code}) để tự ghi giao dịch.',
+                        'paid' => 'Đã đối soát qua SePay.',
+                        'cancelled' => 'Đã hủy yêu cầu. Tiền chuyển vào sẽ không được tự ghi.',
+                        _ => 'Yêu cầu đã hết hạn.',
+                      },
+                      style: const TextStyle(height: 1.4))),
             ]))
       else if (offlineReason != null)
-        Panel(
-            color: AppColors.primaryGreenSurface,
-            child: Text(offlineReason!, style: const TextStyle(height: 1.4))),
+        Panel(color: AppColors.primaryGreenSurface, child: Text(offlineReason!, style: const TextStyle(height: 1.4))),
       const SizedBox(height: 12),
       Row(children: [
         Expanded(
             child: OutlinedButton.icon(
-                onPressed: () => SharePlus.instance
-                    .share(ShareParams(text: shareText, subject: 'Thông tin chuyển khoản')),
+                onPressed: () =>
+                    SharePlus.instance.share(ShareParams(text: shareText, subject: 'Thông tin chuyển khoản')),
                 icon: const Icon(Icons.share_outlined),
                 label: const Text('Chia sẻ'))),
         if (r?.isPending == true) ...[
           const SizedBox(width: 10),
           Expanded(
-              child: TextButton.icon(
-                  onPressed: cancel,
-                  icon: const Icon(Icons.close),
-                  label: const Text('Hủy yêu cầu'))),
+              child:
+                  TextButton.icon(onPressed: cancel, icon: const Icon(Icons.close), label: const Text('Hủy yêu cầu'))),
         ],
       ]),
     ]);

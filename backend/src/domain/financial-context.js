@@ -16,7 +16,12 @@ function financialContext(state, user, now = new Date()) {
       income: round(sum(list.filter((e) => isIncome(e.kind)))),
       expense: round(sum(list.filter((e) => isExpense(e.kind)))),
       byCategory: state.categories
-        .map((c) => ({ name: c.name, amount: round(sum(list.filter((e) => e.categoryId === c.id && (c.income ? isIncome(e.kind) : isExpense(e.kind))))) }))
+        .map((c) => ({
+          name: c.name,
+          amount: round(
+            sum(list.filter((e) => e.categoryId === c.id && (c.income ? isIncome(e.kind) : isExpense(e.kind)))),
+          ),
+        }))
         .filter((x) => x.amount > 0)
         .sort((a, b) => b.amount - a.amount)
         .slice(0, 8),
@@ -36,21 +41,31 @@ function financialContext(state, user, now = new Date()) {
       target: w.target || undefined,
     })),
     months,
-    budgets: state.budgets.filter((b) => L.sameMonth(L.monthValue(b.month), thisMonth)).map((b) => ({
-      category: b.categoryId ? L.byId(state.categories, b.categoryId)?.name : (b.income ? 'Mục tiêu thu cả tháng' : 'Tổng chi cả tháng'),
-      limit: round(b.amount),
-      used: round(L.used(state, b)),
-    })),
-    debts: state.people.map((p) => ({
-      person: p.name,
-      theyOweMe: round(L.outstanding(state, { borrowed: false, personId: p.id, currency: cur })),
-      iOwe: round(L.outstanding(state, { borrowed: true, personId: p.id, currency: cur })),
-      nextDue: state.entries
-        .filter((e) => isDebt(e.kind) && e.personId === p.id && e.dueDate)
-        .map((e) => new Date(e.dueDate).toISOString().slice(0, 10))
-        .sort()[0],
-    })).filter((d) => d.theyOweMe > 0 || d.iOwe > 0),
-    recurring: (state.recurring || []).filter((r) => r.active).map((r) => ({ note: r.note, amount: r.amount, frequency: r.frequency })),
+    budgets: state.budgets
+      .filter((b) => L.sameMonth(L.monthValue(b.month), thisMonth))
+      .map((b) => ({
+        category: b.categoryId
+          ? L.byId(state.categories, b.categoryId)?.name
+          : b.income
+            ? 'Mục tiêu thu cả tháng'
+            : 'Tổng chi cả tháng',
+        limit: round(b.amount),
+        used: round(L.used(state, b)),
+      })),
+    debts: state.people
+      .map((p) => ({
+        person: p.name,
+        theyOweMe: round(L.outstanding(state, { borrowed: false, personId: p.id, currency: cur })),
+        iOwe: round(L.outstanding(state, { borrowed: true, personId: p.id, currency: cur })),
+        nextDue: state.entries
+          .filter((e) => isDebt(e.kind) && e.personId === p.id && e.dueDate)
+          .map((e) => new Date(e.dueDate).toISOString().slice(0, 10))
+          .sort()[0],
+      }))
+      .filter((d) => d.theyOweMe > 0 || d.iOwe > 0),
+    recurring: (state.recurring || [])
+      .filter((r) => r.active)
+      .map((r) => ({ note: r.note, amount: r.amount, frequency: r.frequency })),
   };
 }
 

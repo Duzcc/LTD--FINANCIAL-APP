@@ -6,6 +6,5 @@ class SyncRemoteDataSource {
 
   Future<Map<String, dynamic>> fetchSnapshot() => _client.send('GET', '/sync');
 
-  Future<void> pushBatch(List<Map<String, dynamic>> ops) =>
-      _client.send('POST', '/sync/batch', body: {'ops': ops});
+  Future<void> pushBatch(List<Map<String, dynamic>> ops) => _client.send('POST', '/sync/batch', body: {'ops': ops});
 }

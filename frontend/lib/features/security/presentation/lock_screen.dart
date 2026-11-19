@@ -69,8 +69,7 @@ class PinPad extends StatelessWidget {
           child: icon != null
               ? Icon(icon, color: AppColors.textPrimary)
               : Text(label,
-                  style: const TextStyle(
-                      fontSize: 26, fontWeight: FontWeight.w600, color: AppColors.textPrimary))));
+                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w600, color: AppColors.textPrimary))));
 
   @override
   Widget build(BuildContext context) => Column(mainAxisSize: MainAxisSize.min, children: [
@@ -100,21 +99,20 @@ class PinPad extends StatelessWidget {
             height: 40,
             child: Center(
                 child: Text(error ?? '',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.accentRed)))),
+                    textAlign: TextAlign.center, style: const TextStyle(color: AppColors.accentRed)))),
         for (final row in const [
           ['1', '2', '3'],
           ['4', '5', '6'],
           ['7', '8', '9']
         ])
           Row(mainAxisSize: MainAxisSize.min, children: [
-            for (final d in row)
-              _key(d, onTap: value.length < length ? () => onChanged(value + d) : null)
+            for (final d in row) _key(d, onTap: value.length < length ? () => onChanged(value + d) : null)
           ]),
         Row(mainAxisSize: MainAxisSize.min, children: [
           const SizedBox.square(dimension: 72),
           _key('0', onTap: value.length < length ? () => onChanged('${value}0') : null),
-          _key('', icon: Icons.backspace_outlined,
+          _key('',
+              icon: Icons.backspace_outlined,
               onTap: value.isEmpty ? null : () => onChanged(value.substring(0, value.length - 1))),
         ]),
       ]);
@@ -235,9 +233,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                           : first.isEmpty
                               ? 'Đặt mã PIN 4 số'
                               : 'Nhập lại mã PIN',
-                      subtitle: verifying
-                          ? null
-                          : 'Mã PIN chỉ lưu trên thiết bị này (đã mã hóa).',
+                      subtitle: verifying ? null : 'Mã PIN chỉ lưu trên thiết bị này (đã mã hóa).',
                       value: value,
                       error: error,
                       onChanged: onChanged)))));

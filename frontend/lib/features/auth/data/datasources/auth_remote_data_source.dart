@@ -9,13 +9,10 @@ class AuthRemoteDataSource {
       _client.send('POST', '/auth$path', body: body, auth: false);
 
   Future<OtpChallenge> login(String email, String password) async =>
-      OtpChallenge.fromJson(
-          await _public('/login', {'email': email, 'password': password}),
-          email: email);
+      OtpChallenge.fromJson(await _public('/login', {'email': email, 'password': password}), email: email);
 
   Future<OtpChallenge> register(String name, String email, String password) async =>
-      OtpChallenge.fromJson(
-          await _public('/register', {'name': name, 'email': email, 'password': password}),
+      OtpChallenge.fromJson(await _public('/register', {'name': name, 'email': email, 'password': password}),
           email: email);
 
   Future<Map<String, dynamic>> verifyOtp(OtpChallenge challenge, String code) =>
@@ -27,30 +24,21 @@ class AuthRemoteDataSource {
   Future<String?> forgotPassword(String email) async =>
       (await _public('/forgot-password', {'email': email}))['devCode'] as String?;
 
-  Future<Map<String, dynamic>> resetPassword(
-          String email, String code, String newPassword) =>
-      _public('/reset-password',
-          {'email': email, 'code': code, 'newPassword': newPassword});
+  Future<Map<String, dynamic>> resetPassword(String email, String code, String newPassword) =>
+      _public('/reset-password', {'email': email, 'code': code, 'newPassword': newPassword});
 
-  Future<Map<String, dynamic>> changePassword(
-          String oldPassword, String newPassword) =>
-      _client.send('PUT', '/auth/change-password',
-          body: {'oldPassword': oldPassword, 'newPassword': newPassword});
+  Future<Map<String, dynamic>> changePassword(String oldPassword, String newPassword) =>
+      _client.send('PUT', '/auth/change-password', body: {'oldPassword': oldPassword, 'newPassword': newPassword});
 
-  Future<void> verifyEmail(String code) =>
-      _client.send('POST', '/auth/verify-email', body: {'code': code});
+  Future<void> verifyEmail(String code) => _client.send('POST', '/auth/verify-email', body: {'code': code});
 
   Future<String?> resendVerification() async =>
-      (await _client.send('POST', '/auth/resend-verification'))['devCode']
-          as String?;
+      (await _client.send('POST', '/auth/resend-verification'))['devCode'] as String?;
 
-  Future<void> updateProfile(Map<String, dynamic> profile) =>
-      _client.send('PUT', '/auth/me', body: profile);
+  Future<void> updateProfile(Map<String, dynamic> profile) => _client.send('PUT', '/auth/me', body: profile);
 
   Future<void> logout({required bool everywhere, String? refreshToken}) =>
-      _client.send('POST', '/auth/logout',
-          body: everywhere ? {'all': true} : {'refreshToken': refreshToken});
+      _client.send('POST', '/auth/logout', body: everywhere ? {'all': true} : {'refreshToken': refreshToken});
 
-  Future<void> deleteAccount(String password) =>
-      _client.send('DELETE', '/auth/me', body: {'password': password});
+  Future<void> deleteAccount(String password) => _client.send('DELETE', '/auth/me', body: {'password': password});
 }

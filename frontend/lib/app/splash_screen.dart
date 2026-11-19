@@ -19,13 +19,11 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      Navigator.pushReplacementNamed(
-          context, widget.returning ? AppRoutes.home : AppRoutes.login);
+      Navigator.pushReplacementNamed(context, widget.returning ? AppRoutes.home : AppRoutes.login);
     });
   }
 
   @override
-  Widget build(BuildContext context) => const Scaffold(
-      backgroundColor: AppColors.backgroundBeige,
-      body: Center(child: BrandLogo.app(size: 96)));
+  Widget build(BuildContext context) =>
+      const Scaffold(backgroundColor: AppColors.backgroundBeige, body: Center(child: BrandLogo.app(size: 96)));
 }

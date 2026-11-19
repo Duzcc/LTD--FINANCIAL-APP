@@ -10,11 +10,7 @@ class BankRepository {
   final FinanceStore p;
 
   Future<PaymentRequestInfo> create(
-      {required String walletId,
-      double? amount,
-      String kind = 'income',
-      String? personId,
-      String note = ''}) async {
+      {required String walletId, double? amount, String kind = 'income', String? personId, String note = ''}) async {
     final r = await p.bankRequest('POST', '/requests', body: {
       'walletId': walletId,
       if (amount != null) 'amount': amount.round(),
@@ -34,16 +30,13 @@ class BankRepository {
   Future<List<PaymentRequestInfo>> list() async {
     final r = await p.bankRequest('GET', '/requests');
     return [
-      for (final j in (r['items'] as List? ?? const []))
-        PaymentRequestInfo.fromJson((j as Map).cast<String, dynamic>())
+      for (final j in (r['items'] as List? ?? const [])) PaymentRequestInfo.fromJson((j as Map).cast<String, dynamic>())
     ];
   }
 
-  Future<SepayStatus> sepay() async =>
-      SepayStatus.fromJson(await p.bankRequest('GET', '/sepay'));
+  Future<SepayStatus> sepay() async => SepayStatus.fromJson(await p.bankRequest('GET', '/sepay'));
 
-  Future<SepayStatus> createKey() async =>
-      SepayStatus.fromJson(await p.bankRequest('POST', '/sepay/key'));
+  Future<SepayStatus> createKey() async => SepayStatus.fromJson(await p.bankRequest('POST', '/sepay/key'));
 
   Future<void> revokeKey() => p.bankRequest('DELETE', '/sepay/key');
 }

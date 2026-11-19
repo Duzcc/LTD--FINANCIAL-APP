@@ -23,5 +23,5 @@ budgetSchema.set('toJSON', {
     delete out.endDate;
     return out;
   },
-}); 
+});
 module.exports = model('Budget', budgetSchema);

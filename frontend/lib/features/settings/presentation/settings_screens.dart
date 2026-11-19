@@ -59,8 +59,7 @@ class RatesScreen extends StatelessWidget {
 class RemindersScreen extends StatelessWidget {
   const RemindersScreen({super.key});
 
-  static String label(int m) =>
-      '${(m ~/ 60).toString().padLeft(2, '0')}:${(m % 60).toString().padLeft(2, '0')}';
+  static String label(int m) => '${(m ~/ 60).toString().padLeft(2, '0')}:${(m % 60).toString().padLeft(2, '0')}';
 
   @override
   Widget build(BuildContext context) {
@@ -69,8 +68,7 @@ class RemindersScreen extends StatelessWidget {
       if (v) {
         final granted = await NotificationService.instance.requestPermission();
         if (!granted && context.mounted) {
-          message(context,
-              'Chưa được cấp quyền thông báo. Hãy bật trong Cài đặt của hệ điều hành.');
+          message(context, 'Chưa được cấp quyền thông báo. Hãy bật trong Cài đặt của hệ điều hành.');
         }
       }
       p.setReminders(enabled: v);
@@ -120,8 +118,8 @@ class RemindersScreen extends StatelessWidget {
                 label: const Text('Giờ khác'),
                 onPressed: p.remindersEnabled
                     ? () async {
-                        final t = await showTimePicker(
-                            context: context, initialTime: const TimeOfDay(hour: 21, minute: 0));
+                        final t =
+                            await showTimePicker(context: context, initialTime: const TimeOfDay(hour: 21, minute: 0));
                         if (t != null) {
                           p.setReminders(minutes: [...p.reminderMinutes, t.hour * 60 + t.minute]);
                         }
@@ -129,9 +127,7 @@ class RemindersScreen extends StatelessWidget {
                     : null),
           ]),
           const SizedBox(height: 16),
-          const Text(
-              'Thông báo được lên lịch trên thiết bị, không cần kết nối mạng.',
-              style: TextStyle(fontSize: 12)),
+          const Text('Thông báo được lên lịch trên thiết bị, không cần kết nối mạng.', style: TextStyle(fontSize: 12)),
         ]));
   }
 }
@@ -157,8 +153,7 @@ class SecurityScreen extends StatelessWidget {
                       if (v) {
                         await openPage(context, const PinSetupScreen());
                       } else {
-                        final ok = await openPage<bool>(
-                            context, const PinSetupScreen(verifyOnly: true));
+                        final ok = await openPage<bool>(context, const PinSetupScreen(verifyOnly: true));
                         if (ok == true) await lock.disable();
                       }
                     }),

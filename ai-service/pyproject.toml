@@ -11,10 +11,10 @@ addopts = "-q"
 filterwarnings = ["ignore::DeprecationWarning"]
 
 [tool.ruff]
-line-length = 140
+line-length = 120
 target-version = "py311"
 extend-exclude = [".venv"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "SIM"]
-ignore = ["E731", "SIM108", "B008"]
+ignore = ["E501", "E731", "SIM108", "B008"]

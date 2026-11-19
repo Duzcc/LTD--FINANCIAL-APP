@@ -14,16 +14,8 @@ import 'package:finance_app/features/settings/data/services/excel_export.dart';
 
 void main() {
   final now = DateTime(2026, 10, 20, 10);
-  MoneyEntry spend(String id, double amount, String category, DateTime date,
-          {String note = ''}) =>
-      MoneyEntry(
-          id: id,
-          kind: EntryKind.expense,
-          amount: amount,
-          walletId: 'cash',
-          categoryId: category,
-          date: date,
-          note: note);
+  MoneyEntry spend(String id, double amount, String category, DateTime date, {String note = ''}) => MoneyEntry(
+      id: id, kind: EntryKind.expense, amount: amount, walletId: 'cash', categoryId: category, date: date, note: note);
 
   group('Giao dịch định kỳ', () {
     test('Sinh giao dịch hằng tháng, lùi về cuối tháng và không trùng', () {
@@ -182,8 +174,7 @@ void main() {
       for (var d = 1; d <= 20; d++) {
         p.saveEntry(spend('c$d', 60000, 'food', DateTime(2026, 10, d)));
       }
-      p.saveBudget(MoneyBudget(
-          id: 'all', categoryId: null, month: DateTime(2026, 10), amount: 1300000));
+      p.saveBudget(MoneyBudget(id: 'all', categoryId: null, month: DateTime(2026, 10), amount: 1300000));
       final insights = FinanceInsights(p, now: now);
       final f = insights.forecast();
       expect(f.spent, 1200000);
@@ -204,7 +195,11 @@ void main() {
   test('Đầu tháng chưa có lịch sử: không đưa dự báo nhân thẳng dễ sai', () {
     final p = FinanceProvider();
     p.saveEntry(MoneyEntry(
-        id: 'x', kind: EntryKind.expense, amount: 50000, walletId: 'cash', categoryId: 'food',
+        id: 'x',
+        kind: EntryKind.expense,
+        amount: 50000,
+        walletId: 'cash',
+        categoryId: 'food',
         date: DateTime(2026, 11, 1, 9)));
     final tips = FinanceInsights(p, now: DateTime(2026, 11, 1, 12)).all();
     expect(tips.first.title, 'Đang học thói quen chi tiêu của bạn');
@@ -242,8 +237,7 @@ void main() {
     final zip = ZipDecoder().decodeBytes(bytes);
     final names = zip.files.map((f) => f.name).toSet();
     expect(names, containsAll(['[Content_Types].xml', 'xl/workbook.xml', 'xl/worksheets/sheet3.xml']));
-    final sheet =
-        utf8.decode(zip.findFile('xl/worksheets/sheet1.xml')!.content as List<int>);
+    final sheet = utf8.decode(zip.findFile('xl/worksheets/sheet1.xml')!.content as List<int>);
     expect(sheet, contains('Phở &amp; &lt;trà&gt;'));
     expect(sheet, contains('<v>45000.0</v>'));
     p.dispose();

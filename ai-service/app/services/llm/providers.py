@@ -20,8 +20,14 @@ class LLMError(RuntimeError):
 class LLMProvider(Protocol):
     name: str
 
-    async def run(self, system: str, messages: list[dict[str, str]], tools: list[dict[str, Any]],
-                  execute: ToolExecutor, max_steps: int = 6) -> tuple[str, list[str]]: ...
+    async def run(
+        self,
+        system: str,
+        messages: list[dict[str, str]],
+        tools: list[dict[str, Any]],
+        execute: ToolExecutor,
+        max_steps: int = 6,
+    ) -> tuple[str, list[str]]: ...
 
     async def complete_vision(self, prompt: str, image_b64: str, media_type: str) -> str: ...
 
@@ -39,8 +45,16 @@ class AnthropicProvider:
         self.http = client
 
     async def _post(self, payload: dict[str, Any]) -> dict[str, Any]:
-        r = await self.http.post(self.URL, json=payload, timeout=self.s.llm_timeout_seconds, headers={
-            "x-api-key": self.s.llm_api_key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
+        r = await self.http.post(
+            self.URL,
+            json=payload,
+            timeout=self.s.llm_timeout_seconds,
+            headers={
+                "x-api-key": self.s.llm_api_key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+        )
         if r.status_code >= 400:
             raise LLMError(f"Anthropic {r.status_code}: {r.text[:300]}")
         return r.json()
@@ -49,8 +63,15 @@ class AnthropicProvider:
         convo: list[dict[str, Any]] = [{"role": m["role"], "content": m["content"]} for m in messages]
         used: list[str] = []
         for _ in range(max_steps):
-            data = await self._post({"model": self.s.llm_model, "max_tokens": self.s.llm_max_tokens,
-                                     "system": system, "messages": convo, "tools": tools})
+            data = await self._post(
+                {
+                    "model": self.s.llm_model,
+                    "max_tokens": self.s.llm_max_tokens,
+                    "system": system,
+                    "messages": convo,
+                    "tools": tools,
+                }
+            )
             blocks = data.get("content", [])
             calls = [b for b in blocks if b.get("type") == "tool_use"]
             if not calls:
@@ -59,16 +80,35 @@ class AnthropicProvider:
             results = []
             for c in calls:
                 used.append(c["name"])
-                results.append({"type": "tool_result", "tool_use_id": c["id"],
-                                "content": _dump(execute(c["name"], c.get("input") or {}))})
+                results.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": c["id"],
+                        "content": _dump(execute(c["name"], c.get("input") or {})),
+                    }
+                )
             convo.append({"role": "user", "content": results})
         raise LLMError("Quá số bước gọi công cụ")
 
     async def complete_vision(self, prompt, image_b64, media_type):
-        data = await self._post({"model": self.s.vision_model or self.s.llm_model, "max_tokens": 1200, "messages": [
-            {"role": "user", "content": [
-                {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_b64}},
-                {"type": "text", "text": prompt}]}]})
+        data = await self._post(
+            {
+                "model": self.s.vision_model or self.s.llm_model,
+                "max_tokens": 1200,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image",
+                                "source": {"type": "base64", "media_type": media_type, "data": image_b64},
+                            },
+                            {"type": "text", "text": prompt},
+                        ],
+                    }
+                ],
+            }
+        )
         return "".join(b.get("text", "") for b in data.get("content", []) if b.get("type") == "text")
 
 
@@ -92,12 +132,24 @@ class OpenAICompatProvider:
 
     async def run(self, system, messages, tools, execute, max_steps=6):
         convo: list[dict[str, Any]] = [{"role": "system", "content": system}] + list(messages)
-        fn_tools = [{"type": "function", "function": {"name": t["name"], "description": t["description"],
-                                                      "parameters": t["input_schema"]}} for t in tools]
+        fn_tools = [
+            {
+                "type": "function",
+                "function": {"name": t["name"], "description": t["description"], "parameters": t["input_schema"]},
+            }
+            for t in tools
+        ]
         used: list[str] = []
         for _ in range(max_steps):
-            data = await self._post({"model": self.s.llm_model, "messages": convo, "tools": fn_tools,
-                                     "max_tokens": self.s.llm_max_tokens, "temperature": 0.3})
+            data = await self._post(
+                {
+                    "model": self.s.llm_model,
+                    "messages": convo,
+                    "tools": fn_tools,
+                    "max_tokens": self.s.llm_max_tokens,
+                    "temperature": 0.3,
+                }
+            )
             msg = data["choices"][0]["message"]
             calls = msg.get("tool_calls") or []
             if not calls:
@@ -110,15 +162,31 @@ class OpenAICompatProvider:
                 except json.JSONDecodeError:
                     args = {}
                 used.append(fn["name"])
-                convo.append({"role": "tool", "tool_call_id": c.get("id", fn["name"]),
-                              "content": _dump(execute(fn["name"], args))})
+                convo.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": c.get("id", fn["name"]),
+                        "content": _dump(execute(fn["name"], args)),
+                    }
+                )
         raise LLMError("Quá số bước gọi công cụ")
 
     async def complete_vision(self, prompt, image_b64, media_type):
-        data = await self._post({"model": self.s.vision_model or self.s.llm_model, "max_tokens": 1200, "messages": [
-            {"role": "user", "content": [
-                {"type": "text", "text": prompt},
-                {"type": "image_url", "image_url": {"url": f"data:{media_type};base64,{image_b64}"}}]}]})
+        data = await self._post(
+            {
+                "model": self.s.vision_model or self.s.llm_model,
+                "max_tokens": 1200,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {"type": "image_url", "image_url": {"url": f"data:{media_type};base64,{image_b64}"}},
+                        ],
+                    }
+                ],
+            }
+        )
         return data["choices"][0]["message"].get("content") or ""
 
 

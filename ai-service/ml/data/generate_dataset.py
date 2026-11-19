@@ -9,8 +9,16 @@ from app.nlp.text import fold
 
 from .lexicon import AMOUNTS, CATEGORIES, COMPANIONS, INTENT_TEMPLATES, PEOPLE, TIME_WORDS, WALLETS
 
-ABBREV = {"cà phê": ["cf", "cafe", "cà fê"], "chuyển khoản": ["ck"], "điện thoại": ["dt", "đt"], "trà sữa": ["ts"],
-          "học phí": ["hp"], "không": ["ko", "k"], "được": ["đc", "dc"], "tiền": ["tien", "t"]}
+ABBREV = {
+    "cà phê": ["cf", "cafe", "cà fê"],
+    "chuyển khoản": ["ck"],
+    "điện thoại": ["dt", "đt"],
+    "trà sữa": ["ts"],
+    "học phí": ["hp"],
+    "không": ["ko", "k"],
+    "được": ["đc", "dc"],
+    "tiền": ["tien", "t"],
+}
 
 
 def _typo(text: str, rnd: random.Random) -> str:
@@ -86,10 +94,15 @@ def intent_samples(rnd: random.Random, per_intent: int) -> list[dict]:
             tpl = rnd.choice(templates)
             items = income_items if label == "income" else expense_items
             text = tpl.format(
-                item=rnd.choice(items), amount=rnd.choice([a for a in AMOUNTS if a] + [""]),
-                verb=rnd.choice(["mua", "ăn", "trả", "đóng", "đi"]), time=rnd.choice(TIME_WORDS),
-                place=rnd.choice(places), person=rnd.choice(PEOPLE), wallet=rnd.choice(WALLETS),
-                wallet2=rnd.choice(WALLETS))
+                item=rnd.choice(items),
+                amount=rnd.choice([a for a in AMOUNTS if a] + [""]),
+                verb=rnd.choice(["mua", "ăn", "trả", "đóng", "đi"]),
+                time=rnd.choice(TIME_WORDS),
+                place=rnd.choice(places),
+                person=rnd.choice(PEOPLE),
+                wallet=rnd.choice(WALLETS),
+                wallet2=rnd.choice(WALLETS),
+            )
             text = augment(text, rnd).strip()
             if text and text not in seen:
                 seen.add(text)
@@ -107,8 +120,10 @@ def main(argv: list[str] | None = None) -> None:
     rnd = random.Random(args.seed)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    for name, rows in [("categories.jsonl", category_samples(rnd, args.per_category)),
-                       ("intents.jsonl", intent_samples(rnd, args.per_intent))]:
+    for name, rows in [
+        ("categories.jsonl", category_samples(rnd, args.per_category)),
+        ("intents.jsonl", intent_samples(rnd, args.per_intent)),
+    ]:
         rnd.shuffle(rows)
         with (out / name).open("w", encoding="utf-8") as f:
             for r in rows:

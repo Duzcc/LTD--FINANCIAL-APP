@@ -26,8 +26,7 @@ class QuickEntryParser {
   QuickEntryParser(this.p);
   final FinanceStore p;
 
-  static final _amount = RegExp(
-      r'(\d+(?:[.,]\d+)*)\s*(k|nghin|ngan|ng|tr|trieu|cu|ty|ti|d|dong|vnd)?(\d{1,3})?\b');
+  static final _amount = RegExp(r'(\d+(?:[.,]\d+)*)\s*(k|nghin|ngan|ng|tr|trieu|cu|ty|ti|d|dong|vnd)?(\d{1,3})?\b');
 
   static (double, int, int)? findAmount(String folded) {
     (double, int, int)? unitless;
@@ -41,10 +40,7 @@ class QuickEntryParser {
       if (m.start > 0 && folded[m.start - 1] == '/') continue;
       if (unit == null || unit == 'd' || unit == 'dong' || unit == 'vnd') {
         final grouped = RegExp(r'^\d{1,3}([.,]\d{3})+$').hasMatch(raw);
-        var value = double.tryParse(grouped
-                ? raw.replaceAll(RegExp(r'[.,]'), '')
-                : raw.replaceAll(',', '.')) ??
-            0;
+        var value = double.tryParse(grouped ? raw.replaceAll(RegExp(r'[.,]'), '') : raw.replaceAll(',', '.')) ?? 0;
         if (unit == null && value < 1000) value *= 1000;
         if (value <= 0) continue;
         if (unit != null || grouped) return (value, m.start, m.end);
@@ -109,10 +105,7 @@ class QuickEntryParser {
   }
 
   static String _originalName(String text, String folded) {
-    final original = text
-        .split(RegExp(r'[^0-9A-Za-zÀ-ỹĐđ]+'))
-        .where((w) => w.isNotEmpty)
-        .toList();
+    final original = text.split(RegExp(r'[^0-9A-Za-zÀ-ỹĐđ]+')).where((w) => w.isNotEmpty).toList();
     final parts = folded.split(' ');
     for (var i = 0; i + parts.length <= original.length; i++) {
       var ok = true;
@@ -123,10 +116,7 @@ class QuickEntryParser {
         }
       }
       if (ok) {
-        return original
-            .sublist(i, i + parts.length)
-            .map((w) => w[0].toUpperCase() + w.substring(1))
-            .join(' ');
+        return original.sublist(i, i + parts.length).map((w) => w[0].toUpperCase() + w.substring(1)).join(' ');
       }
     }
     return folded;
@@ -155,8 +145,7 @@ class QuickEntryParser {
     final repay = RegExp(r'\btra\s+(?:no\s+|tien\s+)?(?:cho\s+)?([a-z]+)\b').firstMatch(f);
     final collect = RegExp(r'\b(thu no|doi no)\s+([a-z]+)\b|\b([a-z]+)\s+tra\s+(?:no|tien)\b').firstMatch(f);
     const pronouns = {'toi', 'minh', 'em', 'anh', 'chi', 'tao', 'da', 'di', 'phai'};
-    final collectMatch =
-        collect != null && !pronouns.contains(collect.group(3)) ? collect : null;
+    final collectMatch = collect != null && !pronouns.contains(collect.group(3)) ? collect : null;
     if (RegExp(r'\btra lai\b').hasMatch(f)) {
       kind = EntryKind.interestExpense;
     } else if (RegExp(r'\b(thu lai|tien lai|lai tiet kiem)\b').hasMatch(f)) {
@@ -175,7 +164,8 @@ class QuickEntryParser {
       newName = borrow.group(2);
     } else if (RegExp(r'\b(chuyen|nap)\s+(tien\s+)?(vao|sang|qua)\b').hasMatch(f)) {
       kind = EntryKind.transfer;
-    } else if (RegExp(r'\b(luong|thuong|nhan|duoc cho|duoc tang|ban do|ban hang|thu nhap|hoan tien|li xi|lam them)\b').hasMatch(f)) {
+    } else if (RegExp(r'\b(luong|thuong|nhan|duoc cho|duoc tang|ban do|ban hang|thu nhap|hoan tien|li xi|lam them)\b')
+        .hasMatch(f)) {
       kind = EntryKind.income;
     } else {
       kind = EntryKind.expense;
@@ -207,7 +197,8 @@ class QuickEntryParser {
     var note = text.trim();
     if (found != null) {
       final words = text.trim().split(RegExp(r'\s+'));
-      final kept = words.where((w) => findAmount(foldKeepNumbers(w)) == null || RegExp(r'^\d{1,2}/\d{1,2}').hasMatch(w));
+      final kept =
+          words.where((w) => findAmount(foldKeepNumbers(w)) == null || RegExp(r'^\d{1,2}/\d{1,2}').hasMatch(w));
       note = kept.join(' ');
     }
     note = note.replaceAll(RegExp(r'\s+'), ' ').trim();

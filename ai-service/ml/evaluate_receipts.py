@@ -42,8 +42,12 @@ def main(argv: list[str] | None = None) -> None:
             print(f"--- #{i} cần {label.total}, đọc {r.total} (tin cậy {r.confidence})\n{text}\n")
     n = args.n
     report = {
-        "engine": engine, "receipts": n, "total_accuracy": round(ok_total / n, 3), "date_accuracy": round(ok_date / n, 3),
-        "merchant_accuracy": round(ok_merchant / n, 3), "avg_seconds": round(secs / n, 2),
+        "engine": engine,
+        "receipts": n,
+        "total_accuracy": round(ok_total / n, 3),
+        "date_accuracy": round(ok_date / n, 3),
+        "merchant_accuracy": round(ok_merchant / n, 3),
+        "avg_seconds": round(secs / n, 2),
         "confidence_when_correct": round(sum(conf_ok) / max(1, len(conf_ok)), 2),
         "confidence_when_wrong": round(sum(conf_bad) / max(1, len(conf_bad)), 2),
     }

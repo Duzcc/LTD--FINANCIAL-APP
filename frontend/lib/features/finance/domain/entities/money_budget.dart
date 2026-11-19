@@ -18,8 +18,7 @@ class MoneyBudget {
   Map<String, dynamic> toJson() => {
         'id': id,
         'categoryId': categoryId,
-        'month':
-            '${month.year.toString().padLeft(4, '0')}-${month.month.toString().padLeft(2, '0')}-01',
+        'month': '${month.year.toString().padLeft(4, '0')}-${month.month.toString().padLeft(2, '0')}-01',
         'amount': amount,
         'walletId': walletId,
         'currency': currency,

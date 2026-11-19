@@ -40,6 +40,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     if (created > 0) message(context, 'Đã tự ghi $created giao dịch định kỳ đến hạn.');
     if (p.signedIn) p.syncNow();
   }
+
   @override
   Widget build(BuildContext context) {
     final storageError = context.select<FinanceProvider, String?>((p) => p.storageError);
@@ -57,13 +58,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
                   if (storageError != null)
                     SafeArea(
                         bottom: false,
-                        child: MaterialBanner(
-                            content: Text(storageError),
-                            actions: [
-                              TextButton(
-                                  onPressed: context.read<FinanceProvider>().retrySave,
-                                  child: const Text('Thử lưu lại'))
-                            ])),
+                        child: MaterialBanner(content: Text(storageError), actions: [
+                          TextButton(
+                              onPressed: context.read<FinanceProvider>().retrySave, child: const Text('Thử lưu lại'))
+                        ])),
                   Expanded(
                       child: IndexedStack(index: index, children: const [
                     HomeScreen(),

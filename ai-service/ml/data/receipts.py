@@ -11,11 +11,17 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 STORES = [
-    ("CIRCLE K", ["Nước suối Aquafina", "Bánh mì sandwich", "Mì ly Hảo Hảo", "Xúc xích Đức", "Trà xanh 0 độ", "Sữa tươi TH"]),
+    (
+        "CIRCLE K",
+        ["Nước suối Aquafina", "Bánh mì sandwich", "Mì ly Hảo Hảo", "Xúc xích Đức", "Trà xanh 0 độ", "Sữa tươi TH"],
+    ),
     ("WINMART+", ["Rau muống", "Trứng gà 10 quả", "Thịt ba chỉ", "Gạo ST25 5kg", "Nước mắm Nam Ngư", "Dầu ăn Neptune"]),
     ("BÁCH HÓA XANH", ["Cà chua", "Hành lá", "Cá basa phi lê", "Sữa chua Vinamilk", "Đậu hũ", "Bột giặt OMO"]),
     ("HIGHLANDS COFFEE", ["Phin sữa đá", "Trà sen vàng", "Bánh mì que", "Freeze trà xanh", "Bạc xỉu"]),
-    ("NHÀ THUỐC LONG CHÂU", ["Panadol Extra", "Vitamin C 500mg", "Khẩu trang y tế", "Nước muối sinh lý", "Băng cá nhân"]),
+    (
+        "NHÀ THUỐC LONG CHÂU",
+        ["Panadol Extra", "Vitamin C 500mg", "Khẩu trang y tế", "Nước muối sinh lý", "Băng cá nhân"],
+    ),
     ("PHỞ THÌN BỜ HỒ", ["Phở tái lăn", "Quẩy", "Trà đá", "Phở chín"]),
     ("CO.OPMART", ["Khăn giấy Pulppy", "Nước rửa chén Sunlight", "Bánh quy Cosy", "Kem đánh răng P/S"]),
 ]
@@ -68,15 +74,25 @@ def make_receipt(rnd: random.Random, idx: int) -> tuple[Image.Image, Label, str]
 
     w = 46
     rows: list[tuple[str, str]] = []
-    rows += [("c", store), ("c", f"{rnd.randint(1, 300)} {rnd.choice(STREETS)}, Q.{rnd.randint(1, 12)}"),
-             ("c", f"ĐT: 0{rnd.randint(200000000, 999999999)}"), ("c", "HÓA ĐƠN BÁN HÀNG"),
-             ("l", rnd.choice(["Ngày: ", "Ngày bán: ", ""])
-              + when.strftime(rnd.choice(["%d/%m/%Y %H:%M", "%d-%m-%Y %H:%M", "%d/%m/%y %H:%M"]))),
-             ("l", f"Số HĐ: {rnd.randint(10000, 99999)}"), ("l", "-" * w),
-             ("l", "Tên hàng".ljust(18) + "SL".rjust(4) + "Đ.Giá".rjust(11) + "T.Tiền".rjust(13))]
+    rows += [
+        ("c", store),
+        ("c", f"{rnd.randint(1, 300)} {rnd.choice(STREETS)}, Q.{rnd.randint(1, 12)}"),
+        ("c", f"ĐT: 0{rnd.randint(200000000, 999999999)}"),
+        ("c", "HÓA ĐƠN BÁN HÀNG"),
+        (
+            "l",
+            rnd.choice(["Ngày: ", "Ngày bán: ", ""])
+            + when.strftime(rnd.choice(["%d/%m/%Y %H:%M", "%d-%m-%Y %H:%M", "%d/%m/%y %H:%M"])),
+        ),
+        ("l", f"Số HĐ: {rnd.randint(10000, 99999)}"),
+        ("l", "-" * w),
+        ("l", "Tên hàng".ljust(18) + "SL".rjust(4) + "Đ.Giá".rjust(11) + "T.Tiền".rjust(13)),
+    ]
     for name, q, p in items:
         if rnd.random() < 0.5:
-            rows.append(("l", name[:18].ljust(18) + str(q).rjust(4) + money(p, 0).rjust(11) + money(q * p, style % 2).rjust(13)))
+            rows.append(
+                ("l", name[:18].ljust(18) + str(q).rjust(4) + money(p, 0).rjust(11) + money(q * p, style % 2).rjust(13))
+            )
         else:
             rows.append(("l", name))
             rows.append(("l", f"  {q} x {money(p, 0)}".ljust(w - 13) + money(q * p, style % 2).rjust(13)))

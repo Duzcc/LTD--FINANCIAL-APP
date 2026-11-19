@@ -5,7 +5,9 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-Kind = Literal["expense", "income", "transfer", "lend", "collect", "interestIncome", "borrow", "repay", "interestExpense"]
+Kind = Literal[
+    "expense", "income", "transfer", "lend", "collect", "interestIncome", "borrow", "repay", "interestExpense"
+]
 INCOME_KINDS = {"income", "interestIncome"}
 EXPENSE_KINDS = {"expense", "interestExpense"}
 

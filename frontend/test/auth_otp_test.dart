@@ -38,13 +38,10 @@ void main() {
     expect(find.byType(OtpScreen), findsNothing);
   });
 
-  testWidgets('Đăng nhập phải nhập OTP gửi về email mới vào ứng dụng',
-      (tester) async {
+  testWidgets('Đăng nhập phải nhập OTP gửi về email mới vào ứng dụng', (tester) async {
     final p = await open(tester);
-    await tester.enterText(
-        find.byKey(const ValueKey('auth-email')), 'an@test.vn');
-    await tester.enterText(
-        find.byKey(const ValueKey('auth-password')), '123456');
+    await tester.enterText(find.byKey(const ValueKey('auth-email')), 'an@test.vn');
+    await tester.enterText(find.byKey(const ValueKey('auth-password')), '123456');
     await tester.tap(find.widgetWithText(FilledButton, 'Đăng nhập'));
     await tester.pumpAndSettle();
     expect(find.byType(OtpScreen), findsOneWidget);
@@ -56,8 +53,7 @@ void main() {
     expect(find.textContaining('không đúng'), findsOneWidget);
     expect(p.signedIn, isFalse);
 
-    await tester.enterText(
-        find.byKey(const ValueKey('otp-code')), FakeBackend.otpCode);
+    await tester.enterText(find.byKey(const ValueKey('otp-code')), FakeBackend.otpCode);
     await tester.pumpAndSettle();
     expect(p.signedIn, isTrue);
     expect(find.byType(MainScreen), findsOneWidget);

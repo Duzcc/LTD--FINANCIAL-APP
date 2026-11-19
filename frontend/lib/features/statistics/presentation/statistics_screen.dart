@@ -24,27 +24,19 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
   bool income = false;
 
   (DateTime, DateTime) get bounds => switch (period) {
-        StatPeriod.month => (
-            DateTime(anchor.year, anchor.month),
-            DateTime(anchor.year, anchor.month + 1)
-          ),
+        StatPeriod.month => (DateTime(anchor.year, anchor.month), DateTime(anchor.year, anchor.month + 1)),
         StatPeriod.year => (DateTime(anchor.year), DateTime(anchor.year + 1)),
-        StatPeriod.range => (
-            dateOnly(range!.start),
-            dateOnly(range!.end).add(const Duration(days: 1))
-          ),
+        StatPeriod.range => (dateOnly(range!.start), dateOnly(range!.end).add(const Duration(days: 1))),
       };
 
   String get title => switch (period) {
         StatPeriod.month => 'Tháng ${DateFormat('MM/yyyy').format(anchor)}',
         StatPeriod.year => 'Năm ${anchor.year}',
-        StatPeriod.range =>
-          '${dayLabel(range!.start)} – ${dayLabel(range!.end)}',
+        StatPeriod.range => '${dayLabel(range!.start)} – ${dayLabel(range!.end)}',
       };
 
-  void shift(int step) => setState(() => anchor = period == StatPeriod.year
-      ? DateTime(anchor.year + step)
-      : DateTime(anchor.year, anchor.month + step));
+  void shift(int step) => setState(() =>
+      anchor = period == StatPeriod.year ? DateTime(anchor.year + step) : DateTime(anchor.year, anchor.month + step));
 
   Future<void> pickRange() async {
     final now = DateTime.now();
@@ -52,8 +44,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         context: context,
         firstDate: DateTime(2020),
         lastDate: DateTime(2100),
-        initialDateRange: range ??
-            DateTimeRange(start: DateTime(now.year, now.month), end: now));
+        initialDateRange: range ?? DateTimeRange(start: DateTime(now.year, now.month), end: now));
     if (r != null && mounted) {
       setState(() {
         range = r;
@@ -86,9 +77,7 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
         expenses.add(p.sumBetween(d, next, income: false));
       }
     } else {
-      for (var m = DateTime(from.year, from.month);
-          m.isBefore(to);
-          m = DateTime(m.year, m.month + 1)) {
+      for (var m = DateTime(from.year, from.month); m.isBefore(to); m = DateTime(m.year, m.month + 1)) {
         final next = DateTime(m.year, m.month + 1);
         final start = m.isBefore(from) ? from : m;
         final end = next.isAfter(to) ? to : next;
@@ -136,44 +125,32 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
             Expanded(
                 child: InkWell(
                     onTap: period == StatPeriod.range ? pickRange : null,
-                    child: Text(title,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontWeight: FontWeight.w600)))),
+                    child:
+                        Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w600)))),
             IconButton(
                 tooltip: 'Kỳ sau',
                 onPressed: period == StatPeriod.range ? null : () => shift(1),
                 icon: const Icon(Icons.chevron_right)),
           ]),
           Panel(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                Row(children: [
-                  Expanded(
-                      child: _Stat('Thu nhập', money(totalIncome, p.currency),
-                          AppColors.primaryGreen)),
-                  Expanded(
-                      child: _Stat('Chi tiêu', money(totalExpense, p.currency),
-                          AppColors.accentRed)),
-                ]),
-                const Divider(height: 24),
-                Row(children: [
-                  Expanded(
-                      child: Text(diff >= 0 ? 'Tiết kiệm được' : 'Chi vượt thu')),
-                  Text(money(diff.abs(), p.currency),
-                      style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: diff >= 0
-                              ? AppColors.primaryGreen
-                              : AppColors.accentRed)),
-                ]),
-                if (totalIncome > 0) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                      'Chi tiêu bằng ${(100 * totalExpense / totalIncome).toStringAsFixed(0)}% thu nhập',
-                      style: const TextStyle(fontSize: 12)),
-                ],
-              ])),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Expanded(child: _Stat('Thu nhập', money(totalIncome, p.currency), AppColors.primaryGreen)),
+              Expanded(child: _Stat('Chi tiêu', money(totalExpense, p.currency), AppColors.accentRed)),
+            ]),
+            const Divider(height: 24),
+            Row(children: [
+              Expanded(child: Text(diff >= 0 ? 'Tiết kiệm được' : 'Chi vượt thu')),
+              Text(money(diff.abs(), p.currency),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700, color: diff >= 0 ? AppColors.primaryGreen : AppColors.accentRed)),
+            ]),
+            if (totalIncome > 0) ...[
+              const SizedBox(height: 6),
+              Text('Chi tiêu bằng ${(100 * totalExpense / totalIncome).toStringAsFixed(0)}% thu nhập',
+                  style: const TextStyle(fontSize: 12)),
+            ],
+          ])),
           const SectionTitle('Thu nhập và chi tiêu theo thời gian'),
           Panel(
               child: Column(children: [
@@ -181,23 +158,18 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                 height: 200,
                 child: totalIncome == 0 && totalExpense == 0
                     ? const Center(child: Text('Chưa có dữ liệu trong kỳ này'))
-                    : IncomeExpenseChart(
-                        labels: labels, incomes: incomes, expenses: expenses)),
+                    : IncomeExpenseChart(labels: labels, incomes: incomes, expenses: expenses)),
             const SizedBox(height: 8),
-            const Wrap(
-                alignment: WrapAlignment.center,
-                spacing: 16,
-                children: [
-                  Row(mainAxisSize: MainAxisSize.min, children: [
-                    CircleAvatar(
-                        radius: 5, backgroundColor: AppColors.primaryGreen),
-                    Text('  Thu nhập', style: TextStyle(fontSize: 12)),
-                  ]),
-                  Row(mainAxisSize: MainAxisSize.min, children: [
-                    CircleAvatar(radius: 5, backgroundColor: AppColors.accentRed),
-                    Text('  Chi tiêu', style: TextStyle(fontSize: 12)),
-                  ]),
-                ]),
+            const Wrap(alignment: WrapAlignment.center, spacing: 16, children: [
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                CircleAvatar(radius: 5, backgroundColor: AppColors.primaryGreen),
+                Text('  Thu nhập', style: TextStyle(fontSize: 12)),
+              ]),
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                CircleAvatar(radius: 5, backgroundColor: AppColors.accentRed),
+                Text('  Chi tiêu', style: TextStyle(fontSize: 12)),
+              ]),
+            ]),
           ])),
           const SizedBox(height: 16),
           SegmentedButton<bool>(segments: const [
@@ -218,26 +190,18 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
               SizedBox(
                   height: 230,
                   child: Stack(alignment: Alignment.center, children: [
-                    PieChart(PieChartData(
-                        centerSpaceRadius: 70,
-                        sectionsSpace: 3,
-                        sections: [
-                          for (final (i, (_, value)) in categories.indexed)
-                            PieChartSectionData(
-                                value: value,
-                                color: colors[i % colors.length],
-                                radius: 28,
-                                showTitle: false)
-                        ])),
+                    PieChart(PieChartData(centerSpaceRadius: 70, sectionsSpace: 3, sections: [
+                      for (final (i, (_, value)) in categories.indexed)
+                        PieChartSectionData(
+                            value: value, color: colors[i % colors.length], radius: 28, showTitle: false)
+                    ])),
                     SizedBox(
                         width: 130,
-                        child:
-                            Column(mainAxisSize: MainAxisSize.min, children: [
+                        child: Column(mainAxisSize: MainAxisSize.min, children: [
                           Text(income ? 'Tổng thu' : 'Tổng chi'),
                           Text(money(total, p.currency),
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w700, fontSize: 17))
+                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17))
                         ])),
                   ])),
             for (final (i, (c, value)) in categories.indexed)
@@ -259,13 +223,9 @@ class _Stat extends StatelessWidget {
   final String label, value;
   final Color color;
   @override
-  Widget build(BuildContext context) =>
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(label, style: const TextStyle(fontSize: 12)),
         const SizedBox(height: 4),
-        FittedBox(
-            child: Text(value,
-                style: TextStyle(
-                    fontWeight: FontWeight.w700, fontSize: 18, color: color))),
+        FittedBox(child: Text(value, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: color))),
       ]);
 }

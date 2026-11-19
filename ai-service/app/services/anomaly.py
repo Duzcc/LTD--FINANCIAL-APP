@@ -34,11 +34,13 @@ def _robust_z(values: np.ndarray, x: float) -> float:
     return 0.6745 * (x - med) / mad
 
 
-def detect(transactions: list[Transaction], now: datetime, lookback_days: int = 30,
-           categories: dict[str, str] | None = None) -> tuple[list[Anomaly], list[CategorySpike]]:
+def detect(
+    transactions: list[Transaction], now: datetime, lookback_days: int = 30, categories: dict[str, str] | None = None
+) -> tuple[list[Anomaly], list[CategorySpike]]:
     names = categories or {}
-    expenses = sorted((t for t in transactions if t.kind in EXPENSE_KINDS and not t.excluded and t.amount > 0),
-                      key=lambda t: t.date)
+    expenses = sorted(
+        (t for t in transactions if t.kind in EXPENSE_KINDS and not t.excluded and t.amount > 0), key=lambda t: t.date
+    )
     since = now - timedelta(days=lookback_days)
     found: dict[str, Anomaly] = {}
 
@@ -66,13 +68,21 @@ def detect(transactions: list[Transaction], now: datetime, lookback_days: int = 
             median = float(np.expm1(np.median(others)))
             ratio = t.amount / max(median, 1)
             if z >= 3.5 and ratio >= 2.5 and t.amount - median >= 50_000:
-                add(t, 0.5 + min(0.5, (z - 3.5) / 7),
-                    f"Cao gấp {ratio:.1f} lần mức thường chi cho {names.get(cid, 'danh mục này')}", "amount")
+                add(
+                    t,
+                    0.5 + min(0.5, (z - 3.5) / 7),
+                    f"Cao gấp {ratio:.1f} lần mức thường chi cho {names.get(cid, 'danh mục này')}",
+                    "amount",
+                )
 
     if len(expenses) >= 40:
         cat_index = {c: i for i, c in enumerate(sorted(by_cat))}
-        X = np.array([[np.log1p(t.amount), t.date.hour + t.date.minute / 60, t.date.weekday(),
-                       cat_index[t.categoryId or "_"]] for t in expenses])
+        X = np.array(
+            [
+                [np.log1p(t.amount), t.date.hour + t.date.minute / 60, t.date.weekday(), cat_index[t.categoryId or "_"]]
+                for t in expenses
+            ]
+        )
         forest = IsolationForest(n_estimators=200, contamination=0.03, random_state=0).fit(X)
         scores = -forest.score_samples(X)
         threshold = np.quantile(scores, 0.97)
@@ -88,10 +98,13 @@ def detect(transactions: list[Transaction], now: datetime, lookback_days: int = 
     for i, t in enumerate(expenses):
         if t.date < since:
             continue
-        for o in expenses[max(0, i - 6):i]:
+        for o in expenses[max(0, i - 6) : i]:
             same_text = fold(o.note).strip() == fold(t.note).strip()
-            if (o.amount == t.amount and (o.categoryId == t.categoryId or same_text)
-                    and abs((t.date - o.date).total_seconds()) <= 600):
+            if (
+                o.amount == t.amount
+                and (o.categoryId == t.categoryId or same_text)
+                and abs((t.date - o.date).total_seconds()) <= 600
+            ):
                 add(t, 0.8, "Có thể bị nhập trùng (cùng số tiền trong vòng 10 phút)", "duplicate")
                 break
 

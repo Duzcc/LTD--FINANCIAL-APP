@@ -4,21 +4,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 class OcrLine {
-  const OcrLine(this.text, this.x, this.y, this.w, this.h,
-      {this.confidence = 1, this.angle});
+  const OcrLine(this.text, this.x, this.y, this.w, this.h, {this.confidence = 1, this.angle});
   final String text;
   final double x, y, w, h, confidence;
 
   final double? angle;
 
-  factory OcrLine.fromMap(Map<dynamic, dynamic> m) => OcrLine(
-      '${m['text']}',
-      (m['x'] as num).toDouble(),
-      (m['y'] as num).toDouble(),
-      (m['w'] as num).toDouble(),
-      (m['h'] as num).toDouble(),
-      confidence: (m['confidence'] as num?)?.toDouble() ?? 1,
-      angle: (m['angle'] as num?)?.toDouble());
+  factory OcrLine.fromMap(Map<dynamic, dynamic> m) => OcrLine('${m['text']}', (m['x'] as num).toDouble(),
+      (m['y'] as num).toDouble(), (m['w'] as num).toDouble(), (m['h'] as num).toDouble(),
+      confidence: (m['confidence'] as num?)?.toDouble() ?? 1, angle: (m['angle'] as num?)?.toDouble());
 }
 
 class OcrResult {
@@ -70,11 +64,7 @@ List<String> groupRows(List<OcrLine> lines, {double? skew}) {
   final c = math.cos(-skew), s = math.sin(-skew);
   final items = [
     for (final b in boxes)
-      (
-        x: (b.x + b.w / 2) * c - (b.y + b.h / 2) * s,
-        y: (b.x + b.w / 2) * s + (b.y + b.h / 2) * c,
-        box: b
-      )
+      (x: (b.x + b.w / 2) * c - (b.y + b.h / 2) * s, y: (b.x + b.w / 2) * s + (b.y + b.h / 2) * c, box: b)
   ]..sort((a, b) => a.y.compareTo(b.y));
   final rows = <List<({double x, double y, OcrLine box})>>[];
   for (final it in items) {
@@ -90,8 +80,5 @@ List<String> groupRows(List<OcrLine> lines, {double? skew}) {
     }
     if (!placed) rows.add([it]);
   }
-  return [
-    for (final row in rows)
-      (row..sort((a, b) => a.x.compareTo(b.x))).map((r) => r.box.text.trim()).join('  ')
-  ];
+  return [for (final row in rows) (row..sort((a, b) => a.x.compareTo(b.x))).map((r) => r.box.text.trim()).join('  ')];
 }

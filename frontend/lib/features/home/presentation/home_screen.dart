@@ -41,40 +41,27 @@ class HomeScreen extends StatelessWidget {
                         onPressed: () => Scaffold.of(context).openDrawer(),
                         icon: const Icon(Icons.menu)),
                     Expanded(
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                          Row(children: [
-                            Flexible(
-                                child: Text(
-                                    secret(p.hideBalance,
-                                        p.totalBalance(p.currency), p.currency),
-                                    style: const TextStyle(
-                                        fontSize: 26,
-                                        fontWeight: FontWeight.w800),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis)),
-                            IconButton(
-                                tooltip:
-                                    p.hideBalance ? 'Hiện số dư' : 'Ẩn số dư',
-                                onPressed: () =>
-                                    p.preferences(hidden: !p.hideBalance),
-                                icon: Icon(
-                                    p.hideBalance
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                    size: 18))
-                          ]),
-                          Text(
-                              p.hasManyCurrencies && !p.hideBalance
-                                  ? 'Tổng số dư • quy đổi mọi ví ≈ ${money(p.convertedTotal(p.currency), p.currency)}'
-                                  : 'Tổng số dư • Xin chào, ${p.displayName}',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary)),
-                        ])),
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(children: [
+                        Flexible(
+                            child: Text(secret(p.hideBalance, p.totalBalance(p.currency), p.currency),
+                                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis)),
+                        IconButton(
+                            tooltip: p.hideBalance ? 'Hiện số dư' : 'Ẩn số dư',
+                            onPressed: () => p.preferences(hidden: !p.hideBalance),
+                            icon: Icon(p.hideBalance ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                size: 18))
+                      ]),
+                      Text(
+                          p.hasManyCurrencies && !p.hideBalance
+                              ? 'Tổng số dư • quy đổi mọi ví ≈ ${money(p.convertedTotal(p.currency), p.currency)}'
+                              : 'Tổng số dư • Xin chào, ${p.displayName}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    ])),
                     IconButton(
                         key: const ValueKey('quick-entry-button'),
                         tooltip: 'Nhập nhanh bằng AI',
@@ -82,28 +69,19 @@ class HomeScreen extends StatelessWidget {
                         icon: const BrandLogo.ai(size: 26)),
                     IconButton(
                         tooltip: 'Tìm giao dịch',
-                        onPressed: () =>
-                            openPage(context, const LedgerScreen()),
+                        onPressed: () => openPage(context, const LedgerScreen()),
                         icon: const Icon(Icons.search)),
                     IconButton(
                         tooltip: 'Chọn tiền tệ báo cáo',
                         onPressed: () async {
-                          final unit = await openPage<String>(
-                              context,
-                              CurrencySelectionScreen(
-                                  selectedCurrency: p.currency));
+                          final unit =
+                              await openPage<String>(context, CurrencySelectionScreen(selectedCurrency: p.currency));
                           if (unit != null) p.preferences(unit: unit);
                         },
                         icon: const Icon(Icons.currency_exchange, size: 22)),
                   ])),
-              const TabBar(tabs: [
-                Tab(text: 'Báo cáo'),
-                Tab(text: 'Sổ nợ'),
-                Tab(text: 'Ví')
-              ]),
-              const Expanded(
-                  child: TabBarView(
-                      children: [OverviewTab(), DebtOverview(), WalletList()])),
+              const TabBar(tabs: [Tab(text: 'Báo cáo'), Tab(text: 'Sổ nợ'), Tab(text: 'Ví')]),
+              const Expanded(child: TabBarView(children: [OverviewTab(), DebtOverview(), WalletList()])),
             ])));
   }
 }
@@ -118,8 +96,7 @@ class OverviewTab extends StatelessWidget {
     final recent = p.inMonth(now, unit: p.currency).take(4).toList();
     final wallets = p.wallets.where((w) => w.currency == p.currency).toList();
     final byCategory = [
-      for (final c in p.categories.where((c) => !c.income))
-        (c, p.total(now, income: false, categoryId: c.id))
+      for (final c in p.categories.where((c) => !c.income)) (c, p.total(now, income: false, categoryId: c.id))
     ].where((x) => x.$2 > 0).toList()
       ..sort((a, b) => b.$2.compareTo(a.$2));
     final overall = p.overallBudget(now, income: false);
@@ -133,9 +110,7 @@ class OverviewTab extends StatelessWidget {
         .toList();
     final due = dueDebts(p);
     return ListView(padding: const EdgeInsets.all(16), children: [
-      SectionTitle('Ví của tôi',
-          action: 'Xem tất cả',
-          onTap: () => openPage(context, const WalletsScreen())),
+      SectionTitle('Ví của tôi', action: 'Xem tất cả', onTap: () => openPage(context, const WalletsScreen())),
       Panel(
           padding: EdgeInsets.zero,
           child: Column(children: [
@@ -146,8 +121,7 @@ class OverviewTab extends StatelessWidget {
                   subtitle: Text(
                       '${secret(p.hideBalance, p.balance(w.id), w.currency)}${w.excluded ? ' • không tính tổng' : ''}'),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: () =>
-                      openPage(context, WalletDetailScreen(walletId: w.id))),
+                  onTap: () => openPage(context, WalletDetailScreen(walletId: w.id))),
             if (wallets.isEmpty)
               ListTile(
                   title: const Text('Thêm ví đầu tiên'),
@@ -155,21 +129,21 @@ class OverviewTab extends StatelessWidget {
                   onTap: () => openPage(context, const CreateWalletScreen())),
           ])),
       SectionTitle('Báo cáo tháng này',
-          action: 'Xem báo cáo',
-          onTap: () => openPage(context, const StatisticsScreen())),
+          action: 'Xem báo cáo', onTap: () => openPage(context, const StatisticsScreen())),
       const ReportCarousel(),
-      ValueListenableBuilder<int>(valueListenable: AiRepository.insightsVersion, builder: (context, _, __) {
-        final repo = AiRepository(p);
-        repo.refreshInsightsIfStale();
-        final tips = FinanceInsights(p, server: repo.cachedInsights?.forecast).all().take(2).toList();
-        if (tips.isEmpty) return const SizedBox.shrink();
-        return Column(children: [
-          SectionTitle('Phân tích thông minh',
-              action: 'Xem thêm',
-              onTap: () => openPage(context, const InsightsScreen())),
-          for (final t in tips) InsightTile(insight: t),
-        ]);
-      }),
+      ValueListenableBuilder<int>(
+          valueListenable: AiRepository.insightsVersion,
+          builder: (context, _, __) {
+            final repo = AiRepository(p);
+            repo.refreshInsightsIfStale();
+            final tips = FinanceInsights(p, server: repo.cachedInsights?.forecast).all().take(2).toList();
+            if (tips.isEmpty) return const SizedBox.shrink();
+            return Column(children: [
+              SectionTitle('Phân tích thông minh',
+                  action: 'Xem thêm', onTap: () => openPage(context, const InsightsScreen())),
+              for (final t in tips) InsightTile(insight: t),
+            ]);
+          }),
       if (byCategory.isNotEmpty) ...[
         const SectionTitle('Chi tiêu theo danh mục'),
         Panel(
@@ -182,8 +156,7 @@ class OverviewTab extends StatelessWidget {
                     Icon(c.icon, size: 18, color: const Color(0xFF9B806B)),
                     const SizedBox(width: 8),
                     Expanded(child: Text(c.name)),
-                    Text(
-                        '${money(amount, p.currency)} • ${(100 * amount / expense).toStringAsFixed(0)}%')
+                    Text('${money(amount, p.currency)} • ${(100 * amount / expense).toStringAsFixed(0)}%')
                   ]),
                   const SizedBox(height: 8),
                   LinearProgressIndicator(
@@ -195,20 +168,15 @@ class OverviewTab extends StatelessWidget {
                 ])),
         ])),
       ],
-      SectionTitle('Ngân sách tháng này',
-          action: 'Quản lý',
-          onTap: () => openPage(context, const GoalsScreen())),
+      SectionTitle('Ngân sách tháng này', action: 'Quản lý', onTap: () => openPage(context, const GoalsScreen())),
       Panel(
           child: overall == null && budgets.isEmpty
               ? Row(children: [
                   const RoundIcon(Icons.track_changes),
                   const SizedBox(width: 12),
                   const Expanded(
-                      child: Text(
-                          'Chưa đặt ngân sách. Đặt hạn mức để được cảnh báo khi chi tiêu vượt kế hoạch.')),
-                  TextButton(
-                      onPressed: () => openPage(context, const GoalsScreen()),
-                      child: const Text('Đặt ngay')),
+                      child: Text('Chưa đặt ngân sách. Đặt hạn mức để được cảnh báo khi chi tiêu vượt kế hoạch.')),
+                  TextButton(onPressed: () => openPage(context, const GoalsScreen()), child: const Text('Đặt ngay')),
                 ])
               : Column(children: [
                   if (overall != null)
@@ -221,8 +189,7 @@ class OverviewTab extends StatelessWidget {
                   for (final b in budgets.take(3))
                     BudgetBar(
                         label: p.category(b.categoryId)?.name ?? '',
-                        icon: p.category(b.categoryId)?.icon ??
-                            Icons.category_outlined,
+                        icon: p.category(b.categoryId)?.icon ?? Icons.category_outlined,
                         used: p.used(b),
                         target: b.amount,
                         unit: b.currency),
@@ -234,32 +201,22 @@ class OverviewTab extends StatelessWidget {
             child: Column(children: [
               for (final d in due.take(4))
                 ListTile(
-                    leading: RoundIcon(
-                        d.entry.kind == EntryKind.lend
-                            ? Icons.north_east
-                            : Icons.south_west,
-                        color: d.days < 0
-                            ? AppColors.accentRed
-                            : AppColors.accentOrange),
+                    leading: RoundIcon(d.entry.kind == EntryKind.lend ? Icons.north_east : Icons.south_west,
+                        color: d.days < 0 ? AppColors.accentRed : AppColors.accentOrange),
                     title: Text(
                         '${d.entry.kind == EntryKind.lend ? 'Thu nợ' : 'Trả nợ'} • ${p.personName(d.entry.personId)}'),
                     subtitle: Text(dueLabel(d.days)),
-                    trailing: Text(money(d.remaining, d.unit),
-                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                    trailing: Text(money(d.remaining, d.unit), style: const TextStyle(fontWeight: FontWeight.w600)),
                     onTap: () => openPage(
                         context,
                         AddTransactionScreen(
-                            initialKind: d.entry.kind == EntryKind.lend
-                                ? EntryKind.collect
-                                : EntryKind.repay,
+                            initialKind: d.entry.kind == EntryKind.lend ? EntryKind.collect : EntryKind.repay,
                             initialPersonId: d.entry.personId,
                             initialWalletId: d.entry.walletId,
                             initialAmount: d.remaining))),
             ])),
       ],
-      SectionTitle('Giao dịch gần đây',
-          action: 'Xem tất cả',
-          onTap: () => openPage(context, const LedgerScreen())),
+      SectionTitle('Giao dịch gần đây', action: 'Xem tất cả', onTap: () => openPage(context, const LedgerScreen())),
       for (final e in recent) EntryTile(e),
       if (recent.isEmpty)
         OutlinedButton.icon(
@@ -273,31 +230,26 @@ class OverviewTab extends StatelessWidget {
             RoundIcon(Icons.lightbulb_outline),
             SizedBox(width: 12),
             Expanded(
-                child: Text(
-                    'Mỗi khoản nhỏ được ghi lại là một bước để quản lý tiền tốt hơn.',
+                child: Text('Mỗi khoản nhỏ được ghi lại là một bước để quản lý tiền tốt hơn.',
                     style: TextStyle(height: 1.5)))
           ])),
     ]);
   }
 }
 
-List<({MoneyEntry entry, int days, double remaining, String unit})> dueDebts(
-    FinanceProvider p) {
+List<({MoneyEntry entry, int days, double remaining, String unit})> dueDebts(FinanceProvider p) {
   final today = dateOnly(DateTime.now());
   final result = <({MoneyEntry entry, int days, double remaining, String unit})>[];
   final seen = <String>{};
   final principals = p.entries
-      .where((e) =>
-          (e.kind == EntryKind.lend || e.kind == EntryKind.borrow) &&
-          e.dueDate != null)
+      .where((e) => (e.kind == EntryKind.lend || e.kind == EntryKind.borrow) && e.dueDate != null)
       .toList()
     ..sort((a, b) => a.dueDate!.compareTo(b.dueDate!));
   for (final e in principals) {
     final unit = p.findWallet(e.walletId)?.currency ?? p.currency;
     final key = '${e.kind.name}|${e.personId}|$unit';
     if (seen.contains(key)) continue;
-    final remaining = p.debt(
-        borrowed: e.kind == EntryKind.borrow, personId: e.personId, unit: unit);
+    final remaining = p.debt(borrowed: e.kind == EntryKind.borrow, personId: e.personId, unit: unit);
     if (remaining <= 0) continue;
     final days = dateOnly(e.dueDate!).difference(today).inDays;
     if (days > 7) continue;
@@ -334,8 +286,7 @@ class BudgetBar extends StatelessWidget {
             Icon(icon, size: 18, color: const Color(0xFF9B806B)),
             const SizedBox(width: 8),
             Expanded(child: Text(label)),
-            Text('${money(used, unit)} / ${money(target, unit)}',
-                style: const TextStyle(fontSize: 12)),
+            Text('${money(used, unit)} / ${money(target, unit)}', style: const TextStyle(fontSize: 12)),
           ]),
           const SizedBox(height: 8),
           LinearProgressIndicator(
@@ -345,10 +296,7 @@ class BudgetBar extends StatelessWidget {
               backgroundColor: AppColors.backgroundBeige,
               borderRadius: BorderRadius.circular(4)),
           const SizedBox(height: 4),
-          Text(
-              used > target
-                  ? 'Vượt ${money(used - target, unit)}'
-                  : 'Còn lại ${money(target - used, unit)}',
+          Text(used > target ? 'Vượt ${money(used - target, unit)}' : 'Còn lại ${money(target - used, unit)}',
               style: TextStyle(fontSize: 12, color: color)),
         ]));
   }
@@ -370,8 +318,7 @@ class _ReportCarouselState extends State<ReportCarousel> {
     super.dispose();
   }
 
-  void go(int i) => controller.animateToPage(i,
-      duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+  void go(int i) => controller.animateToPage(i, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
 
   @override
   Widget build(BuildContext context) {
@@ -401,9 +348,7 @@ class _ReportCarouselState extends State<ReportCarousel> {
                     width: page == i ? 18 : 7,
                     height: 7,
                     decoration: BoxDecoration(
-                        color: page == i
-                            ? AppColors.primaryGreen
-                            : AppColors.divider,
+                        color: page == i ? AppColors.primaryGreen : AppColors.divider,
                         borderRadius: BorderRadius.circular(4))),
             ])),
             IconButton(
@@ -431,14 +376,11 @@ class _ReportCarouselState extends State<ReportCarousel> {
     final change = previous == 0 ? null : (current - previous) / previous;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
-        const Expanded(
-            child: Text('Báo cáo chi tiêu',
-                style: TextStyle(fontWeight: FontWeight.w700))),
+        const Expanded(child: Text('Báo cáo chi tiêu', style: TextStyle(fontWeight: FontWeight.w700))),
         SegmentedButton<bool>(
             showSelectedIcon: false,
             style: const ButtonStyle(
-                visualDensity: VisualDensity.compact,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap),
+                visualDensity: VisualDensity.compact, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
             segments: const [
               ButtonSegment(value: true, label: Text('Tuần')),
               ButtonSegment(value: false, label: Text('Tháng')),
@@ -448,10 +390,7 @@ class _ReportCarouselState extends State<ReportCarousel> {
       ]),
       const SizedBox(height: 8),
       Text(money(current, p.currency),
-          style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: AppColors.accentRed)),
+          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.accentRed)),
       Text(
           change == null
               ? 'Tổng đã chi ${weekly ? 'tuần' : 'tháng'} này'
@@ -460,13 +399,9 @@ class _ReportCarouselState extends State<ReportCarousel> {
       const SizedBox(height: 12),
       Expanded(
           child: current == 0 && previous == 0
-              ? const Center(
-                  child: Text('Nhập giao dịch để xem báo cáo',
-                      textAlign: TextAlign.center))
+              ? const Center(child: Text('Nhập giao dịch để xem báo cáo', textAlign: TextAlign.center))
               : CompareBarChart(
-                  labels: weekly
-                      ? const ['Tuần trước', 'Tuần này']
-                      : const ['Tháng trước', 'Tháng này'],
+                  labels: weekly ? const ['Tuần trước', 'Tuần này'] : const ['Tháng trước', 'Tháng này'],
                   values: [previous, current],
                   colors: const [Color(0xFFD9BEA9), AppColors.accentRed])),
     ]);
@@ -479,8 +414,7 @@ class _ReportCarouselState extends State<ReportCarousel> {
       var sum = 0.0;
       for (var d = 1; d <= days; d++) {
         final from = DateTime(month.year, month.month, d);
-        sum += p.sumBetween(from, from.add(const Duration(days: 1)),
-            income: trendIncome);
+        sum += p.sumBetween(from, from.add(const Duration(days: 1)), income: trendIncome);
         values.add(sum);
       }
       return values;
@@ -504,23 +438,18 @@ class _ReportCarouselState extends State<ReportCarousel> {
                       child: Text(money(value, p.currency),
                           style: TextStyle(
                               fontWeight: FontWeight.w700,
-                              color: forIncome
-                                  ? AppColors.primaryGreen
-                                  : AppColors.accentRed))),
+                              color: forIncome ? AppColors.primaryGreen : AppColors.accentRed))),
                   const SizedBox(height: 6),
                   Container(
                       height: 3,
                       color: trendIncome == forIncome
-                          ? (forIncome
-                              ? AppColors.primaryGreen
-                              : AppColors.accentRed)
+                          ? (forIncome ? AppColors.primaryGreen : AppColors.accentRed)
                           : Colors.transparent),
                 ]))));
     return Column(children: [
       const Align(
           alignment: Alignment.centerLeft,
-          child: Text('Báo cáo xu hướng',
-              style: TextStyle(fontWeight: FontWeight.w700))),
+          child: Text('Báo cáo xu hướng', style: TextStyle(fontWeight: FontWeight.w700))),
       const SizedBox(height: 6),
       Row(children: [
         metric('Tổng đã chi', expense, false),
@@ -551,10 +480,7 @@ class _Metric extends StatelessWidget {
   Widget build(BuildContext context) => Column(children: [
         Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 12)),
         const SizedBox(height: 4),
-        FittedBox(
-            child: Text(value,
-                style: TextStyle(
-                    fontSize: 17, fontWeight: FontWeight.w700, color: color))),
+        FittedBox(child: Text(value, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: color))),
       ]);
 }
 
@@ -575,15 +501,11 @@ class _DebtOverviewState extends State<DebtOverview> {
         color: borrowed ? const Color(0xFFF7E9E6) : const Color(0xFFE6F2EA),
         child: Column(children: [
           Text(borrowed ? 'Đi vay • phải trả' : 'Cho vay • cần thu',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontWeight: FontWeight.w700, color: color)),
+              textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w700, color: color)),
           const SizedBox(height: 12),
-          PercentRing(
-              value: t.principal == 0 ? 0 : t.settled / t.principal,
-              color: color),
+          PercentRing(value: t.principal == 0 ? 0 : t.settled / t.principal, color: color),
           const SizedBox(height: 12),
-          _Metric('Tổng cộng', secret(p.hideBalance, t.principal, p.currency),
-              AppColors.textPrimary),
+          _Metric('Tổng cộng', secret(p.hideBalance, t.principal, p.currency), AppColors.textPrimary),
           const SizedBox(height: 8),
           _Metric('Còn lại', secret(p.hideBalance, left, p.currency), color),
         ]));
@@ -592,9 +514,7 @@ class _DebtOverviewState extends State<DebtOverview> {
   @override
   Widget build(BuildContext context) {
     final p = context.watch<FinanceProvider>();
-    final entries = p.entries
-        .where((e) => e.kind.isDebt && p.findWallet(e.walletId)?.currency == p.currency)
-        .toList()
+    final entries = p.entries.where((e) => e.kind.isDebt && p.findWallet(e.walletId)?.currency == p.currency).toList()
       ..sort((a, b) => b.date.compareTo(a.date));
     final payable = p.debt(borrowed: true), receivable = p.debt(borrowed: false);
     final balance = receivable - payable;
@@ -617,8 +537,7 @@ class _DebtOverviewState extends State<DebtOverview> {
                     : 'Cân bằng • bạn đang nợ')),
         Text(secret(p.hideBalance, balance, p.currency),
             style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: balance >= 0 ? AppColors.primaryGreen : AppColors.accentRed)),
+                fontWeight: FontWeight.w700, color: balance >= 0 ? AppColors.primaryGreen : AppColors.accentRed)),
       ])),
       const SizedBox(height: 16),
       SegmentedButton<bool>(segments: const [
@@ -631,14 +550,11 @@ class _DebtOverviewState extends State<DebtOverview> {
       if (entries.isEmpty)
         const EmptyView(
             title: 'Không có giao dịch nợ nào',
-            subtitle:
-                'Ghi lại người liên quan, số tiền và ngày hẹn trả để dễ theo dõi.',
+            subtitle: 'Ghi lại người liên quan, số tiền và ngày hẹn trả để dễ theo dõi.',
             icon: Icons.handshake_outlined),
       if (byPerson)
         for (final id in entries.map((e) => e.personId).toSet())
-          Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _PersonDebt(personId: id, entries: entries))
+          Padding(padding: const EdgeInsets.only(bottom: 10), child: _PersonDebt(personId: id, entries: entries))
       else
         for (final e in entries) ...[
           EntryTile(e),
@@ -647,28 +563,21 @@ class _DebtOverviewState extends State<DebtOverview> {
               p.debt(borrowed: e.kind == EntryKind.borrow, personId: e.personId) > 0)
             Padding(
                 padding: const EdgeInsets.only(left: 16, bottom: 10),
-                child: Text(
-                    dueLabel(dateOnly(e.dueDate!)
-                        .difference(dateOnly(DateTime.now()))
-                        .inDays),
-                    style: const TextStyle(
-                        fontSize: 12, color: AppColors.accentOrange))),
+                child: Text(dueLabel(dateOnly(e.dueDate!).difference(dateOnly(DateTime.now())).inDays),
+                    style: const TextStyle(fontSize: 12, color: AppColors.accentOrange))),
         ],
       const SizedBox(height: 8),
       Row(children: [
         Expanded(
             child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.accentRed),
-                onPressed: () => openPage(context,
-                    const AddTransactionScreen(initialKind: EntryKind.borrow)),
+                style: FilledButton.styleFrom(backgroundColor: AppColors.accentRed),
+                onPressed: () => openPage(context, const AddTransactionScreen(initialKind: EntryKind.borrow)),
                 icon: const Icon(Icons.south_west),
                 label: const Text('Thêm đi vay'))),
         const SizedBox(width: 10),
         Expanded(
             child: FilledButton.icon(
-                onPressed: () => openPage(context,
-                    const AddTransactionScreen(initialKind: EntryKind.lend)),
+                onPressed: () => openPage(context, const AddTransactionScreen(initialKind: EntryKind.lend)),
                 icon: const Icon(Icons.north_east),
                 label: const Text('Thêm cho vay'))),
       ]),
@@ -688,19 +597,16 @@ class _PersonDebt extends StatelessWidget {
     final own = entries.where((e) => e.personId == personId).toList();
     final wallet = own.first.walletId;
     final debtWallet = p.findWallet(wallet);
-    final bankWallet = debtWallet != null && debtWallet.hasBank
-        ? debtWallet
-        : p.wallets.where((w) => w.hasBank).firstOrNull;
-    final receivableVnd =
-        p.debt(borrowed: false, personId: personId, unit: 'VND');
+    final bankWallet =
+        debtWallet != null && debtWallet.hasBank ? debtWallet : p.wallets.where((w) => w.hasBank).firstOrNull;
+    final receivableVnd = p.debt(borrowed: false, personId: personId, unit: 'VND');
     return Panel(
         padding: EdgeInsets.zero,
         child: ExpansionTile(
             shape: const Border(),
             collapsedShape: const Border(),
             leading: const RoundIcon(Icons.person_outline),
-            title: Text(p.personName(personId),
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(p.personName(personId), style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Text(
                 'Cần thu ${secret(p.hideBalance, receivable, p.currency)} • Phải trả ${secret(p.hideBalance, payable, p.currency)}'),
             childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
@@ -719,11 +625,7 @@ class _PersonDebt extends StatelessWidget {
                 if (receivableVnd > 0 && bankWallet != null)
                   OutlinedButton.icon(
                       onPressed: () => openPage(
-                          context,
-                          ReceiveQrScreen(
-                              walletId: bankWallet.id,
-                              personId: personId,
-                              amount: receivableVnd)),
+                          context, ReceiveQrScreen(walletId: bankWallet.id, personId: personId, amount: receivableVnd)),
                       icon: const Icon(Icons.qr_code_2, size: 18),
                       label: const Text('Đòi nợ bằng QR')),
                 if (payable > 0)
@@ -736,8 +638,7 @@ class _PersonDebt extends StatelessWidget {
                               initialWalletId: wallet,
                               initialAmount: payable)),
                       child: const Text('Trả nợ')),
-                if (receivable <= 0 && payable <= 0)
-                  const Chip(label: Text('Đã tất toán')),
+                if (receivable <= 0 && payable <= 0) const Chip(label: Text('Đã tất toán')),
               ]),
               const SizedBox(height: 8),
               for (final e in own) EntryTile(e),

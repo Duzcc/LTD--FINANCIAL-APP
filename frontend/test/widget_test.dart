@@ -26,16 +26,14 @@ void main() {
     await tester.pumpWidget(const FinanceApp());
     await tester.pumpAndSettle();
     expect(find.text('Đăng nhập'), findsWidgets);
-    await tester.scrollUntilVisible(find.text('Bắt đầu sử dụng'), 200,
-        scrollable: find.byType(Scrollable).first);
+    await tester.scrollUntilVisible(find.text('Bắt đầu sử dụng'), 200, scrollable: find.byType(Scrollable).first);
     await tester.tap(find.text('Bắt đầu sử dụng'));
     await tester.pumpAndSettle();
     expect(find.byType(MainScreen), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
   for (final width in [320.0, 390.0, 430.0]) {
-    testWidgets('Chuyển tab và lưu giao dịch trên màn rộng $width px',
-        (tester) async {
+    testWidgets('Chuyển tab và lưu giao dịch trên màn rộng $width px', (tester) async {
       tester.view.physicalSize = Size(width, width == 430 ? 932 : 740);
       if (width == 430) {
         tester.view.padding = const FakeViewPadding(top: 59, bottom: 34);
@@ -50,13 +48,7 @@ void main() {
       final p = FinanceProvider();
       await tester.pumpWidget(FinanceApp(finance: p, returning: true));
       await tester.pumpAndSettle();
-      for (final label in [
-        'Sổ giao dịch',
-        'Trợ lý AI',
-        'Ngân sách',
-        'Tài khoản',
-        'Tổng quan'
-      ]) {
+      for (final label in ['Sổ giao dịch', 'Trợ lý AI', 'Ngân sách', 'Tài khoản', 'Tổng quan']) {
         await tester.tap(find.text(label).last);
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull, reason: label);
@@ -64,13 +56,11 @@ void main() {
       await tester.tap(find.byIcon(Icons.add).last);
       await tester.pumpAndSettle();
       expect(find.byType(AddTransactionScreen), findsOneWidget);
-      await tester.enterText(
-          find.byKey(const ValueKey('transaction-amount')), '50000');
+      await tester.enterText(find.byKey(const ValueKey('transaction-amount')), '50000');
       if (width == 430) {
         tester.view.viewInsets = const FakeViewPadding(bottom: 336);
         await tester.pumpAndSettle();
-        expect(
-            tester.getBottomLeft(find.text('Lưu giao dịch')).dy, lessThan(596));
+        expect(tester.getBottomLeft(find.text('Lưu giao dịch')).dy, lessThan(596));
         expect(tester.takeException(), isNull);
       }
       await tester.tap(find.text('Lưu giao dịch'));
@@ -85,20 +75,14 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
-  testWidgets('Màn nhập liệu và báo cáo vừa màn hẹp khi phóng to chữ',
-      (tester) async {
+  testWidgets('Màn nhập liệu và báo cáo vừa màn hẹp khi phóng to chữ', (tester) async {
     tester.view.physicalSize = const Size(320, 740);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     final p = FinanceProvider();
     p.saveEntry(MoneyEntry(
-        id: 'e',
-        kind: EntryKind.expense,
-        amount: 50000,
-        walletId: 'cash',
-        categoryId: 'food',
-        date: DateTime.now()));
+        id: 'e', kind: EntryKind.expense, amount: 50000, walletId: 'cash', categoryId: 'food', date: DateTime.now()));
     await p.flush();
     for (final page in <Widget>[
       const AddTransactionScreen(),
@@ -125,17 +109,14 @@ void main() {
           child: MaterialApp(
               theme: AppTheme.lightTheme,
               builder: (context, child) => MediaQuery(
-                  data: MediaQuery.of(context)
-                      .copyWith(textScaler: const TextScaler.linear(1.3)),
-                  child: child!),
+                  data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.3)), child: child!),
               home: page)));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull, reason: '${page.runtimeType}');
       final list = find.byType(Scrollable).first;
       await tester.drag(list, const Offset(0, -600));
       await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull,
-          reason: 'scrolled ${page.runtimeType}');
+      expect(tester.takeException(), isNull, reason: 'scrolled ${page.runtimeType}');
     }
     await tester.pumpWidget(const SizedBox.shrink());
     p.dispose();
@@ -145,7 +126,12 @@ void main() {
     p.saveWallet(const MoneyWallet(id: 'cash', name: 'Tiền mặt', opening: 500000));
     p.saveWallet(const MoneyWallet(id: 'save', name: 'Tiết kiệm', savings: true));
     final transfer = MoneyEntry(
-        id: 't', kind: EntryKind.transfer, amount: 200000, walletId: 'cash', destinationId: 'save', date: DateTime(2026, 10, 1));
+        id: 't',
+        kind: EntryKind.transfer,
+        amount: 200000,
+        walletId: 'cash',
+        destinationId: 'save',
+        date: DateTime(2026, 10, 1));
     p.saveEntry(transfer);
     await tester.pumpWidget(ChangeNotifierProvider.value(
         value: p, child: MaterialApp(theme: AppTheme.lightTheme, home: AddTransactionScreen(entry: transfer))));
@@ -168,8 +154,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('quick-entry-button')));
     await tester.pumpAndSettle();
-    await tester.enterText(
-        find.byKey(const ValueKey('quick-entry')), 'đổ xăng 70k');
+    await tester.enterText(find.byKey(const ValueKey('quick-entry')), 'đổ xăng 70k');
     await tester.pumpAndSettle();
     expect(find.text('Đi lại'), findsWidgets);
     await tester.ensureVisible(find.text('Tiếp tục'));
@@ -196,8 +181,7 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
   });
 
-  testWidgets('Splash vào thẳng màn chính; Drawer chuyển tab và mở trang quản lý',
-      (tester) async {
+  testWidgets('Splash vào thẳng màn chính; Drawer chuyển tab và mở trang quản lý', (tester) async {
     await tester.pumpWidget(FinanceApp(finance: FinanceProvider(), returning: true));
     expect(find.byType(SplashScreen), findsOneWidget);
     await tester.pumpAndSettle();
@@ -209,8 +193,7 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('drawer-tab-1')));
     await tester.pumpAndSettle();
     expect(find.byType(Drawer), findsNothing);
-    final tabs = find.descendant(
-        of: find.byType(MainScreen), matching: find.byType(IndexedStack));
+    final tabs = find.descendant(of: find.byType(MainScreen), matching: find.byType(IndexedStack));
     expect(tester.widget<IndexedStack>(tabs.first).index, 1);
 
     await tester.dragFrom(const Offset(5, 300), const Offset(300, 0));

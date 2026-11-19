@@ -10,8 +10,7 @@ import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/auth/presentation/auth_screen.dart';
 
 class OtpScreen extends StatefulWidget {
-  const OtpScreen(
-      {super.key, required this.challenge, this.fromSettings = false});
+  const OtpScreen({super.key, required this.challenge, this.fromSettings = false});
   final OtpChallenge challenge;
   final bool fromSettings;
   @override
@@ -55,8 +54,7 @@ class _OtpScreenState extends State<OtpScreen> with BusyState {
     return s < 0 ? 0 : s;
   }
 
-  String clock(int s) =>
-      '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
+  String clock(int s) => '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
 
   void leave(String reason) {
     message(context, reason);
@@ -104,19 +102,13 @@ class _OtpScreenState extends State<OtpScreen> with BusyState {
             autovalidateMode: AutovalidateMode.onUserInteraction,
             key: form,
             child: ListView(padding: const EdgeInsets.all(20), children: [
-              const Icon(Icons.mark_email_read_outlined,
-                  size: 56, color: AppColors.primaryGreen),
+              const Icon(Icons.mark_email_read_outlined, size: 56, color: AppColors.primaryGreen),
               const SizedBox(height: 16),
               Text.rich(
                   TextSpan(children: [
                     const TextSpan(text: 'Mã OTP gồm 6 chữ số đã được gửi tới '),
-                    TextSpan(
-                        text: challenge.email,
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
-                    TextSpan(
-                        text: challenge.isRegister
-                            ? '. Nhập mã để hoàn tất đăng ký.'
-                            : '. Nhập mã để đăng nhập.'),
+                    TextSpan(text: challenge.email, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    TextSpan(text: challenge.isRegister ? '. Nhập mã để hoàn tất đăng ký.' : '. Nhập mã để đăng nhập.'),
                   ]),
                   textAlign: TextAlign.center,
                   style: const TextStyle(height: 1.5)),
@@ -124,9 +116,7 @@ class _OtpScreenState extends State<OtpScreen> with BusyState {
                 const SizedBox(height: 12),
                 Panel(
                     color: AppColors.primaryGreenSurface,
-                    child: Text(
-                        'Mã OTP của bạn: ${challenge.devCode}',
-                        style: const TextStyle(height: 1.5))),
+                    child: Text('Mã OTP của bạn: ${challenge.devCode}', style: const TextStyle(height: 1.5))),
               ],
               const SizedBox(height: 20),
               TextFormField(
@@ -139,42 +129,29 @@ class _OtpScreenState extends State<OtpScreen> with BusyState {
                   maxLength: 6,
                   autofillHints: const [AutofillHints.oneTimeCode],
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  style: const TextStyle(
-                      fontSize: 26, letterSpacing: 10, fontWeight: FontWeight.w700),
-                  decoration: const InputDecoration(
-                      hintText: '••••••', counterText: ''),
+                  style: const TextStyle(fontSize: 26, letterSpacing: 10, fontWeight: FontWeight.w700),
+                  decoration: const InputDecoration(hintText: '••••••', counterText: ''),
                   validator: validateOtp,
                   onChanged: (v) {
                     if (v.length == 6 && !expired) verify();
                   }),
               const SizedBox(height: 8),
-              Text(
-                  expired
-                      ? 'Mã đã hết hạn, hãy gửi lại mã mới.'
-                      : 'Mã hết hạn sau ${clock(left)}',
+              Text(expired ? 'Mã đã hết hạn, hãy gửi lại mã mới.' : 'Mã hết hạn sau ${clock(left)}',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                      fontSize: 13,
-                      color: expired ? AppColors.accentRed : null)),
+                  style: TextStyle(fontSize: 13, color: expired ? AppColors.accentRed : null)),
               if (error != null) ...[
                 const SizedBox(height: 12),
-                Text(error!,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: AppColors.accentRed)),
+                Text(error!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.accentRed)),
               ],
               const SizedBox(height: 20),
               FilledButton(
                   onPressed: busy || expired ? null : verify,
-                  child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Text(busy ? 'Đang xác thực…' : 'Xác nhận'))),
+                  child: Padding(padding: const EdgeInsets.all(14), child: Text(busy ? 'Đang xác thực…' : 'Xác nhận'))),
               TextButton(
                   onPressed: busy || wait > 0 ? null : resend,
-                  child: Text(
-                      wait > 0 ? 'Gửi lại mã sau ${wait}s' : 'Gửi lại mã')),
+                  child: Text(wait > 0 ? 'Gửi lại mã sau ${wait}s' : 'Gửi lại mã')),
               TextButton(
-                  onPressed: busy ? null : () => Navigator.pop(context),
-                  child: const Text('Đổi email / quay lại')),
+                  onPressed: busy ? null : () => Navigator.pop(context), child: const Text('Đổi email / quay lại')),
             ])));
   }
 }

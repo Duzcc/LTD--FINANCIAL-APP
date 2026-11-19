@@ -16,8 +16,8 @@ class ReminderParser {
 
   static bool matches(String text) => _intent.hasMatch(foldVietnamese(text));
 
-  static final _prefix = RegExp(r'^\s*(hãy\s+)?nhắc(\s+nhở)?((\s+(tôi|mình|em|giúp|hộ))+)?(\s+(là|về))?\s*:?\s*',
-      caseSensitive: false);
+  static final _prefix =
+      RegExp(r'^\s*(hãy\s+)?nhắc(\s+nhở)?((\s+(tôi|mình|em|giúp|hộ))+)?(\s+(là|về))?\s*:?\s*', caseSensitive: false);
   static final _noise = [
     RegExp(r'\b(vào\s+|lúc\s+)*\d{1,2}\s*(h(?![a-zà-ỹ])|giờ|:)\s*(\d{2})?\s*(phút)?(\s+(sáng|trưa|chiều|tối))?',
         caseSensitive: false),

@@ -17,7 +17,8 @@ async function dashboard(user, query) {
   const currency = currencyOf(user, query);
   const month = L.monthStart(query.month ? L.monthValue(query.month) : new Date());
   const previousMonth = new Date(month.getFullYear(), month.getMonth() - 1, 1);
-  const entriesOf = (m) => state.entries.filter((e) => !e.excluded && L.sameMonth(new Date(e.date), m) && inCurrency(state, currency)(e));
+  const entriesOf = (m) =>
+    state.entries.filter((e) => !e.excluded && L.sameMonth(new Date(e.date), m) && inCurrency(state, currency)(e));
   const current = entriesOf(month);
   const previous = totals(entriesOf(previousMonth));
   const wallets = state.wallets
@@ -25,7 +26,11 @@ async function dashboard(user, query) {
     .map((w) => ({ ...w, balance: L.balance(state, w.id) }));
   const expenseByCategory = state.categories
     .filter((c) => !c.income)
-    .map((c) => ({ categoryId: c.id, name: c.name, amount: sum(current.filter((e) => isExpense(e.kind) && e.categoryId === c.id)) }))
+    .map((c) => ({
+      categoryId: c.id,
+      name: c.name,
+      amount: sum(current.filter((e) => isExpense(e.kind) && e.categoryId === c.id)),
+    }))
     .filter((x) => x.amount > 0)
     .sort((a, b) => b.amount - a.amount);
   return {

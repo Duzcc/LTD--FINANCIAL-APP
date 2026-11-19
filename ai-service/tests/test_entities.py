@@ -6,11 +6,20 @@ from app.nlp.entities import find_amount, find_date, find_person
 from app.nlp.text import fold
 
 
-@pytest.mark.parametrize("text,value", [
-    ("ăn phở 45k", 45_000), ("lương 15tr", 15_000_000), ("mua laptop 1tr2", 1_200_000),
-    ("tiền nhà 3,5 triệu", 3_500_000), ("đổ xăng 200.000đ", 200_000), ("phở 45", 45_000),
-    ("2 ly cà phê 60k", 60_000), ("vay ngân hàng 1 tỷ", 1_000_000_000), ("ngày 5 đóng học 2tr", 2_000_000),
-])
+@pytest.mark.parametrize(
+    "text,value",
+    [
+        ("ăn phở 45k", 45_000),
+        ("lương 15tr", 15_000_000),
+        ("mua laptop 1tr2", 1_200_000),
+        ("tiền nhà 3,5 triệu", 3_500_000),
+        ("đổ xăng 200.000đ", 200_000),
+        ("phở 45", 45_000),
+        ("2 ly cà phê 60k", 60_000),
+        ("vay ngân hàng 1 tỷ", 1_000_000_000),
+        ("ngày 5 đóng học 2tr", 2_000_000),
+    ],
+)
 def test_amounts(text, value):
     assert find_amount(text).value == value
 

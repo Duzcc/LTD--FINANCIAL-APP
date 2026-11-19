@@ -24,9 +24,7 @@ class AiRepository {
   Future<(ParsedEntry, bool remote)> parse(String text) async {
     final local = QuickEntryParser(p).parse(text);
     if (!remoteAvailable) return (local, false);
-    final j = await p
-        .aiRequest('POST', '/parse', body: {'text': text}, pushFirst: false)
-        .orNullOnApiError();
+    final j = await p.aiRequest('POST', '/parse', body: {'text': text}, pushFirst: false).orNullOnApiError();
     if (j == null) return (local, false);
     final walletId = j['walletId'] as String?;
     final remote = ParsedEntry(
@@ -34,9 +32,7 @@ class AiRepository {
         amount: (j['amount'] as num?)?.toDouble(),
         date: DateTime.tryParse('${j['date']}')?.toLocal() ?? local.date,
         note: '${j['note'] ?? local.note}',
-        categoryId: p.category(j['categoryId'] as String?) == null
-            ? local.categoryId
-            : j['categoryId'] as String?,
+        categoryId: p.category(j['categoryId'] as String?) == null ? local.categoryId : j['categoryId'] as String?,
         personId: j['personId'] as String?,
         newPersonName: j['newPersonName'] as String?,
         walletId: p.findWallet(walletId) == null ? local.walletId : walletId,
@@ -151,9 +147,7 @@ class AiRepository {
         total: r.total,
         date: r.date,
         note: r.note,
-        items: [
-          for (final i in r.items) ReceiptItem(i.name, i.amount, quantity: i.quantity, unitPrice: i.unitPrice)
-        ],
+        items: [for (final i in r.items) ReceiptItem(i.name, i.amount, quantity: i.quantity, unitPrice: i.unitPrice)],
         source: source,
         confidence: r.confidence,
         checks: r.checks,
@@ -163,12 +157,10 @@ class AiRepository {
 
   Future<ReceiptResult> scanReceipt(Uint8List bytes, String mediaType) async =>
       ReceiptResult.fromJson(await p.aiRequest('POST', '/receipts/scan',
-          body: {'image': base64Encode(bytes), 'mediaType': mediaType},
-          pushFirst: false));
+          body: {'image': base64Encode(bytes), 'mediaType': mediaType}, pushFirst: false));
 
   Future<ReceiptResult> receiptFromText(String text) async =>
-      ReceiptResult.fromJson(await p.aiRequest('POST', '/receipts/text',
-          body: {'text': text}, pushFirst: false));
+      ReceiptResult.fromJson(await p.aiRequest('POST', '/receipts/text', body: {'text': text}, pushFirst: false));
 
   Future<(List<String> ids, Map<String, dynamic> filters)> search(String query) async {
     final r = await p.aiRequest('POST', '/search', body: {'query': query});

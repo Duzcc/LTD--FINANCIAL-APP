@@ -13,8 +13,7 @@ String stripAccents(String text) {
   return b.toString();
 }
 
-String foldVietnamese(String text) =>
-    stripAccents(text).replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
+String foldVietnamese(String text) => stripAccents(text).replaceAll(RegExp(r'[^a-z0-9]+'), ' ').trim();
 
 String foldKeepNumbers(String text) {
   return stripAccents(text)
@@ -33,11 +32,109 @@ List<String> tokenize(String text) {
 }
 
 const seedKeywords = <String, List<String>>{
-  'food': ['an', 'com', 'pho', 'bun', 'banh mi', 'ca phe', 'cafe', 'tra sua', 'nuoc', 'an sang', 'an trua', 'an toi', 'nha hang', 'lau', 'nuong', 'do an', 'grabfood', 'shopeefood', 'cho', 'sieu thi', 'trai cay', 'banh', 'kem', 'bia', 'thit', 'rau', 'trung', 'gao', 'mi goi', 'mi ly', 'sua tuoi', 'sua chua', 'nuoc ngot', 'nuoc suoi', 'snack', 'keo', 'banh quy', 'hoa qua', 'sandwich'],
-  'life': ['dien', 'nuoc', 'internet', 'wifi', 'mang', 'gas', 'dien thoai', 'cuoc', 'nap the', 'giat', 've sinh', 'do dung', 'xa phong', 'dau goi', 'sua tam', 'kem danh rang', 'ban chai', 'bot giat', 'nuoc giat', 'nuoc rua chen', 'giay ve sinh', 'khan giay', 'tui rac'],
+  'food': [
+    'an',
+    'com',
+    'pho',
+    'bun',
+    'banh mi',
+    'ca phe',
+    'cafe',
+    'tra sua',
+    'nuoc',
+    'an sang',
+    'an trua',
+    'an toi',
+    'nha hang',
+    'lau',
+    'nuong',
+    'do an',
+    'grabfood',
+    'shopeefood',
+    'cho',
+    'sieu thi',
+    'trai cay',
+    'banh',
+    'kem',
+    'bia',
+    'thit',
+    'rau',
+    'trung',
+    'gao',
+    'mi goi',
+    'mi ly',
+    'sua tuoi',
+    'sua chua',
+    'nuoc ngot',
+    'nuoc suoi',
+    'snack',
+    'keo',
+    'banh quy',
+    'hoa qua',
+    'sandwich'
+  ],
+  'life': [
+    'dien',
+    'nuoc',
+    'internet',
+    'wifi',
+    'mang',
+    'gas',
+    'dien thoai',
+    'cuoc',
+    'nap the',
+    'giat',
+    've sinh',
+    'do dung',
+    'xa phong',
+    'dau goi',
+    'sua tam',
+    'kem danh rang',
+    'ban chai',
+    'bot giat',
+    'nuoc giat',
+    'nuoc rua chen',
+    'giay ve sinh',
+    'khan giay',
+    'tui rac'
+  ],
   'house': ['nha', 'thue nha', 'tien nha', 'phong tro', 'sua nha', 'noi that', 'tien phong'],
-  'self': ['quan ao', 'giay', 'my pham', 'cat toc', 'spa', 'sach', 'hoc', 'khoa hoc', 'game', 'phim', 'du lich', 'mua sam', 'shopee', 'lazada', 'tiki', 'qua'],
-  'transport': ['xang', 'do xang', 'grab', 'be', 'taxi', 'xe', 'gui xe', 've xe', 'xe buyt', 'bus', 'tau', 'may bay', 'sua xe', 'rua xe', 'gojek', 'xanh sm'],
+  'self': [
+    'quan ao',
+    'giay',
+    'my pham',
+    'cat toc',
+    'spa',
+    'sach',
+    'hoc',
+    'khoa hoc',
+    'game',
+    'phim',
+    'du lich',
+    'mua sam',
+    'shopee',
+    'lazada',
+    'tiki',
+    'qua'
+  ],
+  'transport': [
+    'xang',
+    'do xang',
+    'grab',
+    'be',
+    'taxi',
+    'xe',
+    'gui xe',
+    've xe',
+    'xe buyt',
+    'bus',
+    'tau',
+    'may bay',
+    'sua xe',
+    'rua xe',
+    'gojek',
+    'xanh sm'
+  ],
   'health': ['thuoc', 'kham', 'benh vien', 'nha thuoc', 'bao hiem', 'rang', 'vitamin', 'gym', 'tap'],
   'child': ['con', 'hoc phi', 'sua', 'ta', 'do choi', 'tre'],
   'salary': ['luong', 'luong thang', 'tien luong'],
@@ -105,8 +202,7 @@ class CategoryModel {
     final best = logs.values.reduce(math.max);
     final exp = {for (final e in logs.entries) e.key: math.exp(e.value - best)};
     final sum = exp.values.fold(0.0, (a, b) => a + b);
-    final result = [for (final e in exp.entries) (e.key, e.value / sum)]
-      ..sort((a, b) => b.$2.compareTo(a.$2));
+    final result = [for (final e in exp.entries) (e.key, e.value / sum)]..sort((a, b) => b.$2.compareTo(a.$2));
     return result;
   }
 

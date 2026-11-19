@@ -37,41 +37,26 @@ class OthersScreen extends StatelessWidget {
                 _row(context, Icons.chat_bubble_outline, 'Hỏi trợ lý tài chính',
                     () => openPage(context, const AssistantScreen())),
                 const Divider(indent: 60),
-                _row(context, Icons.auto_awesome, 'Phân tích & dự báo',
-                    () => openPage(context, const InsightsScreen())),
+                _row(
+                    context, Icons.auto_awesome, 'Phân tích & dự báo', () => openPage(context, const InsightsScreen())),
                 const Divider(indent: 60),
-                _row(context, Icons.edit_note, 'Nhập nhanh bằng câu',
-                    () => showQuickEntry(context)),
+                _row(context, Icons.edit_note, 'Nhập nhanh bằng câu', () => showQuickEntry(context)),
               ])),
           const SectionTitle('QUẢN LÝ'),
           Panel(
               padding: EdgeInsets.zero,
               child: Column(children: [
-                _row(
-                    context,
-                    Icons.account_balance_wallet_outlined,
-                    'Cài đặt ví',
+                _row(context, Icons.account_balance_wallet_outlined, 'Cài đặt ví',
                     () => openPage(context, const WalletsScreen())),
                 const Divider(indent: 60),
-                _row(
-                    context,
-                    Icons.account_balance_outlined,
-                    'Kết nối ngân hàng • VietQR',
+                _row(context, Icons.account_balance_outlined, 'Kết nối ngân hàng • VietQR',
                     () => openPage(context, const SepayScreen())),
                 const Divider(indent: 60),
-                _row(
-                    context,
-                    Icons.category_outlined,
-                    'Cài đặt danh mục',
-                    () => openPage(
-                        context, const SelectCategoryScreen(manage: true))),
+                _row(context, Icons.category_outlined, 'Cài đặt danh mục',
+                    () => openPage(context, const SelectCategoryScreen(manage: true))),
                 const Divider(indent: 60),
-                _row(
-                    context,
-                    Icons.people_outline,
-                    'Đối tượng',
-                    () => openPage(
-                        context, const SelectPersonScreen(manage: true))),
+                _row(context, Icons.people_outline, 'Đối tượng',
+                    () => openPage(context, const SelectPersonScreen(manage: true))),
                 const Divider(indent: 60),
                 _row(context, Icons.pie_chart_outline, 'Báo cáo thống kê',
                     () => openPage(context, const StatisticsScreen())),
@@ -86,17 +71,17 @@ class OthersScreen extends StatelessWidget {
           Panel(
               padding: EdgeInsets.zero,
               child: Column(children: [
-                _row(context, Icons.currency_exchange,
-                    'Tiền tệ báo cáo • ${p.currency}', () async {
-                  final unit = await openPage<String>(context,
-                      CurrencySelectionScreen(selectedCurrency: p.currency));
+                _row(context, Icons.currency_exchange, 'Tiền tệ báo cáo • ${p.currency}', () async {
+                  final unit = await openPage<String>(context, CurrencySelectionScreen(selectedCurrency: p.currency));
                   if (unit != null) p.preferences(unit: unit);
                 }),
                 const Divider(indent: 60),
                 _row(context, Icons.price_change_outlined, 'Tỷ giá quy đổi',
                     () => openPage(context, const RatesScreen())),
                 const Divider(indent: 60),
-                _row(context, Icons.notifications_outlined,
+                _row(
+                    context,
+                    Icons.notifications_outlined,
                     'Thông báo nhắc nhở • ${p.remindersEnabled ? 'bật' : 'tắt'}',
                     () => openPage(context, const RemindersScreen())),
                 const Divider(indent: 60),
@@ -110,44 +95,36 @@ class OthersScreen extends StatelessWidget {
           Panel(
               padding: EdgeInsets.zero,
               child: Column(children: [
-                _row(context, Icons.lock_outline,
+                _row(
+                    context,
+                    Icons.lock_outline,
                     'Khóa ứng dụng bằng PIN • ${context.watch<AppLock>().enabled ? 'bật' : 'tắt'}',
                     () => openPage(context, const SecurityScreen())),
                 const Divider(indent: 60),
                 if (p.signedIn) ...[
-                  _row(context, Icons.lock_reset, 'Đổi mật khẩu',
-                      () => openPage(context, const ChangePasswordScreen())),
+                  _row(
+                      context, Icons.lock_reset, 'Đổi mật khẩu', () => openPage(context, const ChangePasswordScreen())),
                   const Divider(indent: 60),
                   ListTile(
-                      leading: const RoundIcon(Icons.logout,
-                          color: AppColors.accentRed),
-                      title: const Text('Đăng xuất',
-                          style: TextStyle(color: AppColors.accentRed)),
+                      leading: const RoundIcon(Icons.logout, color: AppColors.accentRed),
+                      title: const Text('Đăng xuất', style: TextStyle(color: AppColors.accentRed)),
                       onTap: () => signOutFlow(context)),
                   const Divider(indent: 60),
                   _row(context, Icons.devices_other_outlined, 'Đăng xuất khỏi mọi thiết bị',
                       () => signOutFlow(context, everywhere: true)),
                   const Divider(indent: 60),
-                  _row(context, Icons.person_remove_outlined, 'Xóa tài khoản',
-                      () => deleteAccountFlow(context)),
+                  _row(context, Icons.person_remove_outlined, 'Xóa tài khoản', () => deleteAccountFlow(context)),
                 ] else
                   _row(context, Icons.login, 'Đăng nhập / Đăng ký',
                       () => openPage(context, const AuthScreen(fromSettings: true))),
               ])),
           const SizedBox(height: 24),
-          const Center(
-              child: Text('Quản lý chi tiêu • Nhóm 03',
-                  style: TextStyle(fontSize: 12))),
+          const Center(child: Text('Quản lý chi tiêu • Nhóm 03', style: TextStyle(fontSize: 12))),
         ]));
   }
 
-  Widget _row(BuildContext context, IconData icon, String title,
-          VoidCallback onTap) =>
-      ListTile(
-          leading: RoundIcon(icon),
-          title: Text(title),
-          trailing: const Icon(Icons.chevron_right, size: 20),
-          onTap: onTap);
+  Widget _row(BuildContext context, IconData icon, String title, VoidCallback onTap) => ListTile(
+      leading: RoundIcon(icon), title: Text(title), trailing: const Icon(Icons.chevron_right, size: 20), onTap: onTap);
 }
 
 class ExportScreen extends StatelessWidget {
@@ -156,8 +133,7 @@ class ExportScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = context.watch<FinanceProvider>();
     final csv = p.exportCsv();
-    Future<void> share({bool csvFile = false}) =>
-        attempt(context, () => ExcelExport.share(p, csv: csvFile));
+    Future<void> share({bool csvFile = false}) => attempt(context, () => ExcelExport.share(p, csv: csvFile));
 
     return FinancePage(
         title: 'Xuất dữ liệu',
@@ -231,20 +207,14 @@ class AccountCard extends StatelessWidget {
                     style: const TextStyle(fontWeight: FontWeight.w700))),
             const SizedBox(width: 12),
             Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                  Text(p.displayName,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w700, fontSize: 16)),
-                  Text(p.signedIn ? p.session!.email : 'Chưa đăng nhập',
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
-                ])),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(p.displayName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+              Text(p.signedIn ? p.session!.email : 'Chưa đăng nhập', maxLines: 1, overflow: TextOverflow.ellipsis),
+            ])),
             IconButton(
                 tooltip: 'Đổi tên hiển thị',
                 onPressed: () async {
-                  final name = await editText(context, 'Tên hiển thị',
-                      initial: p.displayName, validator: validateName);
+                  final name = await editText(context, 'Tên hiển thị', initial: p.displayName, validator: validateName);
                   if (name != null) p.preferences(name: name);
                 },
                 icon: const Icon(Icons.edit_outlined)),
@@ -253,44 +223,32 @@ class AccountCard extends StatelessWidget {
           Row(children: [
             Icon(
                 p.signedIn
-                    ? (p.syncError != null
-                        ? Icons.cloud_off_outlined
-                        : Icons.cloud_done_outlined)
+                    ? (p.syncError != null ? Icons.cloud_off_outlined : Icons.cloud_done_outlined)
                     : Icons.phone_android_outlined,
                 size: 18,
                 color: statusColor),
             const SizedBox(width: 8),
-            Expanded(
-                child: Text(status,
-                    style: TextStyle(fontSize: 13, color: statusColor))),
+            Expanded(child: Text(status, style: TextStyle(fontSize: 13, color: statusColor))),
             if (p.signedIn)
               p.syncing
-                  ? const SizedBox.square(
-                      dimension: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
                   : TextButton.icon(
                       onPressed: () => p.syncNow(),
                       icon: const Icon(Icons.sync, size: 18),
                       label: const Text('Sao lưu'))
             else
               TextButton(
-                  onPressed: () =>
-                      openPage(context, const AuthScreen(fromSettings: true)),
+                  onPressed: () => openPage(context, const AuthScreen(fromSettings: true)),
                   child: const Text('Đăng nhập')),
           ]),
           if (p.signedIn && !p.emailVerified)
             Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Row(children: [
-                  const Icon(Icons.mark_email_unread_outlined,
-                      size: 18, color: AppColors.accentOrange),
+                  const Icon(Icons.mark_email_unread_outlined, size: 18, color: AppColors.accentOrange),
                   const SizedBox(width: 8),
-                  const Expanded(
-                      child: Text('Email chưa được xác thực',
-                          style: TextStyle(fontSize: 13))),
-                  TextButton(
-                      onPressed: () => verifyEmailFlow(context),
-                      child: const Text('Xác thực')),
+                  const Expanded(child: Text('Email chưa được xác thực', style: TextStyle(fontSize: 13))),
+                  TextButton(onPressed: () => verifyEmailFlow(context), child: const Text('Xác thực')),
                 ])),
           if (p.signedIn && p.syncError != null && p.pendingChanges > 0)
             Align(
@@ -332,8 +290,7 @@ Future<void> signOutFlow(BuildContext context, {bool everywhere = false}) async 
 
 Future<void> deleteAccountFlow(BuildContext context) async {
   final p = context.read<FinanceProvider>();
-  final password = await editText(context, 'Nhập mật khẩu để xóa tài khoản',
-      obscure: true);
+  final password = await editText(context, 'Nhập mật khẩu để xóa tài khoản', obscure: true);
   if (password == null || !context.mounted) return;
   final ok = await confirmAction(context,
       title: 'Xóa vĩnh viễn tài khoản?',
@@ -354,11 +311,7 @@ Future<void> verifyEmailFlow(BuildContext context) async {
   String? dev;
   final sent = await attempt(context, () async => dev = await p.resendVerification());
   if (!sent || !context.mounted) return;
-  message(
-      context,
-      dev != null && kDebugMode
-          ? 'Mã xác thực: $dev'
-          : 'Mã 6 số đã được gửi tới ${p.session?.email}.');
+  message(context, dev != null && kDebugMode ? 'Mã xác thực: $dev' : 'Mã 6 số đã được gửi tới ${p.session?.email}.');
   final code = await editText(context, 'Nhập mã xác thực email');
   if (code == null || !context.mounted) return;
   await attempt(context, () async {

@@ -12,11 +12,7 @@ import 'package:finance_app/features/finance/presentation/entity_icons.dart';
 import 'package:finance_app/features/wallets/presentation/wallet_icon_screen.dart';
 
 class CreateWalletScreen extends StatefulWidget {
-  const CreateWalletScreen(
-      {super.key,
-      this.isFirstWallet = false,
-      this.wallet,
-      this.savings = false});
+  const CreateWalletScreen({super.key, this.isFirstWallet = false, this.wallet, this.savings = false});
   final bool isFirstWallet, savings;
   final MoneyWallet? wallet;
   @override
@@ -26,10 +22,8 @@ class CreateWalletScreen extends StatefulWidget {
 class _CreateWalletScreenState extends State<CreateWalletScreen> {
   final form = GlobalKey<FormState>();
   late final name = TextEditingController(text: widget.wallet?.name ?? '');
-  late final opening = TextEditingController(
-      text: formatAmountInput(widget.wallet?.opening ?? 0));
-  late final target = TextEditingController(
-      text: formatAmountInput(widget.wallet?.target ?? 0));
+  late final opening = TextEditingController(text: formatAmountInput(widget.wallet?.opening ?? 0));
+  late final target = TextEditingController(text: formatAmountInput(widget.wallet?.target ?? 0));
   late String currency = widget.wallet?.currency ?? 'VND';
   late bool savings = widget.wallet?.savings ?? widget.savings,
       excluded = widget.wallet?.excluded ?? false,
@@ -38,12 +32,9 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
   late DateTime? deadline = widget.wallet?.deadline;
   late bool linkBank = widget.wallet?.hasBank ?? false;
   late String? bankBin = widget.wallet?.bankBin;
-  late final bankAccount =
-      TextEditingController(text: widget.wallet?.bankAccount ?? '');
-  late final bankHolder =
-      TextEditingController(text: widget.wallet?.bankHolder ?? '');
-  late DateTime? startDate = widget.wallet?.startDate ??
-      (widget.wallet == null ? dateOnly(DateTime.now()) : null);
+  late final bankAccount = TextEditingController(text: widget.wallet?.bankAccount ?? '');
+  late final bankHolder = TextEditingController(text: widget.wallet?.bankHolder ?? '');
+  late DateTime? startDate = widget.wallet?.startDate ?? (widget.wallet == null ? dateOnly(DateTime.now()) : null);
   @override
   void dispose() {
     name.dispose();
@@ -66,8 +57,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
       : walletIcons[symbol!];
 
   Future<void> pickIcon() async {
-    final i = await openPage<int>(
-        context, WalletIconScreen(selected: symbol ?? (savings ? 4 : 0)));
+    final i = await openPage<int>(context, WalletIconScreen(selected: symbol ?? (savings ? 4 : 0)));
     if (i != null && mounted) setState(() => symbol = i);
   }
 
@@ -77,6 +67,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
       message(context, 'Chưa được cấp quyền thông báo. Hãy bật trong Cài đặt của hệ điều hành.');
     }
   }
+
   void save() {
     if (!form.currentState!.validate()) return;
     final p = context.read<FinanceProvider>();
@@ -95,11 +86,8 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
           startDate: savings ? startDate : null,
           deadline: savings ? deadline : null,
           bankBin: bank ? bankBin : null,
-          bankAccount:
-              bank ? bankAccount.text.replaceAll(RegExp(r'\s+'), '') : null,
-          bankHolder: bank
-              ? bankHolder.text.trim().replaceAll(RegExp(r'\s+'), ' ')
-              : null));
+          bankAccount: bank ? bankAccount.text.replaceAll(RegExp(r'\s+'), '') : null,
+          bankHolder: bank ? bankHolder.text.trim().replaceAll(RegExp(r'\s+'), ' ') : null));
       Navigator.pop(context);
     });
   }
@@ -107,10 +95,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
   @override
   Widget build(BuildContext context) => FinancePage(
       title: widget.wallet == null ? 'Thêm ví' : 'Chỉnh sửa ví',
-      bottom: FilledButton(
-          onPressed: save,
-          child: const Padding(
-              padding: EdgeInsets.all(14), child: Text('Lưu ví'))),
+      bottom: FilledButton(onPressed: save, child: const Padding(padding: EdgeInsets.all(14), child: Text('Lưu ví'))),
       child: Form(
           autovalidateMode: AutovalidateMode.onUserInteraction,
           key: form,
@@ -125,31 +110,17 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                             onTap: () => setState(() => savings = type),
                             child: Panel(
                                 color: savings == type
-                                    ? (type
-                                        ? const Color(0xFFBC956D)
-                                        : const Color(0xFF7C9583))
+                                    ? (type ? const Color(0xFFBC956D) : const Color(0xFF7C9583))
                                     : Colors.white,
-                                child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Icon(
-                                          type
-                                              ? Icons.savings_outlined
-                                              : Icons
-                                                  .account_balance_wallet_outlined,
-                                          size: 36,
-                                          color: savings == type
-                                              ? Colors.white
-                                              : AppColors.textSecondary),
-                                      const SizedBox(height: 16),
-                                      Text(type ? 'Ví tiết kiệm' : 'Ví cơ bản',
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.w700,
-                                              color: savings == type
-                                                  ? Colors.white
-                                                  : AppColors.textPrimary)),
-                                    ])))))
+                                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                                  Icon(type ? Icons.savings_outlined : Icons.account_balance_wallet_outlined,
+                                      size: 36, color: savings == type ? Colors.white : AppColors.textSecondary),
+                                  const SizedBox(height: 16),
+                                  Text(type ? 'Ví tiết kiệm' : 'Ví cơ bản',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          color: savings == type ? Colors.white : AppColors.textPrimary)),
+                                ])))))
             ]),
             const SizedBox(height: 20),
             Panel(
@@ -173,32 +144,26 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                         textCapitalization: TextCapitalization.sentences,
                         textInputAction: TextInputAction.next,
                         decoration: const InputDecoration(labelText: 'Tên ví'),
-                        validator: (v) =>
-                            v == null || v.trim().isEmpty ? 'Nhập tên ví' : null)),
+                        validator: (v) => v == null || v.trim().isEmpty ? 'Nhập tên ví' : null)),
               ]),
               const SizedBox(height: 12),
               ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.currency_exchange),
                   title: const Text('Đơn vị tiền tệ'),
-                  subtitle:
-                      Text(CurrencySelectionScreen.units[currency] ?? currency),
+                  subtitle: Text(CurrencySelectionScreen.units[currency] ?? currency),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () async {
-                    final v = await openPage<String>(context,
-                        CurrencySelectionScreen(selectedCurrency: currency));
+                    final v = await openPage<String>(context, CurrencySelectionScreen(selectedCurrency: currency));
                     if (v != null && mounted) setState(() => currency = v);
                   }),
               const SizedBox(height: 12),
               TextFormField(
                   controller: opening,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: [AmountInputFormatter()],
                   decoration: InputDecoration(
-                      labelText: savings ? 'Số tiền ban đầu' : 'Số dư hiện có',
-                      hintText: '0',
-                      suffixText: currency),
+                      labelText: savings ? 'Số tiền ban đầu' : 'Số dư hiện có', hintText: '0', suffixText: currency),
                   validator: amountValidator),
             ])),
             if (savings) ...[
@@ -207,8 +172,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                   child: Column(children: [
                 TextFormField(
                     controller: target,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [AmountInputFormatter()],
                     decoration: InputDecoration(
                         labelText: 'Mục tiêu tiết kiệm',
@@ -219,9 +183,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.play_circle_outline),
                     title: const Text('Ngày bắt đầu'),
-                    subtitle: Text(startDate == null
-                        ? 'Chưa chọn'
-                        : dayLabel(startDate!)),
+                    subtitle: Text(startDate == null ? 'Chưa chọn' : dayLabel(startDate!)),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () async {
                       final d = await showDatePicker(
@@ -242,9 +204,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.event_outlined),
                     title: const Text('Ngày kết thúc'),
-                    subtitle: Text(deadline == null
-                        ? 'Chưa đặt thời hạn'
-                        : dayLabel(deadline!)),
+                    subtitle: Text(deadline == null ? 'Chưa đặt thời hạn' : dayLabel(deadline!)),
                     trailing: deadline == null
                         ? const Icon(Icons.chevron_right)
                         : IconButton(
@@ -256,8 +216,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                       final initial = deadline ?? DateTime.now();
                       final d = await showDatePicker(
                           context: context,
-                          initialDate:
-                              initial.isBefore(first) ? first : initial,
+                          initialDate: initial.isBefore(first) ? first : initial,
                           firstDate: first,
                           lastDate: DateTime(2100));
                       if (d != null && mounted) setState(() => deadline = d);
@@ -267,7 +226,8 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                     contentPadding: EdgeInsets.zero,
                     tileColor: Colors.transparent,
                     title: const Text('Bật thông báo'),
-                    subtitle: const Text('Nhận thông báo khi ví có giao dịch mới từ thiết bị khác, giao dịch định kỳ hoặc ngân hàng.'),
+                    subtitle: const Text(
+                        'Nhận thông báo khi ví có giao dịch mới từ thiết bị khác, giao dịch định kỳ hoặc ngân hàng.'),
                     value: notify,
                     onChanged: setNotify),
               ]))
@@ -284,25 +244,20 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                           ? 'Nhận tiền bằng mã VietQR, tự ghi giao dịch khi kết nối SePay.'
                           : 'Chỉ dùng cho ví VND.'),
                       value: linkBank && currency == 'VND',
-                      onChanged: currency == 'VND'
-                          ? (v) => setState(() => linkBank = v)
-                          : null),
+                      onChanged: currency == 'VND' ? (v) => setState(() => linkBank = v) : null),
                   if (linkBank && currency == 'VND') ...[
                     DropdownButtonFormField<String>(
                         key: const ValueKey('bank-bin'),
                         initialValue: bankBin,
                         isExpanded: true,
                         decoration: const InputDecoration(
-                            labelText: 'Ngân hàng',
-                            prefixIcon: Icon(Icons.account_balance_outlined)),
+                            labelText: 'Ngân hàng', prefixIcon: Icon(Icons.account_balance_outlined)),
                         items: [
                           for (final b in vietBanks)
-                            DropdownMenuItem(
-                                value: b.bin, child: Text('${b.name} (${b.code})'))
+                            DropdownMenuItem(value: b.bin, child: Text('${b.name} (${b.code})'))
                         ],
                         onChanged: (v) => setState(() => bankBin = v),
-                        validator: (v) =>
-                            bankByBin(v) == null ? 'Chọn ngân hàng' : null),
+                        validator: (v) => bankByBin(v) == null ? 'Chọn ngân hàng' : null),
                     const SizedBox(height: 12),
                     TextFormField(
                         key: const ValueKey('bank-account'),
@@ -310,9 +265,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                         keyboardType: TextInputType.number,
                         maxLength: 19,
                         decoration: const InputDecoration(
-                            labelText: 'Số tài khoản',
-                            counterText: '',
-                            prefixIcon: Icon(Icons.numbers)),
+                            labelText: 'Số tài khoản', counterText: '', prefixIcon: Icon(Icons.numbers)),
                         validator: validateBankAccount),
                     const SizedBox(height: 12),
                     TextFormField(
@@ -328,10 +281,8 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
                         onChanged: (v) {
                           final fixed = holderName(v);
                           if (fixed != v) {
-                            bankHolder.value = TextEditingValue(
-                                text: fixed,
-                                selection: TextSelection.collapsed(
-                                    offset: fixed.length));
+                            bankHolder.value =
+                                TextEditingValue(text: fixed, selection: TextSelection.collapsed(offset: fixed.length));
                           }
                         },
                         validator: validateBankHolder),
@@ -340,8 +291,7 @@ class _CreateWalletScreenState extends State<CreateWalletScreen> {
             const SizedBox(height: 16),
             SwitchListTile(
                 title: const Text('Không tính vào tổng'),
-                subtitle: const Text(
-                    'Ví vẫn xuất hiện trong danh sách và giao dịch.'),
+                subtitle: const Text('Ví vẫn xuất hiện trong danh sách và giao dịch.'),
                 value: excluded,
                 onChanged: (v) => setState(() => excluded = v)),
             if (widget.wallet != null) ...[

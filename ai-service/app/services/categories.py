@@ -1,10 +1,17 @@
 from app.nlp.text import fold
 
 GLOBAL_CATEGORIES = {
-    "food": ("Ăn uống", False), "life": ("Sinh hoạt", False), "house": ("Nhà cửa", False),
-    "self": ("Bản thân", False), "transport": ("Đi lại", False), "health": ("Sức khỏe", False),
-    "child": ("Con cái", False), "salary": ("Lương", True), "bonus": ("Thưởng", True),
-    "business": ("Kinh doanh", True), "other_income": ("Thu nhập khác", True),
+    "food": ("Ăn uống", False),
+    "life": ("Sinh hoạt", False),
+    "house": ("Nhà cửa", False),
+    "self": ("Bản thân", False),
+    "transport": ("Đi lại", False),
+    "health": ("Sức khỏe", False),
+    "child": ("Con cái", False),
+    "salary": ("Lương", True),
+    "bonus": ("Thưởng", True),
+    "business": ("Kinh doanh", True),
+    "other_income": ("Thu nhập khác", True),
 }
 NEEDS = {"food", "life", "house", "transport", "health", "child"}
 

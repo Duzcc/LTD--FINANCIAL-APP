@@ -17,7 +17,9 @@ const paymentRequest = (body) => ({
   amount: optionalAmount(body.amount),
   personId: body.personId ? String(body.personId) : null,
   categoryId: body.categoryId ? String(body.categoryId) : null,
-  note: String(body.note || '').trim().slice(0, 100),
+  note: String(body.note || '')
+    .trim()
+    .slice(0, 100),
 });
 
 function webhookTransfer(body = {}) {

@@ -104,7 +104,11 @@ class SpendingCoach {
       if (e.kind != EntryKind.lend && e.kind != EntryKind.borrow) continue;
       if (p.debt(borrowed: e.kind == EntryKind.borrow, personId: e.personId) <= 0) continue;
       final days = DateTime(due.year, due.month, due.day).difference(_today).inDays;
-      final when = days == 0 ? 'hôm nay' : days == 1 ? 'ngày mai' : 'sau $days ngày';
+      final when = days == 0
+          ? 'hôm nay'
+          : days == 1
+              ? 'ngày mai'
+              : 'sau $days ngày';
       out.add(e.kind == EntryKind.lend
           ? 'Khoản cho ${p.personName(e.personId)} vay đến hạn thu $when.'
           : 'Khoản vay của ${p.personName(e.personId)} đến hạn trả $when.');

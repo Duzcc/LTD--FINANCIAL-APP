@@ -31,7 +31,7 @@ def holt_winters_forecast(y: np.ndarray, period: int, horizon: int) -> tuple[np.
     best = (np.inf, None)
     init_season = y[:period] - y[:period].mean()
     for a, b, g in product((0.1, 0.3, 0.5, 0.8), (0.01, 0.1, 0.2), (0.05, 0.2, 0.4)):
-        level, trend = y[:period].mean(), (y[period:2 * period].mean() - y[:period].mean()) / period
+        level, trend = y[:period].mean(), (y[period : 2 * period].mean() - y[:period].mean()) / period
         season = list(init_season)
         sse = 0.0
         for t in range(period, len(y)):
@@ -56,7 +56,7 @@ def _trimmed_mean(values: list[float], cut: float = 0.15) -> float:
         return 0.0
     v = np.sort(np.asarray(values))
     k = int(len(v) * cut)
-    return float(v[k:len(v) - k].mean()) if len(v) > 2 * k else float(v.mean())
+    return float(v[k : len(v) - k].mean()) if len(v) > 2 * k else float(v.mean())
 
 
 def daily_expense(transactions: list[Transaction], category_id: str | None = None) -> dict[date, float]:
@@ -95,8 +95,10 @@ def _large_bills(transactions: list[Transaction], today: date, cap: float) -> tu
         if m == 0:
             y, m = y - 1, 12
         prev_months.append((y, m))
+
     def in_month(t, ym):
         return (t.date.year, t.date.month) == ym
+
     recurring_left = 0.0
     recurring_ids: set[str] = set()
     for t in big:
@@ -104,15 +106,27 @@ def _large_bills(transactions: list[Transaction], today: date, cap: float) -> tu
             continue
         matches = [t]
         for ym in prev_months[1:]:
-            hit = next((o for o in big if in_month(o, ym) and abs(o.date.day - t.date.day) <= 3
-                        and abs(o.amount - t.amount) <= 0.25 * t.amount), None)
+            hit = next(
+                (
+                    o
+                    for o in big
+                    if in_month(o, ym)
+                    and abs(o.date.day - t.date.day) <= 3
+                    and abs(o.amount - t.amount) <= 0.25 * t.amount
+                ),
+                None,
+            )
             if hit:
                 matches.append(hit)
         if len(matches) < 2:
             continue
         recurring_ids.update(x.id for x in matches)
-        seen_now = any(o.date.date() >= month_start and abs(o.amount - t.amount) <= 0.25 * t.amount
-                       and abs(o.date.day - t.date.day) <= 3 for o in big)
+        seen_now = any(
+            o.date.date() >= month_start
+            and abs(o.amount - t.amount) <= 0.25 * t.amount
+            and abs(o.date.day - t.date.day) <= 3
+            for o in big
+        )
         if not seen_now and t.date.day > today.day:
             recurring_left += float(np.median([x.amount for x in matches]))
     since = today - timedelta(days=90)
@@ -130,8 +144,11 @@ def forecast_month(transactions: list[Transaction], now: datetime) -> MonthForec
     daily = daily_expense(transactions)
     spent = sum(v for d, v in daily.items() if month_start <= d <= today)
 
-    recent_amounts = [t.amount for t in transactions if t.kind in EXPENSE_KINDS and not t.excluded
-                      and t.date.date() >= today - timedelta(days=90)]
+    recent_amounts = [
+        t.amount
+        for t in transactions
+        if t.kind in EXPENSE_KINDS and not t.excluded and t.date.date() >= today - timedelta(days=90)
+    ]
     cap = max(300_000.0, 4 * float(np.median(recent_amounts))) if recent_amounts else float("inf")
     regular: dict[date, float] = {}
     for t in transactions:
@@ -201,7 +218,10 @@ def forecast_month(transactions: list[Transaction], now: datetime) -> MonthForec
             cat_hist[t.categoryId] = cat_hist.get(t.categoryId, 0.0) + t.amount
     hist_total = sum(cat_hist.values()) or 1.0
     by_category = {
-        c: {"spent": round(cat_spent.get(c, 0.0)), "projected": round(cat_spent.get(c, 0.0) + rest * cat_hist.get(c, 0.0) / hist_total)}
+        c: {
+            "spent": round(cat_spent.get(c, 0.0)),
+            "projected": round(cat_spent.get(c, 0.0) + rest * cat_hist.get(c, 0.0) / hist_total),
+        }
         for c in set(cat_spent) | set(cat_hist)
     }
 
@@ -229,7 +249,14 @@ def forecast_month(transactions: list[Transaction], now: datetime) -> MonthForec
         nxt, next_method = np.array([0.0]), "none"
 
     return MonthForecast(
-        spent=round(spent), projected=round(projected), lower=round(max(spent, projected - margin)),
-        upper=round(projected + margin), daily_average=round((projected - spent) / days_left) if days_left else 0,
-        days_left=days_left, method=method, by_category=by_category,
-        next_month=round(max(0.0, float(nxt[0]))) if next_method != "none" else None, next_month_method=next_method)
+        spent=round(spent),
+        projected=round(projected),
+        lower=round(max(spent, projected - margin)),
+        upper=round(projected + margin),
+        daily_average=round((projected - spent) / days_left) if days_left else 0,
+        days_left=days_left,
+        method=method,
+        by_category=by_category,
+        next_month=round(max(0.0, float(nxt[0]))) if next_method != "none" else None,
+        next_month_method=next_method,
+    )

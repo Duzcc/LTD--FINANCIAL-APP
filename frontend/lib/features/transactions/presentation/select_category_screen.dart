@@ -6,11 +6,7 @@ import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/finance/presentation/entity_icons.dart';
 
 class SelectCategoryScreen extends StatefulWidget {
-  const SelectCategoryScreen(
-      {super.key,
-      this.selectedCategoryId,
-      this.income = false,
-      this.manage = false});
+  const SelectCategoryScreen({super.key, this.selectedCategoryId, this.income = false, this.manage = false});
   final String? selectedCategoryId;
   final bool income, manage;
   @override
@@ -28,56 +24,37 @@ class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
         context: context,
         builder: (ctx) => StatefulBuilder(
             builder: (ctx, setDialog) => AlertDialog(
-                    title: Text(c == null
-                        ? (income ? 'Danh mục thu mới' : 'Danh mục chi mới')
-                        : 'Sửa danh mục'),
+                    title: Text(c == null ? (income ? 'Danh mục thu mới' : 'Danh mục chi mới') : 'Sửa danh mục'),
                     content: SizedBox(
                         width: 320,
                         child: Form(
                             autovalidateMode: AutovalidateMode.onUserInteraction,
                             key: key,
                             child: SingleChildScrollView(
-                                child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                  TextFormField(
-                                      controller: name,
-                                      autofocus: c == null,
-                                      textCapitalization:
-                                          TextCapitalization.sentences,
-                                      decoration: const InputDecoration(
-                                          labelText: 'Tên danh mục'),
-                                      validator: (v) => (v ?? '').trim().isEmpty
-                                          ? 'Vui lòng nhập tên danh mục'
-                                          : null),
-                                  const SizedBox(height: 16),
-                                  const Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text('Biểu tượng')),
-                                  const SizedBox(height: 8),
-                                  Wrap(spacing: 8, runSpacing: 8, children: [
-                                    for (var i = 0;
-                                        i < categoryIcons.length;
-                                        i++)
-                                      InkWell(
-                                          customBorder: const CircleBorder(),
-                                          onTap: () =>
-                                              setDialog(() => symbol = i),
-                                          child: CircleAvatar(
-                                              radius: 20,
-                                              backgroundColor: symbol == i
-                                                  ? const Color(0xFFD9BEA9)
-                                                  : AppColors.backgroundBeige,
-                                              child: Icon(categoryIcons[i],
-                                                  size: 20,
-                                                  color:
-                                                      const Color(0xFF8D7564)))),
-                                  ]),
-                                ])))),
+                                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                              TextFormField(
+                                  controller: name,
+                                  autofocus: c == null,
+                                  textCapitalization: TextCapitalization.sentences,
+                                  decoration: const InputDecoration(labelText: 'Tên danh mục'),
+                                  validator: (v) => (v ?? '').trim().isEmpty ? 'Vui lòng nhập tên danh mục' : null),
+                              const SizedBox(height: 16),
+                              const Align(alignment: Alignment.centerLeft, child: Text('Biểu tượng')),
+                              const SizedBox(height: 8),
+                              Wrap(spacing: 8, runSpacing: 8, children: [
+                                for (var i = 0; i < categoryIcons.length; i++)
+                                  InkWell(
+                                      customBorder: const CircleBorder(),
+                                      onTap: () => setDialog(() => symbol = i),
+                                      child: CircleAvatar(
+                                          radius: 20,
+                                          backgroundColor:
+                                              symbol == i ? const Color(0xFFD9BEA9) : AppColors.backgroundBeige,
+                                          child: Icon(categoryIcons[i], size: 20, color: const Color(0xFF8D7564)))),
+                              ]),
+                            ])))),
                     actions: [
-                      TextButton(
-                          onPressed: () => Navigator.pop(ctx),
-                          child: const Text('Hủy')),
+                      TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
                       FilledButton(
                           onPressed: () {
                             if (key.currentState!.validate()) {
@@ -91,19 +68,15 @@ class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
     if (result == null || !mounted) return;
     final p = context.read<FinanceProvider>();
     attempt(context, () {
-      p.saveCategory(
-          MoneyCategory(c?.id ?? p.newId(), result.$1, income, result.$2));
+      p.saveCategory(MoneyCategory(c?.id ?? p.newId(), result.$1, income, result.$2));
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final p = context.watch<FinanceProvider>();
-    final items = p.categories
-        .where((c) =>
-            c.income == income &&
-            c.name.toLowerCase().contains(query.toLowerCase()))
-        .toList();
+    final items =
+        p.categories.where((c) => c.income == income && c.name.toLowerCase().contains(query.toLowerCase())).toList();
     return FinancePage(
         title: widget.manage ? 'Quản lý danh mục' : 'Chọn danh mục',
         child: ListView(padding: const EdgeInsets.all(16), children: [
@@ -118,13 +91,10 @@ class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
           ],
           TextField(
               onChanged: (v) => setState(() => query = v),
-              decoration: const InputDecoration(
-                  hintText: 'Tìm danh mục', prefixIcon: Icon(Icons.search))),
+              decoration: const InputDecoration(hintText: 'Tìm danh mục', prefixIcon: Icon(Icons.search))),
           const SizedBox(height: 12),
           OutlinedButton.icon(
-              onPressed: () => edit(),
-              icon: const Icon(Icons.add_circle_outline),
-              label: const Text('Danh mục mới')),
+              onPressed: () => edit(), icon: const Icon(Icons.add_circle_outline), label: const Text('Danh mục mới')),
           const SizedBox(height: 12),
           for (final c in items)
             Padding(
@@ -133,12 +103,10 @@ class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
                     leading: RoundIcon(c.icon),
                     title: Text(c.name),
                     subtitle: widget.manage
-                        ? Text(
-                            '${p.entries.where((e) => e.categoryId == c.id).length} giao dịch',
+                        ? Text('${p.entries.where((e) => e.categoryId == c.id).length} giao dịch',
                             style: const TextStyle(fontSize: 12))
                         : null,
-                    onTap: () =>
-                        widget.manage ? edit(c) : Navigator.pop(context, c),
+                    onTap: () => widget.manage ? edit(c) : Navigator.pop(context, c),
                     trailing: widget.manage
                         ? PopupMenuButton<String>(
                             onSelected: (v) async {
@@ -146,28 +114,21 @@ class _SelectCategoryScreenState extends State<SelectCategoryScreen> {
                                 edit(c);
                                 return;
                               }
-                              if (await confirmDelete(
-                                      context, 'Xóa ${c.name}?') &&
-                                  context.mounted) {
+                              if (await confirmDelete(context, 'Xóa ${c.name}?') && context.mounted) {
                                 attempt(context, () {
                                   p.deleteCategory(c.id);
                                 });
                               }
                             },
                             itemBuilder: (_) => const [
-                                  PopupMenuItem(
-                                      value: 'edit', child: Text('Chỉnh sửa')),
-                                  PopupMenuItem(
-                                      value: 'delete', child: Text('Xóa'))
+                                  PopupMenuItem(value: 'edit', child: Text('Chỉnh sửa')),
+                                  PopupMenuItem(value: 'delete', child: Text('Xóa'))
                                 ])
                         : c.id == widget.selectedCategoryId
-                            ? const Icon(Icons.check,
-                                color: AppColors.primaryGreen)
+                            ? const Icon(Icons.check, color: AppColors.primaryGreen)
                             : const Icon(Icons.chevron_right))),
           if (items.isEmpty)
-            const EmptyView(
-                title: 'Không tìm thấy danh mục',
-                subtitle: 'Thử tên khác hoặc thêm danh mục mới.'),
+            const EmptyView(title: 'Không tìm thấy danh mục', subtitle: 'Thử tên khác hoặc thêm danh mục mới.'),
         ]));
   }
 }

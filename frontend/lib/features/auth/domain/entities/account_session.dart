@@ -10,14 +10,13 @@ class AccountSession {
   final String? refreshToken;
   final bool emailVerified;
 
-  AccountSession withToken(String value, {String? refresh, bool? verified}) =>
-      AccountSession(
-          baseUrl: baseUrl,
-          token: value,
-          email: email,
-          userId: userId,
-          refreshToken: refresh ?? refreshToken,
-          emailVerified: verified ?? emailVerified);
+  AccountSession withToken(String value, {String? refresh, bool? verified}) => AccountSession(
+      baseUrl: baseUrl,
+      token: value,
+      email: email,
+      userId: userId,
+      refreshToken: refresh ?? refreshToken,
+      emailVerified: verified ?? emailVerified);
 
   Map<String, dynamic> toJson() => {
         'baseUrl': baseUrl,

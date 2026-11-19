@@ -5,10 +5,7 @@ import 'package:finance_app/core/widgets/finance_ui.dart';
 
 const _axisStyle = TextStyle(fontSize: 10, color: AppColors.textSecondary);
 
-FlTitlesData _titles(
-        {required Widget Function(double, TitleMeta) bottom,
-        bool left = true,
-        double? bottomInterval}) =>
+FlTitlesData _titles({required Widget Function(double, TitleMeta) bottom, bool left = true, double? bottomInterval}) =>
     FlTitlesData(
       topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
       rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -16,27 +13,21 @@ FlTitlesData _titles(
           sideTitles: SideTitles(
               showTitles: left,
               reservedSize: 40,
-              getTitlesWidget: (v, meta) => v == meta.max
-                  ? const SizedBox.shrink()
-                  : Text(compactMoney(v), style: _axisStyle))),
+              getTitlesWidget: (v, meta) =>
+                  v == meta.max ? const SizedBox.shrink() : Text(compactMoney(v), style: _axisStyle))),
       bottomTitles: AxisTitles(
           sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 26,
               interval: bottomInterval,
-              getTitlesWidget: (v, meta) => Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: bottom(v, meta)))),
+              getTitlesWidget: (v, meta) => Padding(padding: const EdgeInsets.only(top: 6), child: bottom(v, meta)))),
     );
 
 FlGridData _grid() => FlGridData(
-    drawVerticalLine: false,
-    getDrawingHorizontalLine: (_) =>
-        const FlLine(color: AppColors.divider, strokeWidth: 1));
+    drawVerticalLine: false, getDrawingHorizontalLine: (_) => const FlLine(color: AppColors.divider, strokeWidth: 1));
 
 class CompareBarChart extends StatelessWidget {
-  const CompareBarChart(
-      {super.key, required this.labels, required this.values, required this.colors});
+  const CompareBarChart({super.key, required this.labels, required this.values, required this.colors});
   final List<String> labels;
   final List<double> values;
   final List<Color> colors;
@@ -50,9 +41,8 @@ class CompareBarChart extends StatelessWidget {
       gridData: _grid(),
       barTouchData: BarTouchData(enabled: false),
       titlesData: _titles(
-          bottom: (v, _) => Text(
-              v.toInt() >= 0 && v.toInt() < labels.length ? labels[v.toInt()] : '',
-              style: _axisStyle)),
+          bottom: (v, _) =>
+              Text(v.toInt() >= 0 && v.toInt() < labels.length ? labels[v.toInt()] : '', style: _axisStyle)),
       barGroups: [
         for (var i = 0; i < values.length; i++)
           BarChartGroupData(x: i, barRods: [
@@ -68,18 +58,22 @@ class CompareBarChart extends StatelessWidget {
 }
 
 class IncomeExpenseChart extends StatelessWidget {
-  const IncomeExpenseChart(
-      {super.key,
-      required this.labels,
-      required this.incomes,
-      required this.expenses});
+  const IncomeExpenseChart({super.key, required this.labels, required this.incomes, required this.expenses});
   final List<String> labels;
   final List<double> incomes, expenses;
   @override
   Widget build(BuildContext context) {
     final top = [...incomes, ...expenses].fold(0.0, math.max);
-    final width = labels.length > 16 ? 3.0 : labels.length > 8 ? 6.0 : 12.0;
-    final step = labels.length > 16 ? 5 : labels.length > 8 ? 2 : 1;
+    final width = labels.length > 16
+        ? 3.0
+        : labels.length > 8
+            ? 6.0
+            : 12.0;
+    final step = labels.length > 16
+        ? 5
+        : labels.length > 8
+            ? 2
+            : 1;
     return BarChart(BarChartData(
       maxY: math.max(top * 1.15, 1),
       alignment: BarChartAlignment.spaceAround,
@@ -97,15 +91,9 @@ class IncomeExpenseChart extends StatelessWidget {
         for (var i = 0; i < labels.length; i++)
           BarChartGroupData(x: i, barsSpace: 2, barRods: [
             BarChartRodData(
-                toY: incomes[i],
-                width: width,
-                color: AppColors.primaryGreen,
-                borderRadius: BorderRadius.circular(2)),
+                toY: incomes[i], width: width, color: AppColors.primaryGreen, borderRadius: BorderRadius.circular(2)),
             BarChartRodData(
-                toY: expenses[i],
-                width: width,
-                color: AppColors.accentRed,
-                borderRadius: BorderRadius.circular(2)),
+                toY: expenses[i], width: width, color: AppColors.accentRed, borderRadius: BorderRadius.circular(2)),
           ])
       ],
     ));
@@ -113,19 +101,14 @@ class IncomeExpenseChart extends StatelessWidget {
 }
 
 class TrendLineChart extends StatelessWidget {
-  const TrendLineChart(
-      {super.key,
-      required this.current,
-      required this.previous,
-      required this.color});
+  const TrendLineChart({super.key, required this.current, required this.previous, required this.color});
   final List<double> current, previous;
   final Color color;
   @override
   Widget build(BuildContext context) {
     final days = math.max(current.length, previous.length);
     final top = [...current, ...previous].fold(0.0, math.max);
-    List<FlSpot> spots(List<double> v) =>
-        [for (var i = 0; i < v.length; i++) FlSpot(i + 1.0, v[i])];
+    List<FlSpot> spots(List<double> v) => [for (var i = 0; i < v.length; i++) FlSpot(i + 1.0, v[i])];
     return LineChart(LineChartData(
       minX: 1,
       maxX: math.max(days.toDouble(), 2),
@@ -134,9 +117,7 @@ class TrendLineChart extends StatelessWidget {
       borderData: FlBorderData(show: false),
       gridData: _grid(),
       lineTouchData: const LineTouchData(enabled: false),
-      titlesData: _titles(
-          bottomInterval: 7,
-          bottom: (v, _) => Text('${v.toInt()}', style: _axisStyle)),
+      titlesData: _titles(bottomInterval: 7, bottom: (v, _) => Text('${v.toInt()}', style: _axisStyle)),
       lineBarsData: [
         LineChartBarData(
             spots: spots(previous),
@@ -151,16 +132,14 @@ class TrendLineChart extends StatelessWidget {
             isCurved: true,
             preventCurveOverShooting: true,
             dotData: const FlDotData(show: false),
-            belowBarData:
-                BarAreaData(show: true, color: color.withValues(alpha: .12))),
+            belowBarData: BarAreaData(show: true, color: color.withValues(alpha: .12))),
       ],
     ));
   }
 }
 
 class PercentRing extends StatelessWidget {
-  const PercentRing(
-      {super.key, required this.value, required this.color, this.size = 64});
+  const PercentRing({super.key, required this.value, required this.color, this.size = 64});
   final double value;
   final Color color;
   final double size;

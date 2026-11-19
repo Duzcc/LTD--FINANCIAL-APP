@@ -34,26 +34,42 @@ async def forecast(body: SnapshotRequest) -> ForecastResponse:
 @router.post("/anomalies", response_model=AnomalyResponse, summary="Phát hiện giao dịch bất thường")
 async def anomalies(body: AnomalyRequest) -> AnomalyResponse:
     s = body.snapshot
-    found, spikes = await run_in_threadpool(anomaly.detect, s.transactions, s.resolved_now(), body.lookback_days,
-                                            s.category_names())
+    found, spikes = await run_in_threadpool(
+        anomaly.detect, s.transactions, s.resolved_now(), body.lookback_days, s.category_names()
+    )
     return AnomalyResponse(
-        anomalies=[AnomalyItem(transaction_id=a.transaction_id, score=a.score, kind=a.kind, reasons=a.reasons) for a in found],
-        spikes=[SpikeItem(category_id=x.category_id, recent=x.recent, baseline=x.baseline, ratio=x.ratio) for x in spikes])
+        anomalies=[
+            AnomalyItem(transaction_id=a.transaction_id, score=a.score, kind=a.kind, reasons=a.reasons) for a in found
+        ],
+        spikes=[
+            SpikeItem(category_id=x.category_id, recent=x.recent, baseline=x.baseline, ratio=x.ratio) for x in spikes
+        ],
+    )
 
 
 @router.post("/budgets/recommend", response_model=BudgetResponse, summary="Gợi ý ngân sách tháng")
 async def recommend_budgets(body: BudgetRequest) -> BudgetResponse:
     s = body.snapshot
-    r = await run_in_threadpool(budget.recommend, s.transactions, s.categories, s.resolved_now(), body.monthly_income,
-                                body.savings_rate)
-    return BudgetResponse(suggestions=[BudgetItem(**asdict(x)) for x in r["suggestions"]], total=r["total"],
-                          months=r["months"], plan=r["plan"])
+    r = await run_in_threadpool(
+        budget.recommend, s.transactions, s.categories, s.resolved_now(), body.monthly_income, body.savings_rate
+    )
+    return BudgetResponse(
+        suggestions=[BudgetItem(**asdict(x)) for x in r["suggestions"]],
+        total=r["total"],
+        months=r["months"],
+        plan=r["plan"],
+    )
 
 
 @router.post("/search", response_model=SearchResponse, summary="Tìm giao dịch bằng câu tự nhiên")
 async def semantic_search(body: SearchRequest) -> SearchResponse:
     s = body.snapshot
-    flt, hits = await run_in_threadpool(search.search, body.query, s.transactions, s.categories, s.resolved_now(), body.limit)
-    filters = {k: (v.isoformat() if hasattr(v, "isoformat") else sorted(v) if isinstance(v, set) else v)
-               for k, v in asdict(flt).items() if v not in (None, "", set())}
+    flt, hits = await run_in_threadpool(
+        search.search, body.query, s.transactions, s.categories, s.resolved_now(), body.limit
+    )
+    filters = {
+        k: (v.isoformat() if hasattr(v, "isoformat") else sorted(v) if isinstance(v, set) else v)
+        for k, v in asdict(flt).items()
+        if v not in (None, "", set())
+    }
     return SearchResponse(filters=filters, hits=[SearchHit(transaction_id=t.id, score=sc) for t, sc in hits])

@@ -1,7 +1,6 @@
 library;
 
-import 'package:finance_app/features/ai/domain/services/category_model.dart'
-    show foldVietnamese, stripAccents;
+import 'package:finance_app/features/ai/domain/services/category_model.dart' show foldVietnamese, stripAccents;
 
 class VietBank {
   const VietBank(this.bin, this.code, this.name);
@@ -54,8 +53,7 @@ String holderName(String text) {
 }
 
 // mỗi ô = mã ô + độ dài 2 chữ số + nội dung (chuẩn VietQR)
-String _tlv(String id, String value) =>
-    '$id${value.length.toString().padLeft(2, '0')}$value';
+String _tlv(String id, String value) => '$id${value.length.toString().padLeft(2, '0')}$value';
 
 // 4 ký tự cuối là mã kiểm tra CRC
 String crc16(String data) {
@@ -70,14 +68,9 @@ String crc16(String data) {
   return crc.toRadixString(16).toUpperCase().padLeft(4, '0');
 }
 
-String buildVietQr(
-    {required String bin,
-    required String account,
-    double? amount,
-    String? content}) {
-  final merchant = _tlv('00', 'A000000727') +
-      _tlv('01', _tlv('00', bin) + _tlv('01', account)) +
-      _tlv('02', 'QRIBFTTA');
+String buildVietQr({required String bin, required String account, double? amount, String? content}) {
+  final merchant =
+      _tlv('00', 'A000000727') + _tlv('01', _tlv('00', bin) + _tlv('01', account)) + _tlv('02', 'QRIBFTTA');
   final hasAmount = amount != null && amount > 0;
   final note = content == null ? '' : transferContent(content);
   final body = [

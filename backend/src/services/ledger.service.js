@@ -20,7 +20,6 @@ const RESOURCE_KEYS = {
   budgets: 'budgets',
   recurring: 'recurring',
 };
-const TRANSACTION_TYPES = ['all', 'debt', 'income', 'expense'];
 
 const isEntity = (key) => Object.hasOwn(VALIDATORS, key);
 const newId = () => new Types.ObjectId().toHexString();
@@ -36,7 +35,8 @@ async function upsert(userId, state, key, id, data, options = {}) {
   const saved = await repository.upsert(userId, key, id, fields);
   const list = state[key];
   const index = list.findIndex((x) => x.id === id);
-  if (index < 0) list.push(saved); else list[index] = saved;
+  if (index < 0) list.push(saved);
+  else list[index] = saved;
   return saved;
 }
 
@@ -44,7 +44,10 @@ async function removeWallet(userId, state, id, cascade) {
   const refs = L.walletRefs(state, id);
   if (refs.total === 0) return;
   if (!cascade) {
-    throw conflict(`Ví đang có ${refs.entries} giao dịch và ${refs.budgets} ngân sách. Gửi cascade=true để xóa kèm dữ liệu liên quan.`, 'HAS_REFERENCES');
+    throw conflict(
+      `Ví đang có ${refs.entries} giao dịch và ${refs.budgets} ngân sách. Gửi cascade=true để xóa kèm dữ liệu liên quan.`,
+      'HAS_REFERENCES',
+    );
   }
   await repository.removeWalletDependents(userId, id);
   state.entries = state.entries.filter((e) => e.walletId !== id && e.destinationId !== id);
@@ -58,7 +61,8 @@ async function remove(userId, state, key, id, { cascade = false, missingOk = fal
     throw notFound();
   }
   if (key === 'wallets') await removeWallet(userId, state, id, cascade);
-  if (key === 'categories' && L.categoryRefs(state, id) > 0) throw conflict('Danh mục đang được sử dụng.', 'HAS_REFERENCES');
+  if (key === 'categories' && L.categoryRefs(state, id) > 0)
+    throw conflict('Danh mục đang được sử dụng.', 'HAS_REFERENCES');
   if (key === 'people' && L.personRefs(state, id) > 0) throw conflict('Đối tượng đang có giao dịch.', 'HAS_REFERENCES');
   await repository.remove(userId, key, id);
   state[key] = state[key].filter((x) => x.id !== id);
@@ -81,7 +85,9 @@ function matchesType(kind, type) {
 function filterTransactions(state, query) {
   const from = L.date(query.from, 'from');
   const to = L.date(query.to, 'to');
-  const text = String(query.q || '').trim().toLowerCase();
+  const text = String(query.q || '')
+    .trim()
+    .toLowerCase();
   const type = query.type || 'all';
   const nameOf = (list, id) => L.byId(list, id)?.name || '';
   const matches = (e) => {
@@ -93,7 +99,9 @@ function filterTransactions(state, query) {
     if (query.personId && e.personId !== query.personId) return false;
     if (!matchesType(e.kind, type)) return false;
     if (!text) return true;
-    return `${nameOf(state.categories, e.categoryId)} ${e.note} ${nameOf(state.people, e.personId)} ${e.amount}`.toLowerCase().includes(text);
+    return `${nameOf(state.categories, e.categoryId)} ${e.note} ${nameOf(state.people, e.personId)} ${e.amount}`
+      .toLowerCase()
+      .includes(text);
   };
   const direction = query.order === 'asc' ? 1 : -1;
   const list = state.entries
@@ -136,7 +144,10 @@ function resource(name) {
     async update(userId, id, body) {
       const state = await loadState(userId);
       const created = !L.byId(state[key], id);
-      return { created, item: decorate(key, state, await upsert(userId, state, key, id, body, { checkBalance: true })) };
+      return {
+        created,
+        item: decorate(key, state, await upsert(userId, state, key, id, body, { checkBalance: true })),
+      };
     },
     async remove(userId, id, { cascade }) {
       const state = await loadState(userId);

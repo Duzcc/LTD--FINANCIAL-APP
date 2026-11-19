@@ -12,14 +12,13 @@ class OtpChallenge {
 
   bool get isRegister => purpose == 'register';
 
-  factory OtpChallenge.fromJson(Map<String, dynamic> j, {String email = ''}) =>
-      OtpChallenge(
-          token: '${j['otpToken']}',
-          email: '${j['email'] ?? email}',
-          purpose: '${j['purpose'] ?? 'login'}',
-          devCode: j['devCode'] as String?,
-          expiresIn: (j['expiresIn'] as num?)?.toInt() ?? 300,
-          resendAfter: (j['resendAfter'] as num?)?.toInt() ?? 60);
+  factory OtpChallenge.fromJson(Map<String, dynamic> j, {String email = ''}) => OtpChallenge(
+      token: '${j['otpToken']}',
+      email: '${j['email'] ?? email}',
+      purpose: '${j['purpose'] ?? 'login'}',
+      devCode: j['devCode'] as String?,
+      expiresIn: (j['expiresIn'] as num?)?.toInt() ?? 300,
+      resendAfter: (j['resendAfter'] as num?)?.toInt() ?? 60);
 
   OtpChallenge resent(Map<String, dynamic> j) => OtpChallenge(
       token: token,
