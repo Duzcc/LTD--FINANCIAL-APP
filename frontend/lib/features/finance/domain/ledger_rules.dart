@@ -74,15 +74,11 @@ mixin LedgerRules on LedgerQueries {
     if (destination.currency != source.currency) throw ArgumentError('Chỉ chuyển giữa hai ví cùng tiền tệ.');
     if (!checkBalance) return;
     final previous = entries.where((e) => e.id == value.id).firstOrNull;
-    final available = balance(source.id) - (previous == null ? 0 : _effectOn(previous, source.id));
+    final available = balance(source.id) - (previous == null ? 0 : walletEffect(previous, source.id));
     if (value.amount > available + 1e-9) {
       throw ArgumentError('Số dư ví ${source.name} không đủ (còn ${_amount(available)} ${source.currency}).');
     }
   }
-
-  double _effectOn(MoneyEntry e, String walletId) =>
-      (e.walletId == walletId ? e.amount * e.kind.sign : 0) +
-      (e.kind == EntryKind.transfer && e.destinationId == walletId ? e.amount : 0);
 
   String _amount(double v) {
     final digits = v.abs().round().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.');

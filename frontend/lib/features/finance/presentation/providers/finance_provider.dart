@@ -326,6 +326,25 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
     _changed();
   }
 
+  // ghi phần chênh lệch thành khoản thu/chi, nhờ vậy lịch sử số dư vẫn khớp với giao dịch
+  MoneyEntry adjustBalance(String walletId, double actual,
+      {required String categoryId, bool excluded = true, DateTime? date}) {
+    if (!actual.isFinite) throw ArgumentError('Nhập số dư hợp lệ.');
+    final diff = actual - balance(walletId);
+    if (diff.abs() < 0.5) throw ArgumentError('Số dư đã khớp, không cần điều chỉnh.');
+    final e = MoneyEntry(
+        id: newId(),
+        kind: diff > 0 ? EntryKind.income : EntryKind.expense,
+        amount: diff.abs(),
+        walletId: walletId,
+        categoryId: categoryId,
+        note: 'Điều chỉnh số dư',
+        date: date ?? DateTime.now(),
+        excluded: excluded);
+    saveEntry(e);
+    return e;
+  }
+
   void deleteWallet(String id, {bool cascade = false}) {
     checkWalletRemovable(id, cascade: cascade);
     bool usesWallet(String walletId, String? destinationId) => walletId == id || destinationId == id;

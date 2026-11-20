@@ -1,5 +1,11 @@
 # Changelog
 
+## Chưa phát hành
+
+- Ví: điều chỉnh số dư theo số tiền thực tế (ghi khoản chênh lệch, mặc định không tính vào báo cáo).
+- Ví tiết kiệm có nút Nạp tiền / Rút tiền.
+- Màn chi tiết ví có biểu đồ số dư cuối mỗi tháng.
+
 ## 1.3.0 - 2026-11-19
 
 - Ví có biểu tượng riêng, ví tiết kiệm bật được thông báo khi có giao dịch mới.

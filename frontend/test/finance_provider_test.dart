@@ -179,6 +179,26 @@ void main() {
     await p.flush();
     p.dispose();
   });
+  test('Điều chỉnh số dư ghi phần chênh lệch và không tính vào báo cáo', () async {
+    final p = FinanceProvider();
+    p.saveWallet(const MoneyWallet(id: 'cash', name: 'Tiền mặt', opening: 1000000));
+    p.saveEntry(entry('e', EntryKind.expense, 200000));
+    final up = p.adjustBalance('cash', 900000, categoryId: 'other_income', date: DateTime(2026, 11, 5));
+    expect((up.kind, up.amount, up.excluded, up.note), (EntryKind.income, 100000.0, true, 'Điều chỉnh số dư'));
+    expect(p.balance('cash'), 900000);
+    final down = p.adjustBalance('cash', 850000, categoryId: 'food', date: DateTime(2026, 11, 6));
+    expect((down.kind, down.amount), (EntryKind.expense, 50000.0));
+    expect(() => p.adjustBalance('cash', 850000, categoryId: 'food'), throwsArgumentError, reason: 'đã khớp');
+    expect(() => p.adjustBalance('cash', 950000, categoryId: 'food'), throwsArgumentError,
+        reason: 'khoản thu cần danh mục thu');
+    expect(p.total(DateTime(2026, 11), income: true), 0);
+    expect(p.total(DateTime(2026, 11), income: false), 0);
+    expect(p.balanceAt('cash', DateTime(2026, 10)), 1000000);
+    expect(p.balanceAt('cash', DateTime(2026, 11)), 800000);
+    expect(p.balanceAt('cash', DateTime(2026, 12)), 850000);
+    await p.flush();
+    p.dispose();
+  });
   test('Số tiền trả nợ không vượt số còn nợ của từng người', () async {
     final p = FinanceProvider();
     p.savePerson(const MoneyPerson('a', 'An', 'Bạn bè'));

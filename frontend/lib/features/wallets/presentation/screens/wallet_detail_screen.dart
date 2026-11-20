@@ -12,6 +12,8 @@ import 'package:finance_app/features/wallets/presentation/screens/wallets_screen
 import 'package:finance_app/features/recurring/presentation/screens/recurring_screen.dart';
 import 'package:finance_app/features/banking/presentation/screens/receive_qr_screen.dart';
 import 'package:finance_app/features/finance/presentation/widgets/entity_icons.dart';
+import 'package:finance_app/features/wallets/presentation/widgets/adjust_balance_sheet.dart';
+import 'package:finance_app/features/wallets/presentation/widgets/balance_history.dart';
 
 class WalletDetailScreen extends StatefulWidget {
   const WalletDetailScreen({super.key, required this.walletId});
@@ -22,6 +24,9 @@ class WalletDetailScreen extends StatefulWidget {
 
 class _WalletDetailScreenState extends State<WalletDetailScreen> {
   DateTime month = DateTime.now();
+
+  MoneyWallet? spendingSource(FinanceProvider p, MoneyWallet w) =>
+      p.wallets.where((x) => !x.savings && x.currency == w.currency).firstOrNull;
 
   @override
   Widget build(BuildContext context) {
@@ -71,7 +76,16 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
                         color: balance < 0 ? AppColors.accentRed : AppColors.textPrimary)),
-                Text('Số dư ban đầu ${money(w.opening, w.currency)}', style: const TextStyle(fontSize: 12)),
+                Row(children: [
+                  Expanded(
+                      child:
+                          Text('Số dư ban đầu ${money(w.opening, w.currency)}', style: const TextStyle(fontSize: 12))),
+                  TextButton.icon(
+                      key: const ValueKey('adjust-balance'),
+                      onPressed: () => showAdjustBalance(context, w),
+                      icon: const Icon(Icons.tune, size: 18),
+                      label: const Text('Điều chỉnh số dư')),
+                ]),
                 if (w.savings) ...[
                   const SizedBox(height: 14),
                   if (w.target > 0) SavingsProgress(wallet: w, balance: balance),
@@ -97,20 +111,49 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
                 ],
               ])),
           const SizedBox(height: 12),
-          Row(children: [
-            Expanded(
-                child: FilledButton.icon(
-                    onPressed: () => openPage(context, AddTransactionScreen(initialWalletId: w.id)),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Giao dịch'))),
-            const SizedBox(width: 10),
-            Expanded(
-                child: OutlinedButton.icon(
-                    onPressed: () =>
-                        openPage(context, AddTransactionScreen(initialKind: EntryKind.transfer, initialWalletId: w.id)),
-                    icon: const Icon(Icons.swap_horiz),
-                    label: const Text('Chuyển tiền'))),
-          ]),
+          if (w.savings)
+            Row(children: [
+              Expanded(
+                  child: FilledButton.icon(
+                      key: const ValueKey('savings-deposit'),
+                      onPressed: () => openPage(
+                          context,
+                          AddTransactionScreen(
+                              initialKind: EntryKind.transfer,
+                              initialWalletId: spendingSource(p, w)?.id,
+                              initialDestinationId: w.id,
+                              initialNote: 'Nạp ${w.name}')),
+                      icon: const Icon(Icons.south_west),
+                      label: const Text('Nạp tiền'))),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: OutlinedButton.icon(
+                      key: const ValueKey('savings-withdraw'),
+                      onPressed: () => openPage(
+                          context,
+                          AddTransactionScreen(
+                              initialKind: EntryKind.transfer,
+                              initialWalletId: w.id,
+                              initialDestinationId: spendingSource(p, w)?.id,
+                              initialNote: 'Rút từ ${w.name}')),
+                      icon: const Icon(Icons.north_east),
+                      label: const Text('Rút tiền'))),
+            ])
+          else
+            Row(children: [
+              Expanded(
+                  child: FilledButton.icon(
+                      onPressed: () => openPage(context, AddTransactionScreen(initialWalletId: w.id)),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Giao dịch'))),
+              const SizedBox(width: 10),
+              Expanded(
+                  child: OutlinedButton.icon(
+                      onPressed: () => openPage(
+                          context, AddTransactionScreen(initialKind: EntryKind.transfer, initialWalletId: w.id)),
+                      icon: const Icon(Icons.swap_horiz),
+                      label: const Text('Chuyển tiền'))),
+            ]),
           if (w.hasBank) ...[
             const SizedBox(height: 8),
             SizedBox(
@@ -127,7 +170,7 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
                 width: double.infinity,
                 child: TextButton.icon(
                     onPressed: () {
-                      final source = p.wallets.where((x) => !x.savings && x.currency == w.currency).firstOrNull;
+                      final source = spendingSource(p, w);
                       final days =
                           w.deadline == null ? 0 : dateOnly(w.deadline!).difference(dateOnly(DateTime.now())).inDays;
                       final months = math.max(1, (days / 30).ceil());
@@ -145,6 +188,8 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
                     icon: const Icon(Icons.event_repeat),
                     label: const Text('Tự động nạp tiết kiệm hằng tháng'))),
           ],
+          const SizedBox(height: 12),
+          BalanceHistory(walletId: w.id, color: w.savings ? const Color(0xFFBC956D) : AppColors.primaryGreen),
           const SizedBox(height: 12),
           MonthPicker(value: month, onChanged: (v) => setState(() => month = v)),
           Panel(

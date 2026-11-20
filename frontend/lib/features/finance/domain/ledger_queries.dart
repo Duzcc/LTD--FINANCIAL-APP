@@ -42,12 +42,14 @@ mixin LedgerQueries {
 
   bool get hasManyCurrencies => wallets.map((w) => w.currency).toSet().length > 1;
 
-  double balance(String id) => entries.fold(
-      wallet(id).opening,
-      (sum, e) =>
-          sum +
-          (e.walletId == id ? e.amount * e.kind.sign : 0) +
-          (e.kind == EntryKind.transfer && e.destinationId == id ? e.amount : 0));
+  double walletEffect(MoneyEntry e, String walletId) =>
+      (e.walletId == walletId ? e.amount * e.kind.sign : 0) +
+      (e.kind == EntryKind.transfer && e.destinationId == walletId ? e.amount : 0);
+
+  double balance(String id) => entries.fold(wallet(id).opening, (sum, e) => sum + walletEffect(e, id));
+
+  double balanceAt(String id, DateTime end) =>
+      entries.where((e) => e.date.isBefore(end)).fold(wallet(id).opening, (sum, e) => sum + walletEffect(e, id));
 
   Iterable<MoneyWallet> _counted({bool spendableOnly = false}) =>
       wallets.where((w) => !w.excluded && (!spendableOnly || !w.savings));

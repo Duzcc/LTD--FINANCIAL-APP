@@ -21,6 +21,7 @@ class AddTransactionScreen extends StatefulWidget {
       this.entry,
       this.initialKind = EntryKind.expense,
       this.initialWalletId,
+      this.initialDestinationId,
       this.initialPersonId,
       this.initialAmount,
       this.initialCategoryId,
@@ -29,7 +30,7 @@ class AddTransactionScreen extends StatefulWidget {
       this.initialPhoto});
   final MoneyEntry? entry;
   final EntryKind initialKind;
-  final String? initialWalletId, initialPersonId, initialCategoryId, initialNote;
+  final String? initialWalletId, initialDestinationId, initialPersonId, initialCategoryId, initialNote;
   final double? initialAmount;
   final DateTime? initialDate;
 
@@ -44,7 +45,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   late final note = TextEditingController(text: widget.entry?.note ?? widget.initialNote ?? '');
   late EntryKind kind = widget.entry?.kind ?? widget.initialKind;
   late String? walletId = widget.entry?.walletId ?? widget.initialWalletId,
-      destinationId = widget.entry?.destinationId,
+      destinationId = widget.entry?.destinationId ?? widget.initialDestinationId,
       categoryId = widget.entry?.categoryId ?? widget.initialCategoryId,
       personId = widget.entry?.personId ?? widget.initialPersonId;
   late DateTime date = widget.entry?.date ?? widget.initialDate ?? DateTime.now();
