@@ -1,39 +1,142 @@
-# Người duyệt pull request theo từng phần. Dòng sau ghi đè dòng trước.
-# Điền tài khoản GitHub của từng bạn vào chỗ @Duzcc ở nhóm của mình.
+# PHÂN CÔNG MÃ NGUỒN – NHÓM 03
+# Mỗi khối dưới đây là phần việc của một người: tên, việc phụ trách và các thư mục, tệp do người đó viết và duyệt.
+# Công việc chi tiết, luồng demo, mục báo cáo, slide: xem docs/PHAN_CONG.md
+# Thay @Duzcc ở mỗi khối bằng tài khoản GitHub của người phụ trách. Dòng ở dưới ghi đè dòng ở trên.
 
-*                                       @Duzcc
+# ============================================================================
+# Trần Văn Đức – ví, ngân hàng, trợ lý AI, tích hợp và triển khai
+# Mặc định: mọi tệp không thuộc khối nào bên dưới (khung ứng dụng, cấu hình, Docker)
+# ============================================================================
+*                                                                  @Duzcc
+/frontend/lib/main.dart                                            @Duzcc   # khởi tạo Provider, khôi phục dữ liệu
+/frontend/lib/app/                                                 @Duzcc   # MaterialApp, route, màn hình chính, thanh điều hướng
+/frontend/lib/core/theme/                                          @Duzcc   # màu sắc, theme
+/frontend/lib/core/widgets/                                        @Duzcc   # widget dùng chung
+/frontend/lib/features/finance/presentation/providers/finance_provider.dart  @Duzcc   # trạng thái chung của ứng dụng
+/frontend/lib/features/finance/domain/entities/money_wallet.dart   @Duzcc   # thực thể ví
+/frontend/lib/features/wallets/                                    @Duzcc   # danh sách, tạo, chi tiết ví; điều chỉnh số dư; biểu đồ số dư
+/frontend/lib/features/banking/                                    @Duzcc   # VietQR, SePay
+/frontend/lib/features/ai/                                         @Duzcc   # trợ lý AI, quét hóa đơn, phân tích
+/frontend/test/vietqr_test.dart                                    @Duzcc
+/frontend/test/receive_qr_test.dart                                @Duzcc
+/frontend/test/ai_repository_test.dart                             @Duzcc
+/frontend/test/assistant_features_test.dart                        @Duzcc
+/frontend/test/receipt_parser_test.dart                            @Duzcc
+/backend/src/routes/bank.routes.js                                 @Duzcc
+/backend/src/controllers/bank.controller.js                        @Duzcc
+/backend/src/services/bank.service.js                              @Duzcc
+/backend/src/services/sepay.service.js                             @Duzcc
+/backend/src/routes/ai.routes.js                                   @Duzcc
+/backend/src/controllers/ai.controller.js                          @Duzcc
+/backend/src/services/ai.service.js                                @Duzcc
+/backend/src/integrations/                                         @Duzcc   # gọi AI service, SePay, LLM
+/backend/src/models/Wallet.js                                      @Duzcc
+/backend/test/bank.test.js                                         @Duzcc
+/backend/test/ai.test.js                                           @Duzcc
+/ai-service/                                                       @Duzcc   # dịch vụ AI Python
+/render.yaml                                                       @Duzcc   # triển khai Render
+/docker-compose.yml                                                @Duzcc
 
-# Đinh Tuấn Dũng – xác thực, phiên, bảo mật, đồng bộ
-/frontend/lib/features/auth/            @Duzcc
-/frontend/lib/features/security/        @Duzcc
-/frontend/lib/core/network/             @Duzcc
-/frontend/lib/features/finance/data/    @Duzcc
-/backend/src/middleware/                @Duzcc
+# ============================================================================
+# Đinh Tuấn Dũng (trưởng nhóm) – xác thực, phiên đăng nhập, bảo mật, đồng bộ
+# ============================================================================
+/frontend/lib/features/auth/                                       @Duzcc   # đăng ký, đăng nhập OTP, quên mật khẩu, phiên
+/frontend/lib/features/security/                                   @Duzcc   # khóa ứng dụng bằng PIN
+/frontend/lib/features/settings/presentation/screens/security_screen.dart  @Duzcc   # cài đặt PIN
+/frontend/lib/features/settings/presentation/screens/account_screen.dart   @Duzcc   # tài khoản, sao lưu, đăng xuất
+/frontend/lib/app/splash_screen.dart                               @Duzcc   # chọn vào Home hay Login
+/frontend/lib/core/network/                                        @Duzcc   # ApiClient – điểm gọi HTTP duy nhất
+/frontend/lib/core/validation/                                     @Duzcc   # hàm kiểm tra email, mật khẩu, số tiền
+/frontend/lib/features/finance/data/                               @Duzcc   # lưu SharedPreferences, hàng chờ và đồng bộ
+/frontend/test/auth_otp_test.dart                                  @Duzcc
+/frontend/test/validators_test.dart                                @Duzcc
+/frontend/test/sync_test.dart                                      @Duzcc
+/backend/src/routes/auth.routes.js                                 @Duzcc
+/backend/src/controllers/auth.controller.js                        @Duzcc
+/backend/src/validators/auth.validator.js                          @Duzcc
+/backend/src/services/auth.service.js                              @Duzcc
+/backend/src/services/session.service.js                           @Duzcc   # JWT, refresh token
+/backend/src/services/otp.service.js                               @Duzcc
+/backend/src/services/mail.service.js                              @Duzcc   # gửi OTP qua Brevo/SMTP
+/backend/src/services/sync.service.js                              @Duzcc
+/backend/src/routes/sync.routes.js                                 @Duzcc
+/backend/src/controllers/sync.controller.js                        @Duzcc
+/backend/src/middleware/                                           @Duzcc   # requireAuth, giới hạn số lần gọi, xử lý lỗi
+/backend/src/models/User.js                                        @Duzcc
+/backend/src/models/RefreshToken.js                                @Duzcc
+/backend/src/models/OtpChallenge.js                                @Duzcc
+/backend/src/repositories/user.repository.js                       @Duzcc
+/backend/src/repositories/session.repository.js                    @Duzcc
+/backend/src/repositories/otp.repository.js                        @Duzcc
+/backend/docs/openapi.yaml                                         @Duzcc   # tài liệu API
 
-# Đỗ Minh Hiếu – danh mục, đối tượng, cấu hình
-/frontend/lib/features/categories/      @Duzcc
-/backend/src/models/                    @Duzcc
+# ============================================================================
+# Đỗ Minh Hiếu – Module 1: danh mục, đối tượng, cấu hình (tỷ giá, tiền tệ)
+# ============================================================================
+/frontend/lib/features/categories/                                 @Duzcc   # thêm, sửa, xóa, chọn danh mục và đối tượng
+/frontend/lib/features/settings/presentation/screens/rates_screen.dart     @Duzcc   # tỷ giá quy đổi
+/frontend/lib/features/wallets/presentation/screens/currency_selection_screen.dart  @Duzcc   # chọn tiền tệ
+/frontend/lib/features/finance/domain/entities/money_category.dart @Duzcc
+/frontend/lib/features/finance/domain/entities/money_person.dart   @Duzcc
+/frontend/lib/features/finance/presentation/widgets/entity_icons.dart      @Duzcc   # biểu tượng danh mục
+/backend/src/models/Category.js                                    @Duzcc
+/backend/src/models/Person.js                                      @Duzcc
+/backend/src/models/plugin.js                                      @Duzcc   # gắn quyền sở hữu (user, clientId)
+/backend/src/models/index.js                                       @Duzcc
+/backend/src/domain/defaults.js                                    @Duzcc   # danh mục mặc định
+/backend/scripts/                                                  @Duzcc   # chuyển đổi CSDL
 
-# Hoàng Anh Đức – giao dịch, sổ giao dịch, định kỳ
-/frontend/lib/features/transactions/    @Duzcc
-/frontend/lib/features/ledger/          @Duzcc
-/frontend/lib/features/recurring/       @Duzcc
+# ============================================================================
+# Hoàng Anh Đức – Module 2: giao dịch, sổ giao dịch (tìm kiếm, lọc), giao dịch định kỳ
+# ============================================================================
+/frontend/lib/features/transactions/                               @Duzcc   # thêm, sửa, xóa giao dịch; dòng giao dịch
+/frontend/lib/features/ledger/                                     @Duzcc   # sổ giao dịch, tìm kiếm, lọc
+/frontend/lib/features/recurring/                                  @Duzcc   # giao dịch định kỳ
+/frontend/lib/features/finance/domain/entities/money_entry.dart    @Duzcc
+/frontend/lib/features/finance/domain/entities/entry_kind.dart     @Duzcc
+/frontend/lib/features/finance/domain/entities/recurring_rule.dart @Duzcc
+/frontend/lib/features/finance/domain/ledger_csv.dart              @Duzcc   # đọc, xuất CSV giao dịch
+/backend/src/models/Transaction.js                                 @Duzcc
+/backend/src/models/Recurring.js                                   @Duzcc
+/backend/src/routes/resource.routes.js                             @Duzcc   # bộ route CRUD dùng chung
+/backend/src/controllers/resource.controller.js                    @Duzcc
+/backend/src/services/ledger.service.js                            @Duzcc   # CRUD và ràng buộc dữ liệu nghiệp vụ
+/backend/src/repositories/ledger.repository.js                     @Duzcc
+/backend/src/repositories/duplicate.js                             @Duzcc
 
-# Hoàng Đức Nhiệm – ngân sách, sổ nợ, quy tắc tính toán
-/frontend/lib/features/budgets/         @Duzcc
-/frontend/lib/features/finance/domain/  @Duzcc
-/backend/src/domain/                    @Duzcc
+# ============================================================================
+# Hoàng Đức Nhiệm – Module 3: ngân sách, sổ nợ, quy tắc tính toán
+# ============================================================================
+/frontend/lib/features/budgets/                                    @Duzcc   # mục tiêu chi tiêu theo tháng, danh mục, ví
+/frontend/lib/features/finance/domain/ledger_queries.dart          @Duzcc   # số dư, số đã dùng của ngân sách, dư nợ
+/frontend/lib/features/finance/domain/ledger_rules.dart            @Duzcc   # kiểm tra số dư đủ, dư nợ, danh mục đúng loại
+/frontend/lib/features/finance/domain/finance_store.dart           @Duzcc
+/frontend/lib/features/finance/domain/entities/money_budget.dart   @Duzcc
+/frontend/test/finance_provider_test.dart                          @Duzcc
+/backend/src/models/Budget.js                                      @Duzcc
+/backend/src/domain/ledger.js                                      @Duzcc   # quy tắc kiểm tra và tính toán phía máy chủ
+/backend/src/domain/constants.js                                   @Duzcc   # loại giao dịch và dấu cộng/trừ
+/backend/src/domain/snapshot.js                                    @Duzcc
+/backend/src/domain/financial-context.js                           @Duzcc
 
-# Trần Mạnh Hải – báo cáo, thống kê, nhắc nhở, kiểm thử
-/frontend/lib/features/home/            @Duzcc
-/frontend/lib/features/statistics/      @Duzcc
-/frontend/lib/core/services/            @Duzcc
-/frontend/integration_test/             @Duzcc
-/backend/test/                          @Duzcc
-
-# Trần Văn Đức – ví, ngân hàng, trợ lý AI, triển khai
-/frontend/lib/features/wallets/         @Duzcc
-/frontend/lib/features/banking/         @Duzcc
-/frontend/lib/features/ai/              @Duzcc
-/ai-service/                            @Duzcc
-/render.yaml                            @Duzcc
+# ============================================================================
+# Trần Mạnh Hải – Module 4, 5: báo cáo, thống kê, nhắc nhở, cảnh báo; chủ trì kiểm thử
+# ============================================================================
+/frontend/lib/features/home/                                       @Duzcc   # tổng quan, báo cáo nhanh, sổ nợ
+/frontend/lib/features/statistics/                                 @Duzcc   # thống kê, biểu đồ
+/frontend/lib/core/widgets/charts.dart                             @Duzcc   # biểu đồ cột, tròn
+/frontend/lib/core/services/                                       @Duzcc   # thông báo cục bộ
+/frontend/lib/features/settings/presentation/screens/reminders_screen.dart @Duzcc   # nhắc ghi chép
+/frontend/lib/features/settings/data/services/excel_export.dart    @Duzcc   # xuất Excel
+/frontend/lib/features/finance/domain/entities/spending_reminder.dart      @Duzcc
+/frontend/integration_test/                                        @Duzcc   # kiểm thử giao diện trên máy ảo
+/frontend/test/widget_test.dart                                    @Duzcc
+/frontend/test/features_test.dart                                  @Duzcc
+/frontend/test/phone_preview_test.dart                             @Duzcc
+/backend/src/routes/report.routes.js                               @Duzcc
+/backend/src/controllers/report.controller.js                      @Duzcc
+/backend/src/services/report.service.js                            @Duzcc
+/backend/test/api.test.js                                          @Duzcc
+/backend/test/extra.test.js                                        @Duzcc
+/backend/test/helpers/                                             @Duzcc
+/tool/                                                             @Duzcc   # script chạy kiểm thử
