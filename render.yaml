@@ -1,0 +1,46 @@
+# Đưa backend và AI service lên Render bằng Docker (Blueprint).
+# Render > New > Blueprint > chọn repo này; điền các biến có sync: false khi được hỏi.
+services:
+  - type: web
+    name: nhom3-chitieu-ai
+    runtime: docker
+    rootDir: ai-service
+    plan: free
+    region: singapore
+    healthCheckPath: /health
+    # gói miễn phí chỉ có 512 MB RAM nên chạy 1 worker
+    dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 1
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: SERVICE_API_KEY
+        generateValue: true
+
+  - type: web
+    name: nhom3-chitieu-api
+    runtime: docker
+    rootDir: backend
+    plan: free
+    region: singapore
+    healthCheckPath: /api/health
+    envVars:
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: "*"
+      # địa chỉ công khai của nhom3-chitieu-ai, dạng https://nhom3-chitieu-ai.onrender.com
+      - key: AI_SERVICE_URL
+        sync: false
+      - key: AI_SERVICE_KEY
+        fromService:
+          type: web
+          name: nhom3-chitieu-ai
+          envVarKey: SERVICE_API_KEY
+      - key: AI_SERVICE_TIMEOUT_MS
+        value: "60000"
+      - key: BREVO_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false

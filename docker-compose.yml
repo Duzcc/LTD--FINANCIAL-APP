@@ -41,6 +41,8 @@ services:
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
 
   ollama:
     image: ollama/ollama:latest

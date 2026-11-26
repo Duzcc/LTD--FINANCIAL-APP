@@ -42,3 +42,6 @@ tool/*.tgz
 
 *.iml
 .DS_Store
+
+# bản cài để chia sẻ, không đưa lên git
+dist/

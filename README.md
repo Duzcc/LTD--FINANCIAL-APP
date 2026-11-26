@@ -102,6 +102,17 @@ flutter build apk --release --dart-define=API_URL=https://<tên miền>/api
 flutter build ios --release --dart-define=API_URL=https://<tên miền>/api
 ```
 
+## Đưa máy chủ lên mạng (Render)
+
+`render.yaml` mô tả hai dịch vụ chạy bằng Docker: `nhom3-chitieu-api` (backend) và `nhom3-chitieu-ai` (AI service). CSDL dùng MongoDB Atlas.
+
+1. MongoDB Atlas > Network Access: thêm `0.0.0.0/0` để Render kết nối được.
+2. Brevo > SMTP & API > tạo API key; Senders: xác minh email dùng làm người gửi. Gói miễn phí của Render chặn cổng SMTP nên backend gửi OTP qua API của Brevo.
+3. Render > New > Blueprint > chọn repo này, điền `MONGODB_URI`, `BREVO_API_KEY`, `MAIL_FROM` (ví dụ `Wisely <email-da-xac-minh@gmail.com>`), `AI_SERVICE_URL` (địa chỉ của dịch vụ AI, dạng `https://nhom3-chitieu-ai.onrender.com`).
+4. Build lại app với `API_URL=https://nhom3-chitieu-api.onrender.com/api`.
+
+Gói miễn phí tự ngủ sau 15 phút không có request; lần gọi đầu tiên sau đó mất khoảng 1 phút để máy chủ thức dậy.
+
 ## Kiểm thử
 
 ```bash

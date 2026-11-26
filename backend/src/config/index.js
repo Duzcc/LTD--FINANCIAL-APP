@@ -59,6 +59,7 @@ const config = {
     user: process.env.SMTP_USER || '',
     pass: process.env.SMTP_PASS || '',
     from: process.env.MAIL_FROM || 'Quản lý chi tiêu <no-reply@finance.local>',
+    brevoKey: process.env.BREVO_API_KEY || '',
   },
 };
 
