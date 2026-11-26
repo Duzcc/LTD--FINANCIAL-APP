@@ -5,7 +5,7 @@ import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
 import 'package:finance_app/features/recurring/presentation/screens/recurring_screen.dart';
 import 'package:finance_app/features/statistics/presentation/screens/statistics_screen.dart';
-import 'package:finance_app/features/transactions/presentation/screens/select_category_screen.dart';
+import 'package:finance_app/features/categories/presentation/screens/select_category_screen.dart';
 import 'package:finance_app/features/wallets/presentation/screens/wallets_screen.dart';
 
 class AppDrawer extends StatelessWidget {

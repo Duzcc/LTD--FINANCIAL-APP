@@ -17,7 +17,7 @@ import 'package:finance_app/features/ai/presentation/screens/receipt_scan_screen
 import 'package:finance_app/features/ai/presentation/screens/smart_search_screen.dart';
 import 'package:finance_app/features/auth/presentation/screens/auth_screen.dart';
 import 'package:finance_app/features/auth/presentation/screens/forgot_password_screen.dart';
-import 'package:finance_app/features/goals/presentation/screens/goals_screen.dart';
+import 'package:finance_app/features/budgets/presentation/screens/budgets_screen.dart';
 import 'package:finance_app/features/ledger/presentation/screens/ledger_screen.dart';
 import 'package:finance_app/features/recurring/presentation/screens/recurring_screen.dart';
 import 'package:finance_app/features/security/presentation/screens/lock_screen.dart';
@@ -28,8 +28,8 @@ import 'package:finance_app/features/settings/presentation/screens/reminders_scr
 import 'package:finance_app/features/settings/presentation/screens/security_screen.dart';
 import 'package:finance_app/features/statistics/presentation/screens/statistics_screen.dart';
 import 'package:finance_app/features/transactions/presentation/screens/add_transaction_screen.dart';
-import 'package:finance_app/features/transactions/presentation/screens/select_category_screen.dart';
-import 'package:finance_app/features/transactions/presentation/screens/select_person_screen.dart';
+import 'package:finance_app/features/categories/presentation/screens/select_category_screen.dart';
+import 'package:finance_app/features/categories/presentation/screens/select_person_screen.dart';
 import 'package:finance_app/features/wallets/presentation/screens/create_wallet_screen.dart';
 import 'package:finance_app/features/wallets/presentation/screens/wallet_detail_screen.dart';
 import 'package:finance_app/features/wallets/presentation/screens/wallets_screen.dart';
@@ -314,7 +314,7 @@ void main() {
     final pages = <String, Widget>{
       'thong_ke': const StatisticsScreen(),
       'so_giao_dich': const LedgerScreen(),
-      'ngan_sach': const GoalsScreen(),
+      'ngan_sach': const BudgetsScreen(),
       'tai_khoan': const AccountScreen(),
       'vi': const WalletsScreen(),
       'chi_tiet_vi_tiet_kiem': const WalletDetailScreen(walletId: 'save'),

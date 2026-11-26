@@ -14,7 +14,7 @@ import 'package:finance_app/features/wallets/presentation/screens/currency_selec
 import 'package:finance_app/features/wallets/presentation/screens/wallet_detail_screen.dart';
 import 'package:finance_app/features/statistics/presentation/screens/statistics_screen.dart';
 import 'package:finance_app/features/ledger/presentation/screens/ledger_screen.dart';
-import 'package:finance_app/features/goals/presentation/screens/goals_screen.dart';
+import 'package:finance_app/features/budgets/presentation/screens/budgets_screen.dart';
 import 'package:finance_app/features/transactions/presentation/screens/add_transaction_screen.dart';
 import 'package:finance_app/features/ai/presentation/widgets/quick_entry_sheet.dart';
 import 'package:finance_app/features/ai/presentation/screens/insights_screen.dart';
@@ -170,7 +170,7 @@ class OverviewTab extends StatelessWidget {
                 ])),
         ])),
       ],
-      SectionTitle('Ngân sách tháng này', action: 'Quản lý', onTap: () => openPage(context, const GoalsScreen())),
+      SectionTitle('Ngân sách tháng này', action: 'Quản lý', onTap: () => openPage(context, const BudgetsScreen())),
       Panel(
           child: overall == null && budgets.isEmpty
               ? Row(children: [
@@ -178,7 +178,7 @@ class OverviewTab extends StatelessWidget {
                   const SizedBox(width: 12),
                   const Expanded(
                       child: Text('Chưa đặt ngân sách. Đặt hạn mức để được cảnh báo khi chi tiêu vượt kế hoạch.')),
-                  TextButton(onPressed: () => openPage(context, const GoalsScreen()), child: const Text('Đặt ngay')),
+                  TextButton(onPressed: () => openPage(context, const BudgetsScreen()), child: const Text('Đặt ngay')),
                 ])
               : Column(children: [
                   if (overall != null)

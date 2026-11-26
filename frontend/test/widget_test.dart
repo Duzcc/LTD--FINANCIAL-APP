@@ -10,9 +10,9 @@ import 'package:finance_app/features/finance/presentation/providers/finance_prov
 import 'package:finance_app/app/main_screen.dart';
 import 'package:finance_app/features/transactions/presentation/screens/add_transaction_screen.dart';
 import 'package:finance_app/features/wallets/presentation/screens/create_wallet_screen.dart';
-import 'package:finance_app/features/transactions/presentation/screens/select_category_screen.dart';
-import 'package:finance_app/features/transactions/presentation/screens/select_person_screen.dart';
-import 'package:finance_app/features/goals/presentation/screens/goals_screen.dart';
+import 'package:finance_app/features/categories/presentation/screens/select_category_screen.dart';
+import 'package:finance_app/features/categories/presentation/screens/select_person_screen.dart';
+import 'package:finance_app/features/budgets/presentation/screens/budgets_screen.dart';
 import 'package:finance_app/features/statistics/presentation/screens/statistics_screen.dart';
 import 'package:finance_app/features/ai/presentation/screens/insights_screen.dart';
 import 'package:finance_app/features/ai/presentation/screens/assistant_screen.dart';

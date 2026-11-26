@@ -3,16 +3,16 @@ import 'package:provider/provider.dart';
 import 'package:finance_app/features/finance/domain/entities/entities.dart';
 import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
-import 'package:finance_app/features/transactions/presentation/screens/select_category_screen.dart';
+import 'package:finance_app/features/categories/presentation/screens/select_category_screen.dart';
 import 'package:finance_app/features/finance/presentation/widgets/entity_icons.dart';
 
-class GoalsScreen extends StatefulWidget {
-  const GoalsScreen({super.key});
+class BudgetsScreen extends StatefulWidget {
+  const BudgetsScreen({super.key});
   @override
-  State<GoalsScreen> createState() => _GoalsScreenState();
+  State<BudgetsScreen> createState() => _BudgetsScreenState();
 }
 
-class _GoalsScreenState extends State<GoalsScreen> {
+class _BudgetsScreenState extends State<BudgetsScreen> {
   DateTime month = DateTime(DateTime.now().year, DateTime.now().month);
   bool income = false;
 

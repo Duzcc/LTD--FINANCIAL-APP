@@ -11,8 +11,8 @@ import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/core/widgets/photo_picker.dart';
 import 'package:finance_app/features/wallets/presentation/widgets/select_wallet_sheet.dart';
 import 'package:finance_app/features/wallets/presentation/screens/create_wallet_screen.dart';
-import 'package:finance_app/features/transactions/presentation/screens/select_category_screen.dart';
-import 'package:finance_app/features/transactions/presentation/screens/select_person_screen.dart';
+import 'package:finance_app/features/categories/presentation/screens/select_category_screen.dart';
+import 'package:finance_app/features/categories/presentation/screens/select_person_screen.dart';
 import 'package:finance_app/features/finance/presentation/widgets/entity_icons.dart';
 
 class AddTransactionScreen extends StatefulWidget {

@@ -4,8 +4,8 @@ import 'package:finance_app/core/utils/dates.dart';
 import 'package:finance_app/features/finance/domain/entities/entities.dart';
 import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
-import 'package:finance_app/features/transactions/presentation/screens/select_category_screen.dart';
-import 'package:finance_app/features/transactions/presentation/screens/select_person_screen.dart';
+import 'package:finance_app/features/categories/presentation/screens/select_category_screen.dart';
+import 'package:finance_app/features/categories/presentation/screens/select_person_screen.dart';
 import 'package:finance_app/features/finance/presentation/widgets/entity_icons.dart';
 
 class RecurringScreen extends StatelessWidget {

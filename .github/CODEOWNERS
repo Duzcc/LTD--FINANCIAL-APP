@@ -1,0 +1,39 @@
+# Người duyệt pull request theo từng phần. Dòng sau ghi đè dòng trước.
+# Điền tài khoản GitHub của từng bạn vào chỗ @Duzcc ở nhóm của mình.
+
+*                                       @Duzcc
+
+# Đinh Tuấn Dũng – xác thực, phiên, bảo mật, đồng bộ
+/frontend/lib/features/auth/            @Duzcc
+/frontend/lib/features/security/        @Duzcc
+/frontend/lib/core/network/             @Duzcc
+/frontend/lib/features/finance/data/    @Duzcc
+/backend/src/middleware/                @Duzcc
+
+# Đỗ Minh Hiếu – danh mục, đối tượng, cấu hình
+/frontend/lib/features/categories/      @Duzcc
+/backend/src/models/                    @Duzcc
+
+# Hoàng Anh Đức – giao dịch, sổ giao dịch, định kỳ
+/frontend/lib/features/transactions/    @Duzcc
+/frontend/lib/features/ledger/          @Duzcc
+/frontend/lib/features/recurring/       @Duzcc
+
+# Hoàng Đức Nhiệm – ngân sách, sổ nợ, quy tắc tính toán
+/frontend/lib/features/budgets/         @Duzcc
+/frontend/lib/features/finance/domain/  @Duzcc
+/backend/src/domain/                    @Duzcc
+
+# Trần Mạnh Hải – báo cáo, thống kê, nhắc nhở, kiểm thử
+/frontend/lib/features/home/            @Duzcc
+/frontend/lib/features/statistics/      @Duzcc
+/frontend/lib/core/services/            @Duzcc
+/frontend/integration_test/             @Duzcc
+/backend/test/                          @Duzcc
+
+# Trần Văn Đức – ví, ngân hàng, trợ lý AI, triển khai
+/frontend/lib/features/wallets/         @Duzcc
+/frontend/lib/features/banking/         @Duzcc
+/frontend/lib/features/ai/              @Duzcc
+/ai-service/                            @Duzcc
+/render.yaml                            @Duzcc
