@@ -12,7 +12,9 @@ security:
   - bearer: []
 tags:
   - { name: auth, description: Tài khoản }
-  - { name: resources, description: Ví, danh mục, đối tượng, giao dịch, ngân sách, giao dịch định kỳ }
+  - { name: resources, description: Ví, giao dịch, ngân sách, giao dịch định kỳ }
+  - { name: categories, description: Danh mục thu/chi }
+  - { name: people, description: Đối tượng (người cho vay, đi vay, cửa hàng…) }
   - { name: reports, description: Báo cáo }
   - { name: sync, description: Đồng bộ offline-first }
   - { name: ai, description: Tính năng AI (chuyển tiếp tới AI service) }
@@ -52,7 +54,7 @@ paths:
   /api/auth/logout: { post: { tags: [auth], summary: 'Đăng xuất thiết bị hiện tại; body { all: true } để đăng xuất mọi thiết bị', responses: { '204': { description: Đã đăng xuất } } } }
   /api/{resource}:
     parameters:
-      - { name: resource, in: path, required: true, schema: { type: string, enum: [wallets, categories, people, transactions, budgets, recurring] } }
+      - { name: resource, in: path, required: true, schema: { type: string, enum: [wallets, transactions, budgets, recurring] } }
     get:
       tags: [resources]
       summary: Danh sách (giao dịch hỗ trợ lọc from, to, kind, walletId, categoryId, personId, q)
@@ -60,11 +62,231 @@ paths:
     post: { tags: [resources], summary: Tạo mới, responses: { '201': { description: Created }, '400': { $ref: '#/components/responses/Error' } } }
   /api/{resource}/{id}:
     parameters:
-      - { name: resource, in: path, required: true, schema: { type: string } }
+      - { name: resource, in: path, required: true, schema: { type: string, enum: [wallets, transactions, budgets, recurring] } }
       - { name: id, in: path, required: true, schema: { type: string, pattern: '^[A-Za-z0-9_-]{1,64}$' } }
     get: { tags: [resources], summary: Chi tiết, responses: { '200': { description: OK }, '404': { $ref: '#/components/responses/Error' } } }
     put: { tags: [resources], summary: Cập nhật, responses: { '200': { description: OK } } }
     delete: { tags: [resources], summary: Xóa (cascade=true để xóa dữ liệu liên quan), responses: { '200': { description: OK } } }
+  /api/categories:
+    get:
+      tags: [categories]
+      summary: Danh sách danh mục
+      description: Trả mọi danh mục của người dùng hiện tại (cả danh mục mặc định tạo lúc đăng ký), xếp theo thời gian tạo.
+      parameters:
+        - name: income
+          in: query
+          required: false
+          description: '`true` chỉ lấy danh mục thu, `false` chỉ lấy danh mục chi. Bỏ trống để lấy tất cả.'
+          schema: { type: string, enum: ['true', 'false'] }
+      responses:
+        '200':
+          description: Danh sách danh mục
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CategoryList' }
+              example:
+                items:
+                  - { id: salary, name: Lương, income: true, symbol: 7, isDefault: true }
+                  - { id: thuong_du_an, name: Thưởng dự án, income: true, symbol: 8, isDefault: false }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [categories]
+      summary: Tạo danh mục
+      description: |
+        Bỏ trống `id` thì máy chủ tự sinh. Tên không phân biệt hoa thường và phải duy nhất trong cùng loại thu/chi.
+        `symbol` ngoài khoảng 0–23 được đưa về 0.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CategoryInput' }
+            example: { id: thuong_du_an, name: Thưởng dự án, income: true, symbol: 8 }
+      responses:
+        '201':
+          description: Đã tạo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Category' }
+              example: { id: thuong_du_an, name: Thưởng dự án, income: true, symbol: 8, isDefault: false }
+        '400':
+          description: 'Dữ liệu không hợp lệ: thiếu tên, tên quá 60 ký tự, `symbol` không phải số, `id` sai định dạng hoặc đã tồn tại'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              examples:
+                missingName: { value: { error: { code: VALIDATION_ERROR, message: Vui lòng nhập tên danh mục. } } }
+                idExists: { value: { error: { code: VALIDATION_ERROR, message: 'Mã bản ghi đã tồn tại, hãy dùng PUT để cập nhật.' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/DuplicateCategoryName' }
+  /api/categories/{id}:
+    parameters:
+      - $ref: '#/components/parameters/RecordId'
+    get:
+      tags: [categories]
+      summary: Chi tiết danh mục
+      responses:
+        '200':
+          description: Danh mục
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Category' }
+              example: { id: food, name: Ăn uống, income: false, symbol: 0, isDefault: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [categories]
+      summary: Cập nhật hoặc tạo danh mục theo id
+      description: |
+        Ghi đè toàn bộ danh mục bằng nội dung gửi lên; trường bỏ trống lấy giá trị mặc định (`income` false, `symbol` 0).
+        Nếu người dùng hiện tại chưa có danh mục mang `id` này thì tạo mới và trả 201. Mỗi người dùng có không gian
+        `id` riêng nên không thể sửa danh mục của người khác.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CategoryInput' }
+            example: { name: Cà phê sáng, income: false, symbol: 15 }
+      responses:
+        '200':
+          description: Đã cập nhật
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Category' }
+              example: { id: coffee, name: Cà phê sáng, income: false, symbol: 15, isDefault: false }
+        '201':
+          description: Chưa có nên đã tạo mới
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Category' }
+        '400':
+          description: 'Dữ liệu không hợp lệ: thiếu tên, tên quá 60 ký tự, `symbol` không phải số, `id` sai định dạng'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: { code: VALIDATION_ERROR, message: Mã bản ghi không hợp lệ. } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: Trùng tên trong cùng loại, hoặc đổi loại thu/chi của danh mục đang được dùng
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              examples:
+                duplicateName: { value: { error: { code: DUPLICATE_NAME, message: Tên danh mục đã tồn tại. } } }
+                incomeChange: { value: { error: { code: CONFLICT, message: Danh mục đang được sử dụng nên không thể đổi loại thu/chi. } } }
+    delete:
+      tags: [categories]
+      summary: Xóa danh mục
+      description: Không xóa được danh mục đang được giao dịch, ngân sách hoặc giao dịch định kỳ tham chiếu.
+      responses:
+        '204': { description: Đã xóa }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Danh mục đang được sử dụng
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: { code: HAS_REFERENCES, message: Danh mục đang được sử dụng. } }
+  /api/people:
+    get:
+      tags: [people]
+      summary: Danh sách đối tượng
+      description: Trả mọi đối tượng của người dùng hiện tại (cả đối tượng mặc định `self`), xếp theo thời gian tạo.
+      responses:
+        '200':
+          description: Danh sách đối tượng
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PersonList' }
+              example:
+                items:
+                  - { id: self, name: Bản thân, group: Cá nhân }
+                  - { id: minh, name: Minh, group: Bạn bè }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [people]
+      summary: Tạo đối tượng
+      description: Bỏ trống `id` thì máy chủ tự sinh; bỏ trống `group` thì là "Cá nhân". Tên đối tượng được phép trùng.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PersonInput' }
+            example: { id: minh, name: Minh, group: Bạn bè }
+      responses:
+        '201':
+          description: Đã tạo
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Person' }
+              example: { id: minh, name: Minh, group: Bạn bè }
+        '400':
+          description: 'Dữ liệu không hợp lệ: thiếu tên, tên quá 80 ký tự, nhóm quá 60 ký tự, `id` sai định dạng hoặc đã tồn tại'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: { code: VALIDATION_ERROR, message: Vui lòng nhập tên đối tượng. } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /api/people/{id}:
+    parameters:
+      - $ref: '#/components/parameters/RecordId'
+    get:
+      tags: [people]
+      summary: Chi tiết đối tượng
+      responses:
+        '200':
+          description: Đối tượng
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Person' }
+              example: { id: minh, name: Minh, group: Bạn bè }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [people]
+      summary: Cập nhật hoặc tạo đối tượng theo id
+      description: |
+        Ghi đè toàn bộ đối tượng; bỏ trống `group` thì là "Cá nhân". Nếu người dùng hiện tại chưa có đối tượng mang
+        `id` này thì tạo mới và trả 201. Mỗi người dùng có không gian `id` riêng nên không thể sửa đối tượng của người khác.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PersonInput' }
+            example: { name: Minh (cùng lớp), group: Bạn bè }
+      responses:
+        '200':
+          description: Đã cập nhật
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Person' }
+              example: { id: minh, name: Minh (cùng lớp), group: Bạn bè }
+        '201':
+          description: Chưa có nên đã tạo mới
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Person' }
+        '400':
+          description: 'Dữ liệu không hợp lệ: thiếu tên, tên quá 80 ký tự, nhóm quá 60 ký tự, `id` sai định dạng'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: { code: VALIDATION_ERROR, message: Vui lòng nhập tên đối tượng. } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [people]
+      summary: Xóa đối tượng
+      description: Không xóa được đối tượng đang có giao dịch hoặc giao dịch định kỳ tham chiếu; dữ liệu giữ nguyên.
+      responses:
+        '204': { description: Đã xóa }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Đối tượng đang có giao dịch
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { error: { code: HAS_REFERENCES, message: Đối tượng đang có giao dịch. } }
   /api/reports/dashboard: { get: { tags: [reports], summary: Tổng quan trang chủ, responses: { '200': { description: OK } } } }
   /api/reports/summary: { get: { tags: [reports], summary: Thống kê theo khoảng thời gian / danh mục, responses: { '200': { description: OK } } } }
   /api/reports/debts: { get: { tags: [reports], summary: Dư nợ theo đối tượng, responses: { '200': { description: OK } } } }
@@ -153,7 +375,52 @@ paths:
 components:
   securitySchemes:
     bearer: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    RecordId:
+      name: id
+      in: path
+      required: true
+      description: Mã bản ghi do ứng dụng đặt (`clientId`), riêng cho từng người dùng
+      schema: { type: string, pattern: '^[A-Za-z0-9_-]{1,64}$' }
   schemas:
+    Category:
+      type: object
+      required: [id, name, income, symbol, isDefault]
+      properties:
+        id: { type: string }
+        name: { type: string, maxLength: 60 }
+        income: { type: boolean, description: true là danh mục thu, false là danh mục chi }
+        symbol: { type: integer, minimum: 0, maximum: 23, description: Chỉ số biểu tượng trong ứng dụng }
+        isDefault: { type: boolean, description: Danh mục mặc định tạo lúc đăng ký }
+    CategoryInput:
+      type: object
+      required: [name]
+      properties:
+        id: { type: string, pattern: '^[A-Za-z0-9_-]{1,64}$', description: Chỉ dùng khi POST; bỏ trống để máy chủ tự sinh }
+        name: { type: string, maxLength: 60 }
+        income: { type: boolean, default: false }
+        symbol: { type: integer, default: 0 }
+        isDefault: { type: boolean, default: false }
+    CategoryList:
+      type: object
+      properties: { items: { type: array, items: { $ref: '#/components/schemas/Category' } } }
+    Person:
+      type: object
+      required: [id, name, group]
+      properties:
+        id: { type: string }
+        name: { type: string, maxLength: 80 }
+        group: { type: string, maxLength: 60 }
+    PersonInput:
+      type: object
+      required: [name]
+      properties:
+        id: { type: string, pattern: '^[A-Za-z0-9_-]{1,64}$', description: Chỉ dùng khi POST; bỏ trống để máy chủ tự sinh }
+        name: { type: string, maxLength: 80 }
+        group: { type: string, maxLength: 60, default: Cá nhân }
+    PersonList:
+      type: object
+      properties: { items: { type: array, items: { $ref: '#/components/schemas/Person' } } }
     Register:
       type: object
       required: [name, email, password]
@@ -171,6 +438,24 @@ components:
     Error:
       description: Lỗi
       content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Unauthorized:
+      description: Thiếu hoặc sai access token
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: UNAUTHORIZED, message: Bạn cần đăng nhập để tiếp tục. } }
+    NotFound:
+      description: Không có bản ghi mang id này trong dữ liệu của người dùng hiện tại (kể cả khi id thuộc người khác)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: NOT_FOUND, message: Không tìm thấy dữ liệu. } }
+    DuplicateCategoryName:
+      description: Đã có danh mục cùng tên (không phân biệt hoa thường) trong cùng loại thu/chi
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+          example: { error: { code: DUPLICATE_NAME, message: Tên danh mục đã tồn tại. } }
     AiUnavailable:
       description: AI service không khả dụng (AI_UNAVAILABLE) — ứng dụng dùng mô hình trên thiết bị
       content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }

@@ -183,3 +183,44 @@ test('Gửi lại OTP: mã cũ hết hiệu lực, giới hạn số lần gửi
     config.otp.resendSeconds = wait;
   }
 });
+
+test('Không xóa được đối tượng đang có giao dịch, dữ liệu giữ nguyên', async () => {
+  // Ví riêng: test giao dịch định kỳ ở trên đã xóa ví cash.
+  let r = await auth(request(app).post('/api/wallets')).send({ id: 'w_person', name: 'Ví đối tượng', opening: 500000 });
+  assert.equal(r.status, 201);
+  r = await auth(request(app).post('/api/people')).send({ id: 'minh', name: 'Minh', group: 'Bạn bè' });
+  assert.equal(r.status, 201);
+  const person = r.body;
+  r = await auth(request(app).post('/api/transactions')).send({
+    id: 'lend_minh',
+    kind: 'lend',
+    amount: 200000,
+    walletId: 'w_person',
+    personId: 'minh',
+    note: 'Cho Minh mượn',
+    date: '2026-10-10T02:00:00Z',
+  });
+  assert.equal(r.status, 201);
+  const entry = r.body;
+  const balance = (await auth(request(app).get('/api/wallets/w_person'))).body.balance;
+  assert.equal(balance, 300000);
+
+  r = await auth(request(app).delete('/api/people/minh'));
+  assert.equal(r.status, 409);
+  assert.equal(r.body.error.code, 'HAS_REFERENCES');
+
+  r = await auth(request(app).get('/api/people/minh'));
+  assert.equal(r.status, 200, 'đối tượng vẫn còn');
+  assert.deepEqual(r.body, person);
+  r = await auth(request(app).get('/api/transactions/lend_minh'));
+  assert.equal(r.status, 200, 'giao dịch vẫn còn');
+  assert.deepEqual(r.body, entry, 'giao dịch không bị thay đổi');
+  r = await auth(request(app).get('/api/transactions?personId=minh'));
+  assert.equal(r.body.total, 1);
+  assert.equal((await auth(request(app).get('/api/wallets/w_person'))).body.balance, balance);
+
+  // Hết giao dịch tham chiếu thì xóa được: 409 ở trên đúng là do ràng buộc.
+  assert.equal((await auth(request(app).delete('/api/transactions/lend_minh'))).status, 204);
+  assert.equal((await auth(request(app).delete('/api/people/minh'))).status, 204);
+  assert.equal((await auth(request(app).get('/api/people/minh'))).status, 404);
+});
