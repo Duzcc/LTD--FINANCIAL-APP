@@ -51,20 +51,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   late DateTime date = widget.entry?.date ?? widget.initialDate ?? DateTime.now();
   late String? photo = widget.entry?.photo ?? widget.initialPhoto;
   late final String entryId = widget.entry?.id ?? context.read<FinanceProvider>().newId();
-  RepeatFrequency? repeat;
   late bool categoryTouched = widget.entry != null || widget.initialCategoryId != null;
   String? suggestedCategory;
   late DateTime? dueDate = widget.entry?.dueDate;
-  late bool excluded = widget.entry?.excluded ?? false;
   late final String initialSignature;
   bool saving = false;
   int get tab => kind.isDebt ? 3 : kind.index;
-
-  static const _notes = {
-    EntryKind.expense: ['Ăn sáng', 'Cà phê', 'Ăn trưa', 'Đồ uống', 'Đổ xăng'],
-    EntryKind.income: ['Lương tháng', 'Thưởng', 'Bán đồ', 'Làm thêm'],
-    EntryKind.transfer: ['Nạp tiết kiệm', 'Rút tiền mặt', 'Chuyển khoản'],
-  };
 
   @override
   void initState() {
@@ -76,7 +68,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   String get signature =>
-      '$kind|${amount.text}|$walletId|$destinationId|$categoryId|$personId|$date|$dueDate|${note.text}|$excluded|$photo|$repeat';
+      '$kind|${amount.text}|$walletId|$destinationId|$categoryId|$personId|$date|$dueDate|${note.text}|$photo';
 
   void suggestCategory(String text) {
     if (!(kind.isExpense || kind.isIncome) || text.trim().length < 2) {
@@ -185,23 +177,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           date: date,
           dueDate: kind.isDebt ? dueDate : null,
           note: note.text.trim(),
-          excluded: excluded,
+          excluded: widget.entry?.excluded ?? false,
           photo: photo,
           recurringId: widget.entry?.recurringId));
-      if (repeat != null && widget.entry == null) {
-        final rule = RecurringRule(
-            id: p.newId(),
-            kind: kind,
-            amount: value,
-            walletId: walletId!,
-            destinationId: kind == EntryKind.transfer ? destinationId : null,
-            categoryId: kind.isExpense || kind.isIncome ? categoryId : null,
-            personId: personId,
-            note: note.text.trim(),
-            frequency: repeat!,
-            startDate: date);
-        p.saveRecurring(rule.copyWith(nextDate: rule.nextAfter(date)));
-      }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content:
               Text(widget.entry == null ? 'Đã lưu giao dịch ${kind.label.toLowerCase()}.' : 'Đã cập nhật giao dịch.')));
@@ -499,26 +477,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   ],
                   const SizedBox(height: 12),
                   Panel(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    TextFormField(
-                        key: const ValueKey('transaction-note'),
-                        controller: note,
-                        onChanged: suggestCategory,
-                        maxLines: 3,
-                        maxLength: 500,
-                        decoration:
-                            const InputDecoration(labelText: 'Ghi chú', hintText: 'Bạn đã chi tiêu cho điều gì?')),
-                    const SizedBox(height: 8),
-                    Wrap(spacing: 6, children: [
-                      for (final s in _notes[kind] ?? const ['Hẹn trả', 'Trả một phần', 'Tiền lãi'])
-                        ActionChip(
-                            label: Text(s),
-                            onPressed: () {
-                              note.text = s;
-                              suggestCategory(s);
-                            })
-                    ]),
-                  ])),
+                      child: TextFormField(
+                          key: const ValueKey('transaction-note'),
+                          controller: note,
+                          onChanged: suggestCategory,
+                          maxLines: 3,
+                          maxLength: 500,
+                          decoration:
+                              const InputDecoration(labelText: 'Ghi chú', hintText: 'Bạn đã chi tiêu cho điều gì?'))),
                   if (photo != null) ...[
                     const SizedBox(height: 12),
                     Panel(
@@ -546,19 +512,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                               icon: const Icon(Icons.close)),
                         ])),
                   ],
-                  if (widget.entry == null) ...[
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<RepeatFrequency?>(
-                        initialValue: repeat,
-                        isExpanded: true,
-                        decoration:
-                            const InputDecoration(labelText: 'Lặp lại định kỳ', prefixIcon: Icon(Icons.event_repeat)),
-                        items: [
-                          const DropdownMenuItem(value: null, child: Text('Không lặp lại')),
-                          for (final f in RepeatFrequency.values) DropdownMenuItem(value: f, child: Text(f.label)),
-                        ],
-                        onChanged: (v) => setState(() => repeat = v)),
-                  ] else if (widget.entry!.recurringId != null)
+                  if (widget.entry?.recurringId != null)
                     const Padding(
                         padding: EdgeInsets.only(top: 12),
                         child: Row(children: [
@@ -568,12 +522,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                               child: Text('Giao dịch được tạo tự động từ một giao dịch định kỳ.',
                                   style: TextStyle(fontSize: 12))),
                         ])),
-                  const SizedBox(height: 12),
-                  SwitchListTile(
-                      title: const Text('Không tính vào báo cáo'),
-                      subtitle: const Text('Số dư ví vẫn cập nhật theo giao dịch.'),
-                      value: excluded,
-                      onChanged: (v) => setState(() => excluded = v)),
                   if (widget.entry != null) ...[
                     const SizedBox(height: 16),
                     TextButton.icon(

@@ -6,15 +6,6 @@ import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/transactions/presentation/widgets/entry_tile.dart';
 import 'package:finance_app/features/transactions/presentation/screens/add_transaction_screen.dart';
 
-enum LedgerSort { newest, oldest, amountDesc, amountAsc }
-
-const _sortLabels = {
-  LedgerSort.newest: 'Mới nhất',
-  LedgerSort.oldest: 'Cũ nhất',
-  LedgerSort.amountDesc: 'Số tiền giảm dần',
-  LedgerSort.amountAsc: 'Số tiền tăng dần',
-};
-
 class LedgerScreen extends StatefulWidget {
   const LedgerScreen({super.key, this.initialCategoryId});
   final String? initialCategoryId;
@@ -27,7 +18,6 @@ class _LedgerScreenState extends State<LedgerScreen> {
   String query = '', walletId = '', personId = '';
   late String categoryId = widget.initialCategoryId ?? '';
   String type = 'all';
-  LedgerSort sort = LedgerSort.newest;
   DateTimeRange? range;
   bool showFilters = false;
   final search = TextEditingController();
@@ -74,15 +64,9 @@ class _LedgerScreenState extends State<LedgerScreen> {
                     .toLowerCase()
                     .contains(q)))
         .toList()
-      ..sort((a, b) => switch (sort) {
-            LedgerSort.newest => b.date.compareTo(a.date),
-            LedgerSort.oldest => a.date.compareTo(b.date),
-            LedgerSort.amountDesc => b.amount.compareTo(a.amount),
-            LedgerSort.amountAsc => a.amount.compareTo(b.amount),
-          });
+      ..sort((a, b) => b.date.compareTo(a.date));
     final income = entries.where((e) => e.kind.isIncome && !e.excluded).fold(0.0, (s, e) => s + e.amount);
     final expense = entries.where((e) => e.kind.isExpense && !e.excluded).fold(0.0, (s, e) => s + e.amount);
-    final byDate = sort == LedgerSort.newest || sort == LedgerSort.oldest;
     final dayNet = <DateTime, double>{};
     for (final e in entries) {
       if (e.excluded) continue;
@@ -195,10 +179,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
       Panel(
           child: Row(children: [
         Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('${entries.length} giao dịch • ${p.currency}', style: const TextStyle(fontWeight: FontWeight.w700)),
-          Text('Sắp xếp: ${_sortLabels[sort]}', style: const TextStyle(fontSize: 12)),
-        ])),
+            child: Text('${entries.length} giao dịch • ${p.currency}',
+                style: const TextStyle(fontWeight: FontWeight.w700))),
         Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
           Text('+${money(income, p.currency)}', style: const TextStyle(color: AppColors.primaryGreen)),
           Text('−${money(expense, p.currency)}', style: const TextStyle(color: AppColors.accentRed)),
@@ -208,19 +190,6 @@ class _LedgerScreenState extends State<LedgerScreen> {
     ];
     return FinancePage(
         title: 'Sổ giao dịch',
-        actions: [
-          PopupMenuButton<LedgerSort>(
-              tooltip: 'Sắp xếp',
-              icon: const Icon(Icons.sort),
-              initialValue: sort,
-              onSelected: (v) => setState(() => sort = v),
-              itemBuilder: (_) =>
-                  [for (final e in _sortLabels.entries) PopupMenuItem(value: e.key, child: Text(e.value))]),
-          IconButton(
-              tooltip: 'Thêm giao dịch',
-              onPressed: () => openPage(context, const AddTransactionScreen()),
-              icon: const Icon(Icons.add))
-        ],
         child: ListView.builder(
             padding: const EdgeInsets.all(16),
             itemCount: header.length + (entries.isEmpty ? 1 : entries.length),
@@ -238,7 +207,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
               final index = i - header.length;
               final e = entries[index];
               final day = dateOnly(e.date);
-              final startsDay = byDate && (index == 0 || dateOnly(entries[index - 1].date) != day);
+              final startsDay = index == 0 || dateOnly(entries[index - 1].date) != day;
               if (!startsDay) return EntryTile(e, key: ValueKey(e.id));
               return Column(key: ValueKey(e.id), crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 _DayHeader(day: day, net: dayNet[day] ?? 0, currency: p.currency),
