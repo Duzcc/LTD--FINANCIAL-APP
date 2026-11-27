@@ -50,12 +50,43 @@ paths:
     delete: { tags: [auth], summary: Xóa tài khoản và toàn bộ dữ liệu, responses: { '200': { description: OK } } }
   /api/auth/change-password: { put: { tags: [auth], summary: Đổi mật khẩu, responses: { '200': { description: OK } } } }
   /api/auth/logout: { post: { tags: [auth], summary: 'Đăng xuất thiết bị hiện tại; body { all: true } để đăng xuất mọi thiết bị', responses: { '204': { description: Đã đăng xuất } } } }
+  /api/transactions:
+    get:
+      tags: [resources]
+      summary: Danh sách giao dịch có lọc, tìm kiếm, sắp xếp và phân trang
+      parameters:
+        - { name: from, in: query, description: Thời điểm bắt đầu (ISO 8601), schema: { type: string, format: date-time } }
+        - { name: to, in: query, description: Thời điểm kết thúc (ISO 8601), schema: { type: string, format: date-time } }
+        - name: type
+          in: query
+          description: Nhóm hoặc loại giao dịch
+          schema:
+            type: string
+            default: all
+            enum: [all, expense, income, transfer, debt, lend, collect, interestIncome, borrow, repay, interestExpense]
+        - { name: walletId, in: query, description: Mã ví nguồn hoặc ví đích, schema: { type: string } }
+        - { name: categoryId, in: query, description: Mã danh mục, schema: { type: string } }
+        - { name: personId, in: query, description: Mã đối tượng, schema: { type: string } }
+        - { name: q, in: query, description: Từ khóa tìm theo ghi chú, danh mục, đối tượng hoặc số tiền, schema: { type: string } }
+        - { name: sort, in: query, description: Trường sắp xếp, schema: { type: string, enum: [date, amount], default: date } }
+        - { name: order, in: query, description: Thứ tự sắp xếp, schema: { type: string, enum: [desc, asc], default: desc } }
+        - { name: page, in: query, description: Số trang (bắt đầu từ 1), schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: limit, in: query, description: Số bản ghi mỗi trang (tối đa 1000), schema: { type: integer, minimum: 1, maximum: 1000, default: 500 } }
+      responses:
+        '200': { description: '{ total, page, limit, items }' }
+        '400': { $ref: '#/components/responses/Error' }
+    post:
+      tags: [resources]
+      summary: Tạo giao dịch mới
+      responses:
+        '201': { description: Created }
+        '400': { $ref: '#/components/responses/Error' }
   /api/{resource}:
     parameters:
       - { name: resource, in: path, required: true, schema: { type: string, enum: [wallets, categories, people, transactions, budgets, recurring] } }
     get:
       tags: [resources]
-      summary: Danh sách (giao dịch hỗ trợ lọc from, to, kind, walletId, categoryId, personId, q)
+      summary: Danh sách tài nguyên (xem chi tiết bộ lọc giao dịch tại GET /api/transactions)
       responses: { '200': { description: OK } }
     post: { tags: [resources], summary: Tạo mới, responses: { '201': { description: Created }, '400': { $ref: '#/components/responses/Error' } } }
   /api/{resource}/{id}:

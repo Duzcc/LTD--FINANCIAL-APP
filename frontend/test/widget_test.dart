@@ -8,6 +8,7 @@ import 'package:finance_app/core/theme/app_theme.dart';
 import 'package:finance_app/features/finance/domain/entities/entities.dart';
 import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
 import 'package:finance_app/app/main_screen.dart';
+import 'package:finance_app/features/ledger/presentation/screens/ledger_screen.dart';
 import 'package:finance_app/features/transactions/presentation/screens/add_transaction_screen.dart';
 import 'package:finance_app/features/wallets/presentation/screens/create_wallet_screen.dart';
 import 'package:finance_app/features/categories/presentation/screens/select_category_screen.dart';
@@ -203,5 +204,34 @@ void main() {
     await tester.tap(find.text('Ví của tôi'));
     await tester.pumpAndSettle();
     expect(find.byType(WalletsScreen), findsOneWidget);
+  });
+
+  testWidgets('Sổ giao dịch và Thêm giao dịch ẩn các mục đã bỏ', (tester) async {
+    final p = FinanceProvider();
+    p.saveEntry(MoneyEntry(
+        id: 'e1', kind: EntryKind.expense, amount: 45000, walletId: 'cash', categoryId: 'food', date: DateTime.now()));
+    await tester.pumpWidget(ChangeNotifierProvider.value(
+        value: p, child: MaterialApp(theme: AppTheme.lightTheme, home: const LedgerScreen())));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.sort), findsNothing);
+    expect(find.byIcon(Icons.add), findsNothing);
+    expect(find.textContaining('Sắp xếp:'), findsNothing);
+
+    await tester.pumpWidget(ChangeNotifierProvider.value(
+        value: p, child: MaterialApp(theme: AppTheme.lightTheme, home: const AddTransactionScreen())));
+    await tester.pumpAndSettle();
+    for (final text in [
+      'Ăn sáng',
+      'Cà phê',
+      'Ăn trưa',
+      'Đồ uống',
+      'Đổ xăng',
+      'Lặp lại định kỳ',
+      'Không tính vào báo cáo'
+    ]) {
+      expect(find.text(text), findsNothing, reason: text);
+    }
+    await tester.pumpWidget(const SizedBox.shrink());
+    p.dispose();
   });
 }
