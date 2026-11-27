@@ -12,9 +12,9 @@ security:
   - bearer: []
 tags:
   - { name: auth, description: Tài khoản }
-  - { name: resources, description: Ví, giao dịch, ngân sách, giao dịch định kỳ }
+  - { name: resources, description: 'Ví, giao dịch, ngân sách, giao dịch định kỳ' }
   - { name: categories, description: Danh mục thu/chi }
-  - { name: people, description: Đối tượng (người cho vay, đi vay, cửa hàng…) }
+  - { name: people, description: 'Đối tượng (người cho vay, đi vay, cửa hàng…)' }
   - { name: reports, description: Báo cáo }
   - { name: sync, description: Đồng bộ offline-first }
   - { name: ai, description: Tính năng AI (chuyển tiếp tới AI service) }
@@ -48,7 +48,7 @@ paths:
   /api/auth/reset-password: { post: { tags: [auth], security: [], summary: Đặt lại mật khẩu bằng mã, responses: { '200': { description: OK } } } }
   /api/auth/me:
     get: { tags: [auth], summary: Thông tin tài khoản, responses: { '200': { description: OK } } }
-    put: { tags: [auth], summary: Cập nhật tên, tiền tệ, tỷ giá, responses: { '200': { description: OK } } }
+    put: { tags: [auth], summary: 'Cập nhật tên, tiền tệ, tỷ giá', responses: { '200': { description: OK } } }
     delete: { tags: [auth], summary: Xóa tài khoản và toàn bộ dữ liệu, responses: { '200': { description: OK } } }
   /api/auth/change-password: { put: { tags: [auth], summary: Đổi mật khẩu, responses: { '200': { description: OK } } } }
   /api/auth/logout: { post: { tags: [auth], summary: 'Đăng xuất thiết bị hiện tại; body { all: true } để đăng xuất mọi thiết bị', responses: { '204': { description: Đã đăng xuất } } } }
@@ -389,7 +389,7 @@ components:
       properties:
         id: { type: string }
         name: { type: string, maxLength: 60 }
-        income: { type: boolean, description: true là danh mục thu, false là danh mục chi }
+        income: { type: boolean, description: 'true là danh mục thu, false là danh mục chi' }
         symbol: { type: integer, minimum: 0, maximum: 23, description: Chỉ số biểu tượng trong ứng dụng }
         isDefault: { type: boolean, description: Danh mục mặc định tạo lúc đăng ký }
     CategoryInput:
