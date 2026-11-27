@@ -305,7 +305,7 @@ void main() {
       await t.pumpAndSettle();
       expect(t.takeException(), isNull, reason: 'tab $tab');
     }
-    for (final tab in ['Sổ nợ', 'Ví', 'Báo cáo']) {
+    for (final tab in ['Sổ nợ', 'Báo cáo']) {
       await t.tap(find.text(tab).first);
       await t.pumpAndSettle();
       expect(t.takeException(), isNull, reason: 'tab tổng quan $tab');

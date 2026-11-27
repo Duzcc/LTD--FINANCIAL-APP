@@ -37,6 +37,11 @@ mixin LedgerQueries {
 
   String _unitOf(MoneyEntry e) => findWallet(e.walletId)?.currency ?? '';
 
+  Iterable<MoneyEntry> entriesInCurrency(String unit) {
+    final walletIds = wallets.where((wallet) => wallet.currency == unit).map((wallet) => wallet.id).toSet();
+    return entries.where((entry) => walletIds.contains(entry.walletId));
+  }
+
   double convert(double value, String from, String to) =>
       from == to ? value : value * (rates[from] ?? 1) / (rates[to] ?? 1);
 

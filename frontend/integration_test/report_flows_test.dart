@@ -92,8 +92,8 @@ void main() {
     expect(find.byType(MainScreen), findsOneWidget);
 
     // Test flow 1 / Bảng 22–23: quản lý ví
-    await t.tap(find.widgetWithText(Tab, 'Ví'));
-    await settle(t);
+    await tap(t, find.byKey(const ValueKey('open-drawer')));
+    await tapText(t, 'Ví của tôi');
     await tap(t, find.widgetWithText(FilledButton, 'Thêm ví'));
     await tap(t, find.text('Lưu ví'));
     expect(find.text('Nhập tên ví'), findsOneWidget, reason: 'thiếu tên ví thì báo lỗi và không lưu');
@@ -147,8 +147,6 @@ void main() {
         reason: 'khoản điều chỉnh không tính vào báo cáo');
     expect(find.text('Số dư cuối mỗi tháng'), findsOneWidget);
     await back(t);
-    await t.tap(find.widgetWithText(Tab, 'Ví'));
-    await settle(t);
 
     await tap(t, find.widgetWithText(WalletCard, 'Heo đất'));
     await tap(t, find.byKey(const ValueKey('savings-deposit')));
@@ -160,7 +158,6 @@ void main() {
     await tapText(t, 'Lưu giao dịch');
     expect((p.balance(pig.id), p.balance(cash.id)), (100000.0, 200000.0), reason: 'nạp tiền từ Tiền mặt vào Heo đất');
     await back(t);
-    await t.tap(find.widgetWithText(Tab, 'Ví'));
     // thông báo vừa hiện che mất nút ở cuối danh sách
     for (final m in t.stateList<ScaffoldMessengerState>(find.byType(ScaffoldMessenger))) {
       m.clearSnackBars();
@@ -178,6 +175,7 @@ void main() {
     expect(p.findWallet(temp.id), isNull, reason: 'xóa ví sau khi xác nhận');
     await settle(t);
     if (find.byType(WalletDetailScreen).evaluate().isNotEmpty) await back(t);
+    await back(t);
 
     // Test flow 2: quản lý danh mục
     await t.tap(find.byKey(const ValueKey('open-drawer')));

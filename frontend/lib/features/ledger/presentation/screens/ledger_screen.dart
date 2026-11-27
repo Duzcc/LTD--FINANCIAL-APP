@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:finance_app/core/utils/dates.dart';
+import 'package:finance_app/features/finance/domain/entities/money_entry.dart';
 import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/transactions/presentation/widgets/entry_tile.dart';
@@ -16,8 +17,9 @@ const _sortLabels = {
 };
 
 class LedgerScreen extends StatefulWidget {
-  const LedgerScreen({super.key, this.initialCategoryId});
+  const LedgerScreen({super.key, this.initialCategoryId, this.allDates = false});
   final String? initialCategoryId;
+  final bool allDates;
   @override
   State<LedgerScreen> createState() => _LedgerScreenState();
 }
@@ -29,6 +31,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
   String type = 'all';
   LedgerSort sort = LedgerSort.newest;
   DateTimeRange? range;
+  late bool allDates = widget.allDates;
   bool showFilters = false;
   final search = TextEditingController();
 
@@ -57,9 +60,21 @@ class _LedgerScreenState extends State<LedgerScreen> {
     }
     if (personId.isNotEmpty && p.personName(personId).isEmpty) personId = '';
     final q = query.trim().toLowerCase();
-    final entries = (range == null
-            ? p.inMonth(month, unit: p.currency)
-            : p.between(dateOnly(range!.start), dateOnly(range!.end).add(const Duration(days: 1)), unit: p.currency))
+    final selectedRange = range;
+    final Iterable<MoneyEntry> source;
+    if (selectedRange != null) {
+      final end = selectedRange.end;
+      source = p.between(
+        dateOnly(selectedRange.start),
+        DateTime(end.year, end.month, end.day + 1),
+        unit: p.currency,
+      );
+    } else if (allDates) {
+      source = p.entriesInCurrency(p.currency);
+    } else {
+      source = p.inMonth(month, unit: p.currency);
+    }
+    final entries = source
         .where((e) =>
             (walletId.isEmpty || e.walletId == walletId || e.destinationId == walletId) &&
             (categoryId.isEmpty || e.categoryId == categoryId) &&
@@ -94,16 +109,22 @@ class _LedgerScreenState extends State<LedgerScreen> {
       dayNet.update(dateOnly(e.date), (v) => v + signed, ifAbsent: () => signed);
     }
     final header = <Widget>[
-      if (range == null)
+      if (range == null && !allDates)
         MonthPicker(value: month, onChanged: (v) => setState(() => month = v))
       else
         Row(children: [
           const Icon(Icons.date_range, size: 18),
           const SizedBox(width: 8),
           Expanded(
-              child: Text('${dayLabel(range!.start)} – ${dayLabel(range!.end)}',
+              child: Text(range == null ? 'Tất cả thời gian' : '${dayLabel(range!.start)} – ${dayLabel(range!.end)}',
                   style: const TextStyle(fontWeight: FontWeight.w600))),
-          TextButton(onPressed: () => setState(() => range = null), child: const Text('Theo tháng')),
+          TextButton(
+            onPressed: () => setState(() {
+              range = null;
+              allDates = false;
+            }),
+            child: const Text('Theo tháng'),
+          ),
         ]),
       TextField(
           controller: search,

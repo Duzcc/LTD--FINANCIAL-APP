@@ -1,111 +1,134 @@
-import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+
 import 'package:finance_app/core/utils/dates.dart';
-import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
 import 'package:finance_app/core/widgets/charts.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
-import 'package:finance_app/features/ledger/presentation/screens/ledger_screen.dart';
+import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
 import 'package:finance_app/features/finance/presentation/widgets/entity_icons.dart';
+import 'package:finance_app/features/statistics/domain/period_report.dart';
+import 'package:finance_app/features/transactions/presentation/widgets/entry_tile.dart';
 
-enum StatPeriod { month, year, range }
+enum StatPeriod { week, month, year, range }
 
+// Báo cáo thu chi
 class StatisticsScreen extends StatefulWidget {
-  const StatisticsScreen({super.key});
+  const StatisticsScreen({super.key, this.weekly = false, this.showIncome = false});
+
+  final bool weekly;
+  final bool showIncome;
+
   @override
   State<StatisticsScreen> createState() => _StatisticsScreenState();
 }
 
 class _StatisticsScreenState extends State<StatisticsScreen> {
   DateTime anchor = DateTime.now();
-  StatPeriod period = StatPeriod.month;
+  late StatPeriod period = widget.weekly ? StatPeriod.week : StatPeriod.month;
+  late bool income = widget.showIncome;
   DateTimeRange? range;
-  bool income = false;
 
-  (DateTime, DateTime) get bounds => switch (period) {
-        StatPeriod.month => (DateTime(anchor.year, anchor.month), DateTime(anchor.year, anchor.month + 1)),
-        StatPeriod.year => (DateTime(anchor.year), DateTime(anchor.year + 1)),
-        StatPeriod.range => (dateOnly(range!.start), dateOnly(range!.end).add(const Duration(days: 1))),
+  (DateTime, DateTime) get bounds {
+    switch (period) {
+      case StatPeriod.week:
+        final monday =
+            DateTime(anchor.year, anchor.month, anchor.day - anchor.weekday + 1);
+        return (monday, DateTime(monday.year, monday.month, monday.day + 7));
+      case StatPeriod.month:
+        return (
+          DateTime(anchor.year, anchor.month),
+          DateTime(anchor.year, anchor.month + 1)
+        );
+      case StatPeriod.year:
+        return (DateTime(anchor.year), DateTime(anchor.year + 1));
+      case StatPeriod.range:
+        final end = range!.end;
+        return (dateOnly(range!.start), DateTime(end.year, end.month, end.day + 1));
+    }
+  }
+
+  String periodLabel(DateTime from, DateTime last) {
+    if (period == StatPeriod.year) return 'Năm ${from.year}';
+    if (period == StatPeriod.month)
+      return 'Tháng ${DateFormat('MM/yyyy').format(from)}';
+    return '${dayLabel(from)} – ${dayLabel(last)}';
+  }
+
+  void shift(int step) {
+    setState(() {
+      anchor = switch (period) {
+        StatPeriod.week => DateTime(anchor.year, anchor.month, anchor.day + 7 * step),
+        StatPeriod.month => DateTime(anchor.year, anchor.month + step),
+        StatPeriod.year => DateTime(anchor.year + step),
+        StatPeriod.range => anchor,
       };
-
-  String get title => switch (period) {
-        StatPeriod.month => 'Tháng ${DateFormat('MM/yyyy').format(anchor)}',
-        StatPeriod.year => 'Năm ${anchor.year}',
-        StatPeriod.range => '${dayLabel(range!.start)} – ${dayLabel(range!.end)}',
-      };
-
-  void shift(int step) => setState(() =>
-      anchor = period == StatPeriod.year ? DateTime(anchor.year + step) : DateTime(anchor.year, anchor.month + step));
+    });
+  }
 
   Future<void> pickRange() async {
-    final now = DateTime.now();
-    final r = await showDateRangePicker(
-        context: context,
-        firstDate: DateTime(2020),
-        lastDate: DateTime(2100),
-        initialDateRange: range ?? DateTimeRange(start: DateTime(now.year, now.month), end: now));
-    if (r != null && mounted) {
-      setState(() {
-        range = r;
-        period = StatPeriod.range;
-      });
-    }
+    final chosen = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100, 12, 31),
+      initialDateRange: range,
+    );
+
+    if (chosen == null || !mounted) return;
+    setState(() {
+      range = chosen;
+      anchor = chosen.start;
+      period = StatPeriod.range;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    final p = context.watch<FinanceProvider>();
-    final (from, to) = bounds;
-    final totalIncome = p.sumBetween(from, to, income: true);
-    final totalExpense = p.sumBetween(from, to, income: false);
-    final total = income ? totalIncome : totalExpense;
-    final categories = [
-      for (final c in p.categories.where((c) => c.income == income))
-        (c, p.sumBetween(from, to, income: income, categoryId: c.id))
-    ].where((x) => x.$2 > 0).toList()
-      ..sort((a, b) => b.$2.compareTo(a.$2));
+    final finance = context.watch<FinanceProvider>();
+    final (from, until) = bounds;
+    final last = DateTime(until.year, until.month, until.day - 1);
+    final currency = finance.currency;
+    final report = PeriodReport(
+      from: from,
+      until: until,
+      entries: finance.entriesInCurrency(currency),
+    );
+    final difference = report.totals.income - report.totals.expense;
+    final total = income ? report.totals.income : report.totals.expense;
+    final amounts = income ? report.incomeByCategory : report.expenseByCategory;
+    final categories = amounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
 
-    final daily = to.difference(from).inDays <= 62;
-    final labels = <String>[];
-    final incomes = <double>[], expenses = <double>[];
-    if (daily) {
-      for (var d = from; d.isBefore(to); d = DateTime(d.year, d.month, d.day + 1)) {
-        final next = DateTime(d.year, d.month, d.day + 1);
-        labels.add('${d.day}');
-        incomes.add(p.sumBetween(d, next, income: true));
-        expenses.add(p.sumBetween(d, next, income: false));
-      }
-    } else {
-      for (var m = DateTime(from.year, from.month); m.isBefore(to); m = DateTime(m.year, m.month + 1)) {
-        final next = DateTime(m.year, m.month + 1);
-        final start = m.isBefore(from) ? from : m;
-        final end = next.isAfter(to) ? to : next;
-        labels.add('T${m.month}');
-        incomes.add(p.sumBetween(start, end, income: true));
-        expenses.add(p.sumBetween(start, end, income: false));
-      }
+    void openCategory(String? categoryId) {
+      openPage(
+        context,
+        _CategoryTransactions(
+          categoryId: categoryId,
+          currency: currency,
+          from: from,
+          until: until,
+          income: income,
+        ),
+      );
     }
-    const colors = [
-      Color(0xFFAF8F79),
-      Color(0xFF83A38B),
-      Color(0xFFD8B77E),
-      Color(0xFF8E9FAE),
-      Color(0xFFB69AA6),
-      Color(0xFFD38B7D),
-      Color(0xFF8DB8AE)
-    ];
-    final diff = totalIncome - totalExpense;
+
     return FinancePage(
-        title: 'Báo cáo thu chi',
-        child: ListView(padding: const EdgeInsets.all(16), children: [
-          Wrap(spacing: 8, runSpacing: 8, children: [
-            for (final (value, label) in const [
-              (StatPeriod.month, 'Tháng'),
-              (StatPeriod.year, 'Năm'),
-              (StatPeriod.range, 'Khoảng ngày'),
-            ])
-              ChoiceChip(
+      title: 'Báo cáo thu chi',
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              for (final (value, label) in const [
+                (StatPeriod.week, 'Tuần'),
+                (StatPeriod.month, 'Tháng'),
+                (StatPeriod.year, 'Năm'),
+                (StatPeriod.range, 'Khoảng ngày'),
+              ])
+                ChoiceChip(
                   label: Text(label),
                   selected: period == value,
                   onSelected: (_) {
@@ -114,118 +137,299 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
                     } else {
                       setState(() => period = value);
                     }
-                  }),
-          ]),
-          const SizedBox(height: 8),
-          Row(children: [
-            IconButton(
+                  },
+                ),
+            ],
+          ),
+          Row(
+            children: [
+              IconButton(
                 tooltip: 'Kỳ trước',
                 onPressed: period == StatPeriod.range ? null : () => shift(-1),
-                icon: const Icon(Icons.chevron_left)),
-            Expanded(
-                child: InkWell(
-                    onTap: period == StatPeriod.range ? pickRange : null,
-                    child:
-                        Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w600)))),
-            IconButton(
+                icon: const Icon(Icons.chevron_left),
+              ),
+              Expanded(
+                child: TextButton(
+                  onPressed: pickRange,
+                  child: Text(periodLabel(from, last), textAlign: TextAlign.center),
+                ),
+              ),
+              IconButton(
                 tooltip: 'Kỳ sau',
                 onPressed: period == StatPeriod.range ? null : () => shift(1),
-                icon: const Icon(Icons.chevron_right)),
-          ]),
-          Panel(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Expanded(child: _Stat('Thu nhập', money(totalIncome, p.currency), AppColors.primaryGreen)),
-              Expanded(child: _Stat('Chi tiêu', money(totalExpense, p.currency), AppColors.accentRed)),
-            ]),
-            const Divider(height: 24),
-            Row(children: [
-              Expanded(child: Text(diff >= 0 ? 'Tiết kiệm được' : 'Chi vượt thu')),
-              Text(money(diff.abs(), p.currency),
-                  style: TextStyle(
-                      fontWeight: FontWeight.w700, color: diff >= 0 ? AppColors.primaryGreen : AppColors.accentRed)),
-            ]),
-            if (totalIncome > 0) ...[
-              const SizedBox(height: 6),
-              Text('Chi tiêu bằng ${(100 * totalExpense / totalIncome).toStringAsFixed(0)}% thu nhập',
-                  style: const TextStyle(fontSize: 12)),
+                icon: const Icon(Icons.chevron_right),
+              ),
             ],
-          ])),
+          ),
+          Panel(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                        child: _Stat('Thu nhập', money(report.totals.income, currency),
+                            AppColors.primaryGreen)),
+                    Expanded(
+                        child: _Stat('Chi tiêu', money(report.totals.expense, currency),
+                            AppColors.accentRed)),
+                  ],
+                ),
+                const Divider(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                        child:
+                            Text(difference >= 0 ? 'Tiết kiệm được' : 'Chi vượt thu')),
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          money(difference.abs(), currency),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: difference >= 0
+                                ? AppColors.primaryGreen
+                                : AppColors.accentRed,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (report.totals.income > 0) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Chi tiêu bằng ${(100 * report.totals.expense / report.totals.income).round()}% thu nhập',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+              ],
+            ),
+          ),
           const SectionTitle('Thu nhập và chi tiêu theo thời gian'),
           Panel(
-              child: Column(children: [
-            SizedBox(
-                height: 200,
-                child: totalIncome == 0 && totalExpense == 0
-                    ? const Center(child: Text('Chưa có dữ liệu trong kỳ này'))
-                    : IncomeExpenseChart(labels: labels, incomes: incomes, expenses: expenses)),
-            const SizedBox(height: 8),
-            const Wrap(alignment: WrapAlignment.center, spacing: 16, children: [
-              Row(mainAxisSize: MainAxisSize.min, children: [
-                CircleAvatar(radius: 5, backgroundColor: AppColors.primaryGreen),
-                Text('  Thu nhập', style: TextStyle(fontSize: 12)),
-              ]),
-              Row(mainAxisSize: MainAxisSize.min, children: [
-                CircleAvatar(radius: 5, backgroundColor: AppColors.accentRed),
-                Text('  Chi tiêu', style: TextStyle(fontSize: 12)),
-              ]),
-            ]),
-          ])),
-          const SizedBox(height: 16),
-          SegmentedButton<bool>(segments: const [
-            ButtonSegment(value: false, label: Text('Chi tiêu')),
-            ButtonSegment(value: true, label: Text('Thu nhập'))
-          ], selected: {
-            income
-          }, onSelectionChanged: (v) => setState(() => income = v.first)),
-          const SizedBox(height: 16),
+            child: Column(
+              children: [
+                SizedBox(
+                  height: 200,
+                  child: report.totals.income == 0 && report.totals.expense == 0
+                      ? const Center(child: Text('Chưa có dữ liệu trong kỳ này'))
+                      : IncomeExpenseChart(
+                          labels: report.labels,
+                          incomes: [
+                            for (final bucket in report.series.values) bucket.income
+                          ],
+                          expenses: [
+                            for (final bucket in report.series.values) bucket.expense
+                          ],
+                        ),
+                ),
+                const Wrap(
+                  spacing: 16,
+                  children: [
+                    _Legend('Thu nhập', AppColors.primaryGreen),
+                    _Legend('Chi tiêu', AppColors.accentRed),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SectionTitle('Theo danh mục'),
+          SegmentedButton<bool>(
+            segments: const [
+              ButtonSegment(value: false, label: Text('Chi tiêu')),
+              ButtonSegment(value: true, label: Text('Thu nhập')),
+            ],
+            selected: {income},
+            onSelectionChanged: (selection) => setState(() => income = selection.first),
+          ),
+          const SizedBox(height: 12),
           Panel(
-              child: Column(children: [
-            if (total == 0)
-              const EmptyView(
-                  title: 'Chưa có dữ liệu báo cáo',
-                  subtitle: 'Các giao dịch thu chi sẽ được tổng hợp tại đây.',
-                  icon: Icons.pie_chart_outline)
-            else
-              SizedBox(
-                  height: 230,
-                  child: Stack(alignment: Alignment.center, children: [
-                    PieChart(PieChartData(centerSpaceRadius: 70, sectionsSpace: 3, sections: [
-                      for (final (i, (_, value)) in categories.indexed)
-                        PieChartSectionData(
-                            value: value, color: colors[i % colors.length], radius: 28, showTitle: false)
-                    ])),
-                    SizedBox(
-                        width: 130,
-                        child: Column(mainAxisSize: MainAxisSize.min, children: [
-                          Text(income ? 'Tổng thu' : 'Tổng chi'),
-                          Text(money(total, p.currency),
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17))
-                        ])),
-                  ])),
-            for (final (i, (c, value)) in categories.indexed)
-              ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  tileColor: Colors.transparent,
-                  leading: RoundIcon(c.icon, color: colors[i % colors.length]),
-                  title: Text(c.name),
-                  subtitle: Text(money(value, p.currency)),
-                  trailing: Text('${(100 * value / total).toStringAsFixed(1)}%'),
-                  onTap: () => openPage(context, LedgerScreen(initialCategoryId: c.id))),
-          ])),
-        ]));
+            child: Column(
+              children: [
+                if (categories.isEmpty)
+                  const EmptyView(
+                    title: 'Chưa có dữ liệu báo cáo',
+                    subtitle: 'Chọn kỳ khác hoặc ghi thêm giao dịch.',
+                    icon: Icons.pie_chart_outline,
+                  )
+                else
+                  SizedBox(
+                    height: 210,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        PieChart(
+                          PieChartData(
+                            centerSpaceRadius: 65,
+                            sectionsSpace: 3,
+                            pieTouchData: PieTouchData(
+                              touchCallback: (event, response) {
+                                if (event is! FlTapUpEvent) return;
+                                final index =
+                                    response?.touchedSection?.touchedSectionIndex ?? -1;
+                                if (index >= 0 && index < categories.length) {
+                                  openCategory(categories[index].key);
+                                }
+                              },
+                            ),
+                            sections: [
+                              for (final (i, category) in categories.indexed)
+                                PieChartSectionData(
+                                  value: category.value,
+                                  color: _colors[i % _colors.length],
+                                  radius: 27,
+                                  showTitle: false,
+                                ),
+                            ],
+                          ),
+                        ),
+                        IgnorePointer(
+                          child: SizedBox(
+                            width: 118,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(income ? 'Tổng thu' : 'Tổng chi'),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Text(money(total, currency),
+                                      style:
+                                          const TextStyle(fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                for (final (i, group) in categories.indexed)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: RoundIcon(
+                      finance.category(group.key)?.icon ?? Icons.category_outlined,
+                      color: _colors[i % _colors.length],
+                    ),
+                    title: Text(finance.category(group.key)?.name ?? 'Chưa phân loại'),
+                    subtitle: Text(money(group.value, currency)),
+                    trailing:
+                        Text('${(100 * group.value / total).toStringAsFixed(1)}%'),
+                    onTap: () => openCategory(group.key),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+const _colors = [
+  Color(0xFFAF8F79),
+  Color(0xFF83A38B),
+  Color(0xFFD8B77E),
+  Color(0xFF8E9FAE),
+  Color(0xFFB69AA6),
+  Color(0xFFD38B7D),
+  Color(0xFF8DB8AE),
+];
+
+// Giao dịch của danh mục trong kỳ đang xem
+class _CategoryTransactions extends StatelessWidget {
+  const _CategoryTransactions({
+    required this.categoryId,
+    required this.currency,
+    required this.from,
+    required this.until,
+    required this.income,
+  });
+
+  final String? categoryId;
+  final String currency;
+  final DateTime from;
+  final DateTime until;
+  final bool income;
+
+  @override
+  Widget build(BuildContext context) {
+    final finance = context.watch<FinanceProvider>();
+    final entries = finance.between(from, until, unit: currency).where((entry) {
+      final matchesKind = income ? entry.kind.isIncome : entry.kind.isExpense;
+      return !entry.excluded && matchesKind && entry.categoryId == categoryId;
+    }).toList();
+    final last = DateTime(until.year, until.month, until.day - 1);
+    final total = entries.fold(0.0, (sum, entry) => sum + entry.amount);
+
+    return FinancePage(
+      title: finance.category(categoryId)?.name ?? 'Chưa phân loại',
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: entries.length + 1,
+        itemBuilder: (context, index) {
+          if (index > 0) return EntryTile(entries[index - 1]);
+          return Panel(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('${dayLabel(from)} – ${dayLabel(last)}'),
+                const SizedBox(height: 8),
+                _Stat(
+                  '${entries.length} giao dịch • ${income ? 'Tổng thu' : 'Tổng chi'}',
+                  money(total, currency),
+                  income ? AppColors.primaryGreen : AppColors.accentRed,
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 }
 
 class _Stat extends StatelessWidget {
   const _Stat(this.label, this.value, this.color);
-  final String label, value;
+
+  final String label;
+  final String value;
   final Color color;
+
   @override
-  Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
         Text(label, style: const TextStyle(fontSize: 12)),
         const SizedBox(height: 4),
-        FittedBox(child: Text(value, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: color))),
-      ]);
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(value,
+              style:
+                  TextStyle(fontWeight: FontWeight.w700, fontSize: 18, color: color)),
+        ),
+      ],
+    );
+  }
+}
+
+class _Legend extends StatelessWidget {
+  const _Legend(this.label, this.color);
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        CircleAvatar(radius: 5, backgroundColor: color),
+        const SizedBox(width: 5),
+        Text(label, style: const TextStyle(fontSize: 12)),
+      ],
+    );
+  }
 }
