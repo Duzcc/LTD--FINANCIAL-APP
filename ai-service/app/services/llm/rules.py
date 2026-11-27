@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 
 from app.nlp.entities import find_amount
 from app.nlp.text import fold
@@ -15,18 +16,19 @@ def _vnd(x: float | None) -> str:
 
 
 INTENTS: list[tuple[str, str]] = [
+    (r"\b(neu|thu)\b.*\b(bot|giam|cat|it|han che|bo)\b|\btiet kiem duoc bao nhieu\b|\bmo phong\b", "simulate"),
     (r"\b(ghi|them|nhap|luu)\b.*\d", "record"),
     (r"\b(so du|con bao nhieu tien|tong tai san)\b", "balance"),
     (r"\b(duoc chi|nen chi|chi duoc|chi toi da|goi y chi tieu|moi ngay chi)\b", "allowance"),
-    (r"\b(du bao|cuoi thang|se tieu|het thang|thang sau)\b", "forecast"),
     (r"\b(bat thuong|la|dot bien|kha nghi|trung)\b", "anomaly"),
-    (r"\b(goi y|de xuat|nen dat|lap)\b.*\bngan sach\b|\bngan sach\b.*\b(goi y|bao nhieu|nen)\b", "recommend"),
+    (r"\b(goi y|de xuat|nen dat|lap)\b.*\bngan sach\b|\bngan sach\b.*\b(goi y|nen)\b", "recommend"),
+    (r"\b(du bao|cuoi thang|se tieu|het thang|thang sau)\b", "forecast"),
     (r"\bngan sach\b|\bvuot\b|\bhan muc\b", "budget"),
     (r"\b(no|vay|muon|cho vay)\b", "debts"),
     (r"\bvi\b", "balance"),
     (r"\b(danh muc|nhieu nhat|tieu vao|chi vao|co cau)\b", "categories"),
-    (r"\b(tiet kiem|meo|loi khuyen|lam sao)\b", "advice"),
-    (r"\b(tim|giao dich|khoan)\b", "find"),
+    (r"\b(tiet kiem|meo|loi khuyen|lam sao|bot tieu|lam gi de)\b", "advice"),
+    (r"\b(tim|giao dich|khoan|lan nao|nhung lan|mua o dau)\b", "find"),
     (r"\b(tong quan|thang nay|chi bao nhieu|thu bao nhieu|tinh hinh)\b", "overview"),
 ]
 
@@ -39,8 +41,48 @@ def detect_intent(question: str) -> str:
     return "overview"
 
 
+_SIM_TARGET = re.compile(
+    r"\b(?:bot|giam|cat|it|han che|bo)\s+(?:uong|mua|an|di|choi|tieu|chi|di an)?\s*(.+?)"
+    r"(?:\s+(?:thi|xuong|con|di|moi|mot|duoc|lai|khoang|tu)\b.*|\s+\d.*|\s*[?.!]*)$"
+)
+
+
+def simulate_args(question: str) -> dict:
+    text = unicodedata.normalize("NFC", question).lower()
+    f = fold(text)
+    m = _SIM_TARGET.search(f)
+    # fold giữ nguyên độ dài chuỗi nên cắt lại được bản có dấu để hiển thị
+    query = text[m.start(1) : m.end(1)] if m else ""
+    query = re.sub(r"\b(tiền|khoản|các|những|việc)\b", " ", query).strip()
+    args: dict = {"query": query}
+    if p := re.search(r"(\d{1,2})\s*%", f):
+        args["reduce_percent"] = int(p.group(1))
+    if t := re.search(r"(?:xuong|con|giu)\s*(\d{1,2})\s*lan", f):
+        args["target_times"] = int(t.group(1))
+    return args
+
+
 def answer(question: str, kit: FinanceToolkit) -> tuple[str, list[str]]:
     intent = detect_intent(question)
+    if intent == "simulate":
+        args = simulate_args(question)
+        if not args["query"]:
+            return 'Bạn muốn bớt khoản nào? Ví dụ: "nếu bớt trà sữa thì tiết kiệm được bao nhiêu".', []
+        r = kit.simulate_saving(**args)
+        if not r["count"]:
+            return r["note"], ["simulate_saving"]
+        fq = r["by_frequency"]
+        lines = [
+            f"30 ngày qua bạn chi cho {args['query']} {r['count']} lần, tổng {_vnd(r['total_spent'])} "
+            f"(trung bình {_vnd(r['average_price'])}/lần).",
+            f"• Giảm còn {fq['suggested_times_per_month']} lần/tháng: tiết kiệm khoảng {_vnd(fq['monthly_saving'])}/tháng.",
+        ]
+        lines += [
+            f"• Giảm {x['reduce_percent']}%: tiết kiệm khoảng {_vnd(x['monthly_saving'])}/tháng."
+            for x in r["by_percent"]
+        ]
+        lines.append("Đây là khoản tiết kiệm tiềm năng, chưa phải tiền đã để dành.")
+        return "\n".join(lines), ["simulate_saving"]
     if intent == "record" and find_amount(question):
         text = re.sub(
             r"^\s*(hãy\s+)?(ghi|thêm|nhập|lưu)(\s+giúp|\s+hộ)?(\s+(tôi|mình|em))?\s*(là|:)?\s*",

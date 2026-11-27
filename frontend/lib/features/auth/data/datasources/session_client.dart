@@ -10,12 +10,14 @@ class SessionClient {
   final void Function(AccountSession) onRefreshed;
   Future<void>? _refreshing;
 
-  Future<Map<String, dynamic>> send(String method, String path, {Object? body, bool auth = true}) async {
+  Future<Map<String, dynamic>> send(String method, String path,
+      {Object? body, bool auth = true, Duration? timeout}) async {
     final sent = session();
     // hết phiên (401) thì xin phiên mới một lần rồi gửi lại,
     // nhiều request cùng lúc thì dùng chung một lần xin
     try {
-      return await api.send(method, sent?.baseUrl ?? serverUrl(), path, body: body, token: auth ? sent?.token : null);
+      return await api.send(method, sent?.baseUrl ?? serverUrl(), path,
+          body: body, token: auth ? sent?.token : null, timeout: timeout);
     } on ApiException catch (e) {
       if (!auth || !e.isUnauthorized || sent?.refreshToken == null) rethrow;
       if (identical(session(), sent)) {
@@ -27,7 +29,7 @@ class SessionClient {
       }
       final next = session();
       if (next == null) rethrow;
-      return api.send(method, next.baseUrl, path, body: body, token: next.token);
+      return api.send(method, next.baseUrl, path, body: body, token: next.token, timeout: timeout);
     }
   }
 

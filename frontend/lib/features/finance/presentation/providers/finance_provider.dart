@@ -554,16 +554,20 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
   Future<String?> resendVerification() => _auth.resendVerification();
 
   Future<Map<String, dynamic>> _signedInRequest(String method, String path,
-      {Object? body, required bool pushFirst, required String offlineMessage}) async {
+      {Object? body, required bool pushFirst, required String offlineMessage, Duration? timeout}) async {
     if (session == null) throw ApiException(0, 'OFFLINE', offlineMessage);
     if (pushFirst && pendingChanges > 0) await syncNow(pull: false);
-    return _client.send(method, path, body: body);
+    return _client.send(method, path, body: body, timeout: timeout);
   }
 
   @override
-  Future<Map<String, dynamic>> aiRequest(String method, String path, {Object? body, bool pushFirst = true}) =>
+  Future<Map<String, dynamic>> aiRequest(String method, String path,
+          {Object? body, bool pushFirst = true, Duration? timeout}) =>
       _signedInRequest(method, '/ai$path',
-          body: body, pushFirst: pushFirst, offlineMessage: 'Đăng nhập để dùng đầy đủ tính năng Trợ lý AI.');
+          body: body,
+          pushFirst: pushFirst,
+          timeout: timeout,
+          offlineMessage: 'Đăng nhập để dùng đầy đủ tính năng Trợ lý AI.');
 
   @override
   Future<Map<String, dynamic>> bankRequest(String method, String path, {Object? body}) =>

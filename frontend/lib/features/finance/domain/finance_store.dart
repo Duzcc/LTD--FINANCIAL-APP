@@ -7,6 +7,7 @@ abstract interface class FinanceStore implements LedgerQueries {
   bool get syncing;
   int get pendingChanges;
   T cached<T>(T Function() build);
-  Future<Map<String, dynamic>> aiRequest(String method, String path, {Object? body, bool pushFirst = true});
+  Future<Map<String, dynamic>> aiRequest(String method, String path,
+      {Object? body, bool pushFirst = true, Duration? timeout});
   Future<Map<String, dynamic>> bankRequest(String method, String path, {Object? body});
 }

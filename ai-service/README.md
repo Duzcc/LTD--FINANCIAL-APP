@@ -41,13 +41,33 @@ Khi khởi động, nếu thiếu mô hình hoặc mô hình được huấn luy
 
 ### Bật trợ lý LLM (tùy chọn)
 
-- **Claude**: `LLM_PROVIDER=anthropic`, `LLM_API_KEY`, `LLM_MODEL`.
-- **Mô hình mở chạy cục bộ (miễn phí, riêng tư)**: cài [Ollama](https://ollama.com), `ollama pull qwen2.5:7b`, rồi
-  `LLM_PROVIDER=openai`, `LLM_BASE_URL=http://localhost:11434/v1`, `LLM_MODEL=qwen2.5:7b`.
+Nguyên tắc: **dữ liệu nằm ở MongoDB, số liệu do code tính, LLM chỉ chọn công cụ và diễn giải.**
+Không bật LLM, trợ lý vẫn trả lời bằng luật và các mô hình học máy nhẹ, nên chạy được trên máy chủ miễn phí.
 
-LLM **không thấy toàn bộ dữ liệu**: nó gọi 10 công cụ (`get_overview`, `forecast_month`, `get_budget_status`, `get_debts`,
-`get_anomalies`, `recommend_budgets`, `propose_transaction`, `propose_budget`…) để lấy đúng con số cần thiết.
-Các công cụ `propose_*` chỉ tạo **đề xuất** — người dùng phải bấm *Xác nhận* trên ứng dụng (human-in-the-loop).
+- **Qwen2.5 chạy trên máy qua Ollama (miễn phí, dữ liệu không ra ngoài)**: cài [Ollama](https://ollama.com),
+  `ollama pull qwen2.5:3b`, rồi đặt `LLM_PROVIDER=ollama` (mặc định dùng `qwen2.5:3b` tại `http://localhost:11434/v1`;
+  máy mạnh có thể đổi `LLM_MODEL=qwen2.5:7b`).
+- **Claude**: `LLM_PROVIDER=anthropic`, `LLM_API_KEY`, `LLM_MODEL`.
+- **Máy chủ khác theo chuẩn OpenAI**: `LLM_PROVIDER=openai`, `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`.
+
+LLM **không thấy toàn bộ dữ liệu**: nó gọi 12 công cụ (`get_overview`, `get_category_spending`, `find_transactions`,
+`forecast_month`, `get_budget_status`, `get_debts`, `get_anomalies`, `recommend_budgets`, `simulate_saving`,
+`propose_transaction`, `propose_budget`…) để lấy đúng con số cần thiết.
+
+- `simulate_saving`: tính tiền tiết kiệm **tiềm năng** khi bớt một khoản (giảm 10/20/30%, giảm số lần mua mỗi tháng)
+  từ lịch sử 30 ngày; LLM chỉ diễn giải kết quả.
+- **Chặn số bịa**: mọi số tiền trong câu trả lời của LLM phải có trong kết quả công cụ (cho phép làm tròn).
+  Có số lạ thì bỏ câu trả lời đó và trả lời bằng luật (`fallbackReason: unverified_numbers`).
+- Các công cụ `propose_*` chỉ tạo **đề xuất**, người dùng phải bấm *Xác nhận* trên ứng dụng.
+
+### Đánh giá trợ lý
+
+`ml/data/assistant_eval.py` có 50 câu hỏi tiếng Việt, gán nhãn công cụ cần gọi.
+
+```bash
+python -m ml.evaluate_assistant          # trợ lý luật: tỷ lệ chọn đúng việc
+python -m ml.evaluate_assistant --llm    # mô hình đang cấu hình: chọn đúng công cụ, số lần lùi về luật, thời gian
+```
 
 ## Cấu trúc
 

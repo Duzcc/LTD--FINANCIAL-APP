@@ -28,7 +28,7 @@ class Settings(BaseSettings):
             return bool(self.llm_api_key and self.llm_model)
         if self.llm_provider == "openai":
             return bool(self.llm_model and (self.llm_base_url or self.llm_api_key))
-        return False
+        return self.llm_provider == "ollama"
 
 
 @lru_cache

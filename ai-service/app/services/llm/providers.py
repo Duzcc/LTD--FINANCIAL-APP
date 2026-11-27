@@ -93,7 +93,7 @@ class AnthropicProvider:
     async def complete_vision(self, prompt, image_b64, media_type):
         data = await self._post(
             {
-                "model": self.s.vision_model or self.s.llm_model,
+                "model": self.s.vision_model or self.model,
                 "max_tokens": 1200,
                 "messages": [
                     {
@@ -114,11 +114,13 @@ class AnthropicProvider:
 
 class OpenAICompatProvider:
     name = "openai"
+    default_url = "https://api.openai.com/v1"
 
     def __init__(self, settings: Settings, client: httpx.AsyncClient):
         self.s = settings
         self.http = client
-        base = (settings.llm_base_url or "https://api.openai.com/v1").rstrip("/")
+        self.model = settings.llm_model
+        base = (settings.llm_base_url or self.default_url).rstrip("/")
         self.url = base + "/chat/completions" if base.endswith("/v1") else base + "/v1/chat/completions"
 
     async def _post(self, payload: dict[str, Any]) -> dict[str, Any]:
@@ -129,6 +131,8 @@ class OpenAICompatProvider:
         if r.status_code >= 400:
             raise LLMError(f"OpenAI-compatible {r.status_code}: {r.text[:300]}")
         return r.json()
+
+    temperature = 0.3
 
     async def run(self, system, messages, tools, execute, max_steps=6):
         convo: list[dict[str, Any]] = [{"role": "system", "content": system}] + list(messages)
@@ -143,11 +147,11 @@ class OpenAICompatProvider:
         for _ in range(max_steps):
             data = await self._post(
                 {
-                    "model": self.s.llm_model,
+                    "model": self.model,
                     "messages": convo,
                     "tools": fn_tools,
                     "max_tokens": self.s.llm_max_tokens,
-                    "temperature": 0.3,
+                    "temperature": self.temperature,
                 }
             )
             msg = data["choices"][0]["message"]
@@ -174,7 +178,7 @@ class OpenAICompatProvider:
     async def complete_vision(self, prompt, image_b64, media_type):
         data = await self._post(
             {
-                "model": self.s.vision_model or self.s.llm_model,
+                "model": self.s.vision_model or self.model,
                 "max_tokens": 1200,
                 "messages": [
                     {
@@ -190,9 +194,24 @@ class OpenAICompatProvider:
         return data["choices"][0]["message"].get("content") or ""
 
 
+class OllamaProvider(OpenAICompatProvider):
+    """Mô hình mở chạy trên máy qua Ollama, không tốn phí theo token."""
+
+    name = "ollama"
+    default_url = "http://localhost:11434/v1"
+    # mô hình nhỏ dễ "sáng tạo" số liệu nên giữ nhiệt độ thấp
+    temperature = 0.1
+
+    def __init__(self, settings: Settings, client: httpx.AsyncClient):
+        super().__init__(settings, client)
+        self.model = settings.llm_model or "qwen2.5:3b"
+
+
 def build_provider(settings: Settings, client: httpx.AsyncClient) -> LLMProvider | None:
     if not settings.llm_enabled:
         return None
     if settings.llm_provider == "anthropic":
         return AnthropicProvider(settings, client)
+    if settings.llm_provider == "ollama":
+        return OllamaProvider(settings, client)
     return OpenAICompatProvider(settings, client)

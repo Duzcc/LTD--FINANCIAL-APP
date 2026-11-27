@@ -1,6 +1,7 @@
 # Chạy toàn bộ phía máy chủ: MongoDB + Backend (Node.js) + AI service (Python).
 #   cp .env.example .env && docker compose up -d --build
-#   docker compose --profile llm up -d      # thêm Ollama để trợ lý dùng mô hình mở chạy cục bộ
+#   docker compose --profile llm up -d      # thêm Ollama; đặt LLM_PROVIDER=ollama, LLM_BASE_URL=http://ollama:11434/v1
+#   docker compose exec ollama ollama pull qwen2.5:3b
 # Ứng dụng Flutter (frontend/) chạy trên điện thoại/máy ảo và trỏ tới http://<máy chủ>:3000
 services:
   mongo:

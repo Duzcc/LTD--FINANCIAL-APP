@@ -43,7 +43,8 @@ class ApiClient {
     return u;
   }
 
-  Future<Map<String, dynamic>> send(String method, String baseUrl, String path, {Object? body, String? token}) async {
+  Future<Map<String, dynamic>> send(String method, String baseUrl, String path,
+      {Object? body, String? token, Duration? timeout}) async {
     final uri = Uri.parse('${normalize(baseUrl)}/api$path');
     final request = http.Request(method, uri);
     request.headers['Accept'] = 'application/json';
@@ -55,7 +56,7 @@ class ApiClient {
     http.Response response;
     // gom lỗi mạng về ApiException cho màn hình dễ xử lý
     try {
-      response = await http.Response.fromStream(await _client.send(request).timeout(timeout));
+      response = await http.Response.fromStream(await _client.send(request).timeout(timeout ?? this.timeout));
     } on TimeoutException {
       throw const ApiException(0, 'TIMEOUT', 'Kết nối quá chậm. Vui lòng kiểm tra mạng và thử lại.');
     } on Exception {

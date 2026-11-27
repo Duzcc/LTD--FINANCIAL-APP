@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import calendar
+import re
 from collections.abc import Callable
 from datetime import datetime, timedelta
 from typing import Any
@@ -10,6 +11,12 @@ from app.schemas.common import EXPENSE_KINDS, INCOME_KINDS
 from app.schemas.finance import FinanceSnapshot
 from app.services import anomaly, budget, forecaster
 from app.services.parser import get_parser
+
+
+def _thousand(x: float) -> int:
+    # số tiết kiệm là ước tính nên làm tròn nghìn cho dễ đọc
+    return int(round(x, -3))
+
 
 DEBT_OUT = {"lend": 1, "collect": -1}
 DEBT_IN = {"borrow": 1, "repay": -1}
@@ -84,6 +91,21 @@ TOOL_SPECS: list[dict[str, Any]] = [
             "properties": {
                 "savings_rate": {"type": "number", "description": "Tỷ lệ tiết kiệm mục tiêu 0..0.6, mặc định 0.2"}
             },
+        },
+    },
+    {
+        "name": "simulate_saving",
+        "description": "Mô phỏng tiền tiết kiệm tiềm năng khi bớt một khoản chi (theo từ khóa như 'trà sữa' hoặc tên "
+        "danh mục): giảm theo phần trăm và giảm số lần mua mỗi tháng. Số liệu do hệ thống tính từ lịch sử 30 ngày; "
+        "đây là khoản tiềm năng, không phải tiền đã tiết kiệm.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Từ khóa khoản chi, ví dụ 'trà sữa', 'cà phê', 'Ăn uống'"},
+                "reduce_percent": {"type": "number", "description": "Mức giảm muốn thử, 1..90 (tùy chọn)"},
+                "target_times": {"type": "integer", "description": "Số lần mua mỗi tháng muốn giữ lại (tùy chọn)"},
+            },
+            "required": ["query"],
         },
     },
     {
@@ -345,6 +367,60 @@ class FinanceToolkit:
                 }
                 for s in r["suggestions"]
             ],
+        }
+
+    def simulate_saving(
+        self, query: str, reduce_percent: float | None = None, target_times: int | None = None, days: int = 30
+    ) -> dict:
+        since = self.now - timedelta(days=days)
+        q = fold(query).strip()
+        # khớp cả từ để "phở" không dính "văn phòng"
+        word = re.compile(rf"\b{re.escape(q)}\b") if q else None
+        hits = [
+            t
+            for t in self.s.transactions
+            if word
+            and not t.excluded
+            and t.kind in EXPENSE_KINDS
+            and self._local(t.date) >= since
+            and word.search(fold(f"{t.note} {self.names.get(t.categoryId or '', '')}"))
+        ]
+        if not hits:
+            return {"query": query, "count": 0, "note": f"Không có khoản chi nào khớp '{query}' trong {days} ngày qua."}
+        total = sum(t.amount for t in hits)
+        times = len(hits)
+        avg = total / times
+        # quy về một tháng 30 ngày để các phương án so sánh được với nhau
+        scale = 30 / days
+        monthly, monthly_times = total * scale, times * scale
+        percents = sorted({10, 20, 30} | ({round(reduce_percent)} if reduce_percent else set()))
+        by_percent = [
+            {
+                "reduce_percent": p,
+                "monthly_saving": _thousand(monthly * p / 100),
+                "new_monthly_spending": _thousand(monthly * (100 - p) / 100),
+            }
+            for p in percents
+            if 0 < p < 100
+        ]
+        keep = target_times if target_times is not None else int(monthly_times * 0.7)
+        keep = max(0, min(keep, round(monthly_times)))
+        by_frequency = {
+            "current_times_per_month": round(monthly_times, 1),
+            "suggested_times_per_month": keep,
+            "average_price": round(avg),
+            "monthly_saving": _thousand(max(0.0, monthly_times - keep) * avg),
+        }
+        return {
+            "query": query,
+            "period_days": days,
+            "count": times,
+            "total_spent": round(total),
+            "average_price": round(avg),
+            "monthly_spending": round(monthly),
+            "by_percent": by_percent,
+            "by_frequency": by_frequency,
+            "note": "Đây là tiền tiết kiệm tiềm năng nếu thay đổi thói quen, chưa phải tiền đã tiết kiệm.",
         }
 
     def propose_transaction(self, text: str) -> dict:

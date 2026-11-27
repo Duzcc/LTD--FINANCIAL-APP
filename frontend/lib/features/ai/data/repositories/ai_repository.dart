@@ -51,7 +51,8 @@ class AiRepository {
     }
     if (remoteAvailable) {
       final r = await p
-          .aiRequest('POST', '/chat', body: {'messages': history})
+          // mô hình chạy trên máy (Ollama) trả lời chậm hơn các API khác
+          .aiRequest('POST', '/chat', body: {'messages': history}, timeout: const Duration(seconds: 60))
           .then(AssistantReply.fromJson)
           .orNullOnApiError();
       if (r != null && r.reply.isNotEmpty && (r.source != 'rules' || r.actions.isNotEmpty)) {
