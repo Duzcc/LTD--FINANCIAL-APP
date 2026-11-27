@@ -47,8 +47,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(money(50000, 'VND')), findsWidgets);
 
-    final category = find.widgetWithText(ListTile, 'Ăn uống');
+    final category = find.widgetWithText(ListTile, 'Ăn uống').hitTestable();
     await tester.scrollUntilVisible(category, 240, scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
     await tester.tap(category);
     await tester.pumpAndSettle();
 

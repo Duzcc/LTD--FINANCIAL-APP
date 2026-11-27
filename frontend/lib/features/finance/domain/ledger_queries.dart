@@ -101,6 +101,17 @@ mixin LedgerQueries {
   double used(MoneyBudget b) =>
       total(b.month, income: budgetIncome(b), walletId: b.walletId, categoryId: b.categoryId, unit: b.currency);
 
+  Map<MoneyBudget, double> budgetOverruns({DateTime? month}) {
+    final result = <MoneyBudget, double>{};
+    for (final budget in budgets) {
+      if (month != null && (budget.month.year != month.year || budget.month.month != month.month)) continue;
+      if (budgetIncome(budget)) continue;
+      final excess = used(budget) - budget.amount;
+      if (excess > 1e-9) result[budget] = excess;
+    }
+    return result;
+  }
+
   MoneyBudget? overallBudget(DateTime month, {required bool income, String? unit}) {
     for (final b in budgets) {
       if (b.categoryId == null &&
@@ -117,6 +128,38 @@ mixin LedgerQueries {
   double debt({required bool borrowed, String? personId, String? unit, String? excludeId}) {
     final totals = debtTotals(borrowed: borrowed, personId: personId, unit: unit, excludeId: excludeId);
     return totals.principal - totals.settled;
+  }
+
+  // Số dư từng khoản nợ, trừ tiền thanh toán vào khoản cũ nhất trước
+  Map<String, double> remainingByLoan() {
+    final paid = <(String?, String, bool), double>{};
+    final loans = <MoneyEntry>[];
+    for (final entry in entries) {
+      if (entry.kind == EntryKind.borrow || entry.kind == EntryKind.lend) {
+        loans.add(entry);
+      } else if (entry.kind == EntryKind.repay || entry.kind == EntryKind.collect) {
+        final key = (entry.personId, _unitOf(entry), entry.kind == EntryKind.repay);
+        paid[key] = (paid[key] ?? 0) + entry.amount;
+      }
+    }
+    loans.sort((a, b) {
+      final byDate = a.date.compareTo(b.date);
+      return byDate == 0 ? a.id.compareTo(b.id) : byDate;
+    });
+
+    final remaining = <String, double>{};
+    for (final loan in loans) {
+      final key = (loan.personId, _unitOf(loan), loan.kind == EntryKind.borrow);
+      final available = paid[key] ?? 0.0;
+      if (available >= loan.amount) {
+        paid[key] = available - loan.amount;
+      } else {
+        final balance = loan.amount - available;
+        if (balance > 1e-9) remaining[loan.id] = balance;
+        paid[key] = 0;
+      }
+    }
+    return remaining;
   }
 
   DebtTotals debtTotals({required bool borrowed, String? personId, String? unit, String? excludeId}) {

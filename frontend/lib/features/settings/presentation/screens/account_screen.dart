@@ -82,10 +82,7 @@ class AccountScreen extends StatelessWidget {
                 _row(context, Icons.price_change_outlined, 'Tỷ giá quy đổi',
                     () => openPage(context, const RatesScreen())),
                 const Divider(indent: 60),
-                _row(
-                    context,
-                    Icons.notifications_outlined,
-                    'Thông báo nhắc nhở • ${p.remindersEnabled ? 'bật' : 'tắt'}',
+                _row(context, Icons.notifications_outlined, 'Thông báo nhắc nhở',
                     () => openPage(context, const RemindersScreen())),
                 const Divider(indent: 60),
                 SwitchListTile(

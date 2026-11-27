@@ -83,11 +83,13 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
   String displayName = 'Bạn';
   bool hideBalance = false;
   bool remindersEnabled = false, debtReminders = true;
+  bool budgetAlertsEnabled = true;
   List<int> reminderMinutes = [20 * 60];
   List<SpendingReminder> _reminders = [];
   List<SpendingReminder> get reminders => UnmodifiableListView(_reminders);
   void Function(FinanceProvider p)? onScheduleChanged;
   void Function(List<(MoneyWallet, MoneyEntry)> activity)? onWalletActivity;
+  void Function(MoneyBudget budget, String label, double excess)? onBudgetExceeded;
   String? recurringError;
   String? storageError;
   @override
@@ -193,6 +195,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
     rates = _readRates(j['rates']);
     remindersEnabled = j['remindersEnabled'] == true;
     debtReminders = j['debtReminders'] != false;
+    budgetAlertsEnabled = j['budgetAlertsEnabled'] != false;
     reminderMinutes = reminders;
     _reminders = [
       for (final r in (j['spendingReminders'] as List?) ?? const [])
@@ -220,6 +223,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
         'rates': rates,
         'remindersEnabled': remindersEnabled,
         'debtReminders': debtReminders,
+        'budgetAlertsEnabled': budgetAlertsEnabled,
         'reminderMinutes': reminderMinutes,
         'spendingReminders': _reminders.map((r) => r.toJson()).toList(),
         'displayName': displayName,
@@ -293,9 +297,10 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
     _changed();
   }
 
-  void setReminders({bool? enabled, bool? debts, List<int>? minutes}) {
+  void setReminders({bool? enabled, bool? debts, bool? budgetAlerts, List<int>? minutes}) {
     remindersEnabled = enabled ?? remindersEnabled;
     debtReminders = debts ?? debtReminders;
+    budgetAlertsEnabled = budgetAlerts ?? budgetAlertsEnabled;
     if (minutes != null) reminderMinutes = (minutes.toSet().toList()..sort());
     _changed(sync: false);
   }
@@ -367,9 +372,11 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
 
   void saveEntry(MoneyEntry value) {
     checkEntry(value);
+    final previous = value.kind.isExpense && !value.excluded ? _overBudgetIds(value.date) : null;
     _put(_entries, value, (e) => e.id == value.id);
     _mark('entries', value.id);
     _changed();
+    _notifyNewOverruns(previous, value.date);
   }
 
   void deleteEntry(String id) {
@@ -484,9 +491,27 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
 
   void saveBudget(MoneyBudget b) {
     checkBudget(b);
+    final previous = _overBudgetIds(b.month);
     _put(_budgets, b, (v) => v.id == b.id);
     _mark('budgets', b.id);
     _changed();
+    _notifyNewOverruns(previous, b.month);
+  }
+
+  // Cảnh báo khi ngân sách vừa vượt hạn mức
+  Set<String>? _overBudgetIds([DateTime? month]) {
+    if (!budgetAlertsEnabled || onBudgetExceeded == null) return null;
+    return {for (final budget in budgetOverruns(month: month).keys) budget.id};
+  }
+
+  void _notifyNewOverruns(Set<String>? previous, [DateTime? month]) {
+    if (previous == null) return;
+    for (final entry in budgetOverruns(month: month).entries) {
+      final budget = entry.key;
+      if (previous.contains(budget.id)) continue;
+      final label = category(budget.categoryId)?.name ?? 'Tổng chi';
+      onBudgetExceeded?.call(budget, label, entry.value);
+    }
   }
 
   void deleteBudget(String id) {
@@ -655,8 +680,9 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
     if (activity.isNotEmpty) onWalletActivity?.call(activity);
   }
 
-  void _applySnapshot(AccountSnapshot s) {
+  void _applySnapshot(AccountSnapshot s, {bool notifyBudgetChanges = false}) {
     final firstSync = lastSync == null;
+    final previous = notifyBudgetChanges && !firstSync ? _overBudgetIds() : null;
     final known = {for (final e in _entries) e.id};
     final photos = {
       for (final e in _entries)
@@ -685,6 +711,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
     syncError = null;
     _changed(sync: false);
     if (!firstSync) _reportActivity(_entries.where((e) => !known.contains(e.id)));
+    _notifyNewOverruns(previous);
     runRecurring();
   }
 
@@ -701,7 +728,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
       await _push();
       if (pull && _changes.isEmpty && !_profileDirty) {
         final snapshot = AccountSnapshot(await _sync.fetchSnapshot());
-        if (_changes.isEmpty && !_profileDirty) _applySnapshot(snapshot);
+        if (_changes.isEmpty && !_profileDirty) _applySnapshot(snapshot, notifyBudgetChanges: true);
       }
       lastSync = DateTime.now();
       syncError = null;
@@ -780,8 +807,10 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
     lastSync = null;
     syncError = null;
     _resetData();
+    _reminders.clear();
     await _pendingSave;
     await _local.clear();
+    onScheduleChanged?.call(this);
     _notify();
   }
 

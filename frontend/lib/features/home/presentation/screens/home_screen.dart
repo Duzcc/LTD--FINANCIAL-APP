@@ -15,7 +15,6 @@ import 'package:finance_app/features/ledger/presentation/screens/ledger_screen.d
 import 'package:finance_app/features/transactions/presentation/screens/add_transaction_screen.dart';
 import 'package:finance_app/features/ai/presentation/widgets/quick_entry_sheet.dart';
 import 'package:finance_app/features/banking/presentation/screens/receive_qr_screen.dart';
-import 'package:finance_app/features/finance/presentation/widgets/entity_icons.dart';
 
 // Màn hình tổng quan
 class HomeScreen extends StatelessWidget {
@@ -391,6 +390,7 @@ class _DebtOverviewState extends State<DebtOverview> {
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
     final payable = p.debt(borrowed: true), receivable = p.debt(borrowed: false);
+    final remaining = byPerson ? const <String, double>{} : p.remainingByLoan();
     final balance = receivable - payable;
     return ListView(padding: const EdgeInsets.all(16), children: [
       Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -436,9 +436,7 @@ class _DebtOverviewState extends State<DebtOverview> {
       else
         for (final e in entries) ...[
           EntryTile(e),
-          if ((e.kind == EntryKind.lend || e.kind == EntryKind.borrow) &&
-              e.dueDate != null &&
-              p.debt(borrowed: e.kind == EntryKind.borrow, personId: e.personId) > 0)
+          if (e.dueDate != null && remaining.containsKey(e.id))
             Padding(
                 padding: const EdgeInsets.only(left: 16, bottom: 10),
                 child: Text(

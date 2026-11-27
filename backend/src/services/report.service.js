@@ -12,6 +12,14 @@ function totals(list) {
   return { income: sum(list.filter((e) => isIncome(e.kind))), expense: sum(list.filter((e) => isExpense(e.kind))) };
 }
 
+function reportDate(value, field) {
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const time = field === 'to' ? '23:59:59.999' : '00:00:00.000';
+    return L.date(`${value}T${time}`, field);
+  }
+  return L.date(value, field);
+}
+
 async function dashboard(user, query) {
   const state = await ledger.loadState(user._id);
   const currency = currencyOf(user, query);
@@ -57,8 +65,8 @@ async function summary(user, query) {
   const state = await ledger.loadState(user._id);
   const currency = currencyOf(user, query);
   const now = new Date();
-  const from = L.date(query.from, 'from') || L.monthStart(now);
-  const to = L.date(query.to, 'to') || L.monthEnd(now);
+  const from = reportDate(query.from, 'from') || L.monthStart(now);
+  const to = reportDate(query.to, 'to') || L.monthEnd(now);
   const groupBy = query.groupBy === 'month' ? 'month' : 'day';
   const list = state.entries.filter((e) => {
     const d = new Date(e.date);

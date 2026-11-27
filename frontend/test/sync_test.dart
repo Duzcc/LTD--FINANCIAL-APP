@@ -99,6 +99,39 @@ void main() {
     p.dispose();
   });
 
+  test('Đồng bộ chỉ báo ngân sách mới vượt, một lần cho mỗi lần vượt', () async {
+    final server = FakeBackend();
+    final meal = {
+      'id': 'meal',
+      'kind': 'expense',
+      'amount': 150,
+      'walletId': 'cash',
+      'categoryId': 'food',
+      'date': '2026-11-03T02:00:00Z',
+    };
+    (server.snapshot['entries'] as List).add(meal);
+    (server.snapshot['budgets'] as List).add({
+      'id': 'budget',
+      'categoryId': 'food',
+      'month': '2026-11-01',
+      'amount': 100,
+    });
+    final p = FinanceProvider(api: ApiClient(client: server.client));
+    final alerts = <double>[];
+    p.onBudgetExceeded = (_, __, excess) => alerts.add(excess);
+
+    await signInWithOtp(p);
+    await p.syncNow();
+    expect(alerts, isEmpty);
+    meal['amount'] = 80;
+    await p.syncNow();
+    meal['amount'] = 125;
+    await p.syncNow();
+    await p.syncNow();
+    expect(alerts, [25.0]);
+    p.dispose();
+  });
+
   test('Hết phiên thì báo lỗi mà không mất thay đổi đang chờ', () async {
     final server = FakeBackend();
     final p = FinanceProvider(api: ApiClient(client: server.client));

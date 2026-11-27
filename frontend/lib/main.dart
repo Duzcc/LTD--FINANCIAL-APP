@@ -27,6 +27,7 @@ Future<void> main() async {
   }
   finance.onScheduleChanged = NotificationService.instance.apply;
   finance.onWalletActivity = NotificationService.instance.walletActivity;
+  finance.onBudgetExceeded = NotificationService.instance.budgetExceeded;
   finance.runRecurring();
   runApp(FinanceApp(
       finance: finance,

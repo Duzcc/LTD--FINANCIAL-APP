@@ -51,8 +51,9 @@ class _StatisticsScreenState extends State<StatisticsScreen> {
 
   String periodLabel(DateTime from, DateTime last) {
     if (period == StatPeriod.year) return 'Năm ${from.year}';
-    if (period == StatPeriod.month)
+    if (period == StatPeriod.month) {
       return 'Tháng ${DateFormat('MM/yyyy').format(from)}';
+    }
     return '${dayLabel(from)} – ${dayLabel(last)}';
   }
 

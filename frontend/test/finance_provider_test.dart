@@ -235,4 +235,85 @@ void main() {
     await p.flush();
     p.dispose();
   });
+
+  test('Chỉ cảnh báo khi chi tiêu của đúng ngân sách vừa vượt hạn mức', () async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = await SharedPreferences.getInstance();
+    final p = FinanceProvider(storage: storage);
+    final alerts = <(String, String, double)>[];
+    p.onBudgetExceeded = (b, label, excess) => alerts.add((b.id, label, excess));
+    p.saveWallet(const MoneyWallet(id: 'cash', name: 'Tiền mặt', opening: 1000));
+    p.saveWallet(const MoneyWallet(id: 'bank', name: 'Ngân hàng'));
+    p.saveWallet(const MoneyWallet(id: 'usd', name: 'Đô la', currency: 'USD'));
+
+    void limit(double amount) {
+      p.saveBudget(MoneyBudget(
+        id: 'food-cash',
+        categoryId: 'food',
+        walletId: 'cash',
+        month: month,
+        amount: amount,
+      ));
+    }
+
+    limit(100);
+    p.saveBudget(MoneyBudget(id: 'income', categoryId: null, income: true, month: month, amount: 20));
+    p.saveEntry(entry('other-wallet', EntryKind.expense, 150, wallet: 'bank'));
+    p.saveEntry(entry('usd', EntryKind.expense, 150, wallet: 'usd'));
+    p.saveEntry(entry('other-category', EntryKind.expense, 150, category: 'house'));
+    p.saveEntry(entry('other-month', EntryKind.expense, 150, date: DateTime(2026, 9)));
+    p.saveEntry(entry('hidden', EntryKind.expense, 150, excluded: true));
+    p.saveEntry(entry('transfer', EntryKind.transfer, 20, dest: 'bank'));
+    p.saveEntry(entry('income', EntryKind.income, 150));
+    p.saveEntry(entry('meal', EntryKind.expense, 100));
+    expect(alerts, isEmpty);
+
+    p.saveEntry(entry('meal', EntryKind.expense, 120));
+    p.saveEntry(entry('meal', EntryKind.expense, 125));
+    expect(alerts, [('food-cash', 'Ăn uống', 20.0)]);
+    limit(150);
+    limit(115);
+    expect(alerts.last, ('food-cash', 'Ăn uống', 10.0));
+    p.deleteEntry('meal');
+    p.saveEntry(entry('new-meal', EntryKind.expense, 135));
+    expect(alerts, hasLength(3));
+
+    p.setReminders(budgetAlerts: false);
+    p.deleteEntry('new-meal');
+    p.saveEntry(entry('another-meal', EntryKind.expense, 200));
+    expect(alerts, hasLength(3));
+    await p.flush();
+    final restored = FinanceProvider(storage: storage)..restore();
+    expect(restored.budgetAlertsEnabled, isFalse);
+    restored.dispose();
+    p.dispose();
+  });
+
+  test('Trả khoản nợ cũ nhất của đúng người, đúng loại nợ và tiền tệ', () async {
+    final p = FinanceProvider();
+    p.savePerson(const MoneyPerson('an', 'An', 'Bạn bè'));
+    p.savePerson(const MoneyPerson('binh', 'Bình', 'Bạn bè'));
+    p.saveWallet(const MoneyWallet(id: 'usd', name: 'Đô la', currency: 'USD'));
+    p.saveEntry(entry('new', EntryKind.borrow, 200, person: 'an', date: DateTime(2026, 10, 5)));
+    p.saveEntry(entry('older-b', EntryKind.borrow, 30, person: 'an'));
+    p.saveEntry(entry('older-a', EntryKind.borrow, 100, person: 'an'));
+    p.saveEntry(entry('return', EntryKind.repay, 110, person: 'an', date: DateTime(2026, 10, 6)));
+    p.saveEntry(entry('loan-usd', EntryKind.borrow, 12.5, wallet: 'usd', person: 'an'));
+    p.saveEntry(entry('lent', EntryKind.lend, 50, person: 'an'));
+    p.saveEntry(entry('collected', EntryKind.collect, 15, person: 'an'));
+    p.saveEntry(entry('other-person', EntryKind.borrow, 80, person: 'binh'));
+    p.saveEntry(entry('interest', EntryKind.interestExpense, 15, person: 'an'));
+    expect(p.remainingByLoan(), {
+      'older-b': 20.0,
+      'new': 200.0,
+      'loan-usd': 12.5,
+      'lent': 35.0,
+      'other-person': 80.0,
+    });
+    p.saveEntry(entry('return', EntryKind.repay, 160, person: 'an', date: DateTime(2026, 10, 6)));
+    expect(p.remainingByLoan().containsKey('older-b'), isFalse);
+    expect(p.remainingByLoan()['new'], 170);
+    await p.flush();
+    p.dispose();
+  });
 }

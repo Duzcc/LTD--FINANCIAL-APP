@@ -98,11 +98,11 @@ class SpendingCoach {
     }
     out.addAll(_tightBudgets().take(2));
     final soon = _today.add(const Duration(days: 4));
-    for (final e in p.entries) {
+    final remaining = p.remainingByLoan();
+    for (final e in p.entriesInCurrency(p.currency)) {
       final due = e.dueDate;
       if (due == null || due.isBefore(_today) || !due.isBefore(soon)) continue;
-      if (e.kind != EntryKind.lend && e.kind != EntryKind.borrow) continue;
-      if (p.debt(borrowed: e.kind == EntryKind.borrow, personId: e.personId) <= 0) continue;
+      if (!remaining.containsKey(e.id)) continue;
       final days = DateTime(due.year, due.month, due.day).difference(_today).inDays;
       final when = days == 0
           ? 'hôm nay'

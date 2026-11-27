@@ -35,8 +35,10 @@ test('Báo cáo tháng khớp với các giao dịch thu chi trong tháng', asyn
 
   const user = { currency: 'VND' };
   const dashboard = await reports.dashboard(user, { month: '2026-11' });
-  const report = await reports.summary(user, { from: first, to: last });
+  const report = await reports.summary(user, { from: '2026-11-01', to: '2026-11-30' });
 
+  assert.equal(report.from, first.toISOString());
+  assert.equal(report.to, last.toISOString());
   for (const result of [dashboard, report]) {
     assert.equal(result.income, 205000);
     assert.equal(result.expense, 75000);
@@ -56,4 +58,8 @@ test('Báo cáo tháng khớp với các giao dịch thu chi trong tháng', asyn
       ['food', 75000],
     ],
   );
+
+  const midnight = await reports.summary(user, { from: first.toISOString(), to: first.toISOString() });
+  assert.equal(midnight.expense, 45000);
+  assert.equal(midnight.income, 0);
 });
