@@ -1,8 +1,8 @@
 {
-  "trained_at": "2026-11-02T03:36:11+00:00",
+  "trained_at": "2026-11-27T11:01:48+00:00",
   "sklearn": "1.9.1",
-  "numpy": "2.5.4",
-  "python": "3.14.3",
+  "numpy": "2.5.5",
+  "python": "3.12.16",
   "categorizer": {
     "model": "categorizer",
     "algorithm": "TF-IDF (từ 1–2 + ký tự 2–5) + Logistic Regression (class_weight=balanced)",
@@ -145,7 +145,7 @@
         ]
       }
     },
-    "train_seconds": 10.7
+    "train_seconds": 9.5
   },
   "intent": {
     "model": "intent",
@@ -245,6 +245,6 @@
     },
     "handwritten_errors": [],
     "extra_eval": {},
-    "train_seconds": 3.6
+    "train_seconds": 3.2
   }
 }
