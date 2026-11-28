@@ -39,17 +39,19 @@ test('Refresh token xoay vòng và bị thu hồi khi đăng xuất', async () =
   assert.equal(r.status, 401);
 });
 
-test('Xác thực email bằng mã', async () => {
+test('Xác thực email bằng liên kết dùng một lần', async () => {
   let r = await auth(request(app).get('/api/auth/me'));
-  assert.equal(r.body.user.emailVerified, true, 'đã xác thực qua OTP khi đăng ký');
+  assert.equal(r.body.user.emailVerified, true, 'email đã xác minh khi đăng ký');
   await User.updateOne({ email: 'chi@test.vn' }, { emailVerified: false });
-  r = await auth(request(app).post('/api/auth/verify-email')).send({ code: '000000' });
-  assert.equal(r.status, 400);
-  r = await auth(request(app).post('/api/auth/resend-verification'));
-  const code = r.body.devCode;
-  r = await auth(request(app).post('/api/auth/verify-email')).send({ code });
+  r = await request(app).post('/api/auth/resend-verification').send({ email: 'chi@test.vn' });
   assert.equal(r.status, 200);
-  assert.equal(r.body.user.emailVerified, true);
+  const token = new URL(r.body.devLink).searchParams.get('token');
+  assert.equal((await request(app).get(`/api/auth/verify-email?token=${token}`)).status, 200);
+  r = await request(app).post('/api/auth/verify-email').type('form').send({ token });
+  assert.equal(r.status, 200);
+  assert.match(r.headers['content-type'], /text\/html/);
+  assert.match(r.text, /Email đã xác minh/);
+  assert.equal((await request(app).post('/api/auth/verify-email').send({ token })).status, 400);
 });
 
 test('Giao dịch định kỳ: CRUD, ràng buộc và xóa ví kèm dữ liệu', async () => {
@@ -158,28 +160,5 @@ test('Trợ lý AI: chế độ luật khi chưa cấu hình và gọi mô hình
   } finally {
     global.fetch = realFetch;
     Object.assign(config.ai, saved);
-  }
-});
-
-test('Gửi lại OTP: mã cũ hết hiệu lực, giới hạn số lần gửi', async () => {
-  const wait = config.otp.resendSeconds;
-  config.otp.resendSeconds = 0;
-  try {
-    const step = (await request(app).post('/api/auth/login').send({ email: 'chi@test.vn', password: 'Matkhau1' })).body;
-    const again = await request(app).post('/api/auth/resend-otp').send({ otpToken: step.otpToken });
-    assert.equal(again.status, 200);
-    assert.match(again.body.devCode, /^\d{6}$/);
-    if (again.body.devCode !== step.devCode) {
-      const old = await request(app).post('/api/auth/verify-otp').send({ otpToken: step.otpToken, code: step.devCode });
-      assert.equal(old.status, 400, 'mã cũ không dùng được nữa');
-    }
-    for (let i = 2; i < config.otp.maxSends; i += 1) {
-      assert.equal((await request(app).post('/api/auth/resend-otp').send({ otpToken: step.otpToken })).status, 200);
-    }
-    const r = await request(app).post('/api/auth/resend-otp').send({ otpToken: step.otpToken });
-    assert.equal(r.status, 429);
-    assert.equal(r.body.error.code, 'OTP_EXPIRED');
-  } finally {
-    config.otp.resendSeconds = wait;
   }
 });

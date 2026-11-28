@@ -11,7 +11,7 @@ const config = {
   mongoUri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/finance_app',
   mongoDb: process.env.MONGODB_DB || '',
   jwtSecret: process.env.JWT_SECRET || (env === 'production' ? '' : 'dev-only-secret-change-me'),
-  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1h',
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '15m',
   refreshDays: Number(process.env.REFRESH_TOKEN_DAYS) || 30,
   corsOrigins: (process.env.CORS_ORIGINS || '*')
     .split(',')
@@ -19,15 +19,10 @@ const config = {
     .filter(Boolean),
   publicUrl: trimSlash(process.env.PUBLIC_URL),
   paymentRequestDays: Number(process.env.PAYMENT_REQUEST_DAYS) || 7,
-  resetCodeMinutes: Number(process.env.RESET_CODE_MINUTES) || 15,
+  resetTokenMinutes: Number(process.env.RESET_TOKEN_MINUTES || process.env.RESET_CODE_MINUTES) || 15,
+  emailVerifyMinutes: Number(process.env.EMAIL_VERIFY_MINUTES) || 1440,
   maxFailedLogins: Number(process.env.MAX_FAILED_LOGINS) || 5,
   lockMinutes: Number(process.env.LOGIN_LOCK_MINUTES) || 15,
-  otp: {
-    minutes: Number(process.env.OTP_MINUTES) || 5,
-    resendSeconds: Number(process.env.OTP_RESEND_SECONDS) || 60,
-    maxAttempts: 5,
-    maxSends: 5,
-  },
   rateLimits: {
     auth: Number(process.env.AUTH_RATE_LIMIT) || 50,
     ai: Number(process.env.AI_RATE_LIMIT) || 30,
@@ -68,6 +63,8 @@ if (!config.mongoDb) {
   config.mongoDb = dbInUri || 'finance_app';
 }
 
-if (!config.jwtSecret) throw new Error('JWT_SECRET bắt buộc khi NODE_ENV=production');
+if (config.isProduction && Buffer.byteLength(config.jwtSecret, 'utf8') < 32) {
+  throw new Error('JWT_SECRET cần ít nhất 32 byte khi NODE_ENV=production');
+}
 
 module.exports = config;

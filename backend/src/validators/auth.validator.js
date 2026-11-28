@@ -3,7 +3,6 @@ const { CURRENCIES } = require('../domain/constants');
 
 const EMAIL = /^[a-z0-9._%+-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/;
 const NAME = /^[\p{L}][\p{L} .'-]*$/u;
-const OTP = /^\d{6}$/;
 
 function newEmail(value) {
   const email = String(value || '')
@@ -39,17 +38,19 @@ function newPassword(value, email = '', field = 'Mật khẩu') {
   const password = String(value || '');
   if (!password) throw badRequest(`Vui lòng nhập ${field.toLowerCase()}.`);
   if (password.length < 8) throw badRequest(`${field} phải có ít nhất 8 ký tự.`);
-  if (password.length > 72) throw badRequest(`${field} tối đa 72 ký tự.`);
+  if (Buffer.byteLength(password, 'utf8') > 72) throw badRequest(`${field} tối đa 72 byte khi mã hóa.`);
   if (/\s/.test(password)) throw badRequest(`${field} không được chứa khoảng trắng.`);
   if (!/\p{L}/u.test(password) || !/\d/.test(password)) throw badRequest(`${field} phải có cả chữ cái và chữ số.`);
   if (email && password.toLowerCase() === email) throw badRequest(`${field} không được trùng email.`);
   return password;
 }
 
-function otpCode(value) {
-  const code = String(value || '').trim();
-  if (!OTP.test(code)) throw badRequest('Mã OTP gồm đúng 6 chữ số.', 'INVALID_CODE');
-  return code;
+function actionToken(value) {
+  const token = String(value || '').trim();
+  if (!/^[A-Za-z0-9_-]{40,128}$/.test(token)) {
+    throw badRequest('Liên kết không hợp lệ hoặc đã hết hạn.', 'INVALID_TOKEN');
+  }
+  return token;
 }
 
 function profile(body) {
@@ -72,4 +73,4 @@ function profile(body) {
   return changes;
 }
 
-module.exports = { newEmail, existingEmail, fullName, newPassword, otpCode, profile };
+module.exports = { newEmail, existingEmail, fullName, newPassword, actionToken, profile };

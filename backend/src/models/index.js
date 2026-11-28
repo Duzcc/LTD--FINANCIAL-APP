@@ -7,7 +7,6 @@ module.exports = {
   Budget: require('./Budget'),
   Recurring: require('./Recurring'),
   RefreshToken: require('./RefreshToken'),
-  OtpChallenge: require('./OtpChallenge'),
   PaymentRequest: require('./PaymentRequest'),
   BankEvent: require('./BankEvent'),
 };

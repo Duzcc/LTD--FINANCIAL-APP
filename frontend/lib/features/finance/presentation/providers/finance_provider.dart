@@ -1,37 +1,43 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:finance_app/core/network/api_client.dart';
 import 'package:finance_app/core/utils/dates.dart';
 import 'package:finance_app/core/validation/validators.dart';
 import 'package:finance_app/features/auth/data/datasources/auth_remote_data_source.dart';
+import 'package:finance_app/features/auth/data/datasources/session_store.dart';
 import 'package:finance_app/features/auth/data/datasources/session_client.dart';
 import 'package:finance_app/features/auth/domain/entities/account_session.dart';
-import 'package:finance_app/features/auth/domain/entities/otp_challenge.dart';
 import 'package:finance_app/features/finance/data/datasources/finance_local_data_source.dart';
 import 'package:finance_app/features/finance/data/datasources/sync_remote_data_source.dart';
 import 'package:finance_app/features/finance/data/models/account_snapshot.dart';
 import 'package:finance_app/features/finance/data/sync/change_tracker.dart';
 import 'package:finance_app/features/finance/domain/entities/entities.dart';
 import 'package:finance_app/features/finance/domain/finance_store.dart';
-import 'package:finance_app/features/finance/domain/ledger_csv.dart';
 import 'package:finance_app/features/finance/domain/ledger_queries.dart';
 import 'package:finance_app/features/finance/domain/ledger_rules.dart';
 
 export 'package:finance_app/features/auth/domain/entities/account_session.dart';
-export 'package:finance_app/features/auth/domain/entities/otp_challenge.dart';
 export 'package:finance_app/features/finance/domain/ledger_queries.dart' show DebtTotals;
 
 class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules implements FinanceStore {
-  FinanceProvider({SharedPreferences? storage, ApiClient? api})
+  FinanceProvider({SharedPreferences? storage, ApiClient? api, SessionStore? sessionStore})
       : _local = FinanceLocalDataSource(storage),
+        _sessionStore = sessionStore ?? SecureSessionStore(),
         api = api ?? ApiClient() {
     _client = SessionClient(this.api,
         session: () => session,
         serverUrl: () => serverUrl,
-        onRefreshed: (next) {
+        onRefreshed: (next) async {
           session = next;
+          try {
+            await _saveSession();
+          } catch (_) {
+            session = null;
+            rethrow;
+          }
           _changed(sync: false);
         });
     _auth = AuthRemoteDataSource(_client);
@@ -40,6 +46,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
   }
 
   final FinanceLocalDataSource _local;
+  final SessionStore _sessionStore;
   final ApiClient api;
   late final SessionClient _client;
   late final AuthRemoteDataSource _auth;
@@ -168,15 +175,43 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
     if (!_disposed) notifyListeners();
   }
 
-  void restore() {
+  Future<void> restore() async {
+    Map<String, dynamic>? saved;
     // dữ liệu cũ hỏng thì không ghi đè, để còn khôi phục
     try {
-      final saved = _local.read();
+      saved = _local.read();
       if (saved != null) _applySaved(saved);
     } catch (_) {
       _corruptStorage = true;
       storageError = 'Không đọc được dữ liệu đã lưu. Vui lòng kiểm tra bản sao lưu trước khi tiếp tục.';
+      return;
     }
+
+    final oldSession = AccountSession.fromJson(saved?['session'], defaultBaseUrl: ApiClient.defaultBaseUrl);
+    try {
+      final raw = await _sessionStore.read();
+      if (raw != null) {
+        session = AccountSession.fromJson(jsonDecode(raw), defaultBaseUrl: ApiClient.defaultBaseUrl);
+        if (session == null) throw const FormatException('Phiên đăng nhập không hợp lệ.');
+      } else if (oldSession != null) {
+        session = oldSession;
+        await _saveSession();
+      }
+    } on Exception {
+      session = null;
+      storageError = 'Không thể truy cập kho bảo mật của thiết bị. Vui lòng đăng nhập lại.';
+    }
+
+    if (saved?.containsKey('session') == true) {
+      try {
+        if (!await _local.write(_toJson())) {
+          storageError = 'Chưa thể xóa phiên đăng nhập cũ khỏi bộ nhớ ứng dụng.';
+        }
+      } on Exception {
+        storageError = 'Chưa thể xóa phiên đăng nhập cũ khỏi bộ nhớ ứng dụng.';
+      }
+    }
+    _notify();
   }
 
   void _applySaved(Map<String, dynamic> j) {
@@ -201,7 +236,6 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
     displayName = j['displayName'] ?? 'Bạn';
     currency = j['currency'] ?? 'VND';
     hideBalance = j['hideBalance'] ?? false;
-    session = AccountSession.fromJson(j['session'], defaultBaseUrl: ApiClient.defaultBaseUrl);
     _changes.restore((j['dirty'] as List?) ?? const []);
     _profileDirty = j['profileDirty'] == true;
     lastSync = DateTime.tryParse('${j['lastSync'] ?? ''}')?.toLocal();
@@ -225,11 +259,25 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
         'displayName': displayName,
         'currency': currency,
         'hideBalance': hideBalance,
-        'session': session?.toJson(),
         'dirty': _changes.keys,
         'profileDirty': _profileDirty,
         'lastSync': lastSync?.toUtc().toIso8601String(),
       };
+
+  Future<void> _saveSession() async {
+    try {
+      final current = session;
+      if (current == null) {
+        await _sessionStore.clear();
+      } else {
+        await _sessionStore.write(jsonEncode(current.toJson()));
+      }
+    } on Exception {
+      storageError = 'Không thể lưu phiên đăng nhập an toàn trên thiết bị.';
+      _notify();
+      throw const ApiException(0, 'SECURE_STORAGE', 'Không thể lưu phiên đăng nhập an toàn trên thiết bị.');
+    }
+  }
 
   // dataChanged: false khi chỉ trạng thái sao lưu đổi, khỏi tính lại phân tích
   void _changed({bool sync = true, bool dataChanged = true}) {
@@ -237,6 +285,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
       _notify();
       return;
     }
+
     final data = _toJson();
     _pendingSave = _pendingSave.then((_) async {
       if (_local.persistent) {
@@ -515,43 +564,35 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
     return count;
   }
 
-  String exportCsv() => ledgerCsv(this);
-
   Future<String?> checkServer() => api
       .send('GET', serverUrl, '/health')
       .then<String?>((r) => r['status'] == 'ok' ? null : 'Không kết nối được, vui lòng thử lại sau.')
       .onError<ApiException>((e, _) => e.message);
 
-  Future<OtpChallenge> signIn({required String email, required String password}) =>
-      _auth.login(email.trim().toLowerCase(), password);
+  Future<bool> signIn({required String email, required String password}) async =>
+      _startSession(await _auth.login(email.trim().toLowerCase(), password));
 
-  Future<OtpChallenge> register({required String name, required String email, required String password}) =>
+  Future<Map<String, dynamic>> register({required String name, required String email, required String password}) =>
       _auth.register(name.trim().replaceAll(RegExp(r'\s+'), ' '), email.trim().toLowerCase(), password);
 
-  Future<bool> verifyOtp(OtpChallenge challenge, String code) async =>
-      _startSession(await _auth.verifyOtp(challenge, code.trim()));
+  Future<void> verifyEmail(String token) => _auth.verifyEmail(token);
 
-  Future<OtpChallenge> resendOtp(OtpChallenge challenge) => _auth.resendOtp(challenge);
+  Future<Map<String, dynamic>> forgotPassword(String email) => _auth.forgotPassword(email.trim());
 
-  Future<String?> forgotPassword(String email) => _auth.forgotPassword(email.trim());
+  Future<void> validateResetToken(String token) => _auth.validateResetToken(token);
 
-  Future<bool> resetPassword({required String email, required String code, required String newPassword}) async =>
-      _startSession(await _auth.resetPassword(email.trim(), code.trim(), newPassword));
+  Future<void> resetPassword(String token, String newPassword, String confirmPassword) =>
+      _auth.resetPassword(token, newPassword, confirmPassword);
+
+  Future<Map<String, dynamic>> resendVerification(String email) => _auth.resendVerification(email.trim());
 
   Future<void> changePassword(String oldPassword, String newPassword) async {
     final r = await _auth.changePassword(oldPassword, newPassword);
     session = session!.withToken(r['token'] as String, refresh: r['refreshToken'] as String?);
+    await _saveSession();
     syncError = null;
     _changed(sync: false);
   }
-
-  Future<void> verifyEmail(String code) async {
-    await _auth.verifyEmail(code.trim());
-    session = session!.withToken(session!.token, verified: true);
-    _changed(sync: false);
-  }
-
-  Future<String?> resendVerification() => _auth.resendVerification();
 
   Future<Map<String, dynamic>> _signedInRequest(String method, String path,
       {Object? body, required bool pushFirst, required String offlineMessage}) async {
@@ -579,6 +620,12 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
         userId: '${user['id']}',
         refreshToken: r['refreshToken'] as String?,
         emailVerified: user['emailVerified'] != false);
+    try {
+      await _saveSession();
+    } catch (_) {
+      session = null;
+      rethrow;
+    }
     displayName = '${user['name'] ?? displayName}';
     syncError = null;
     final AccountSnapshot snapshot;
@@ -587,6 +634,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
       snapshot = AccountSnapshot(await _sync.fetchSnapshot());
     } catch (_) {
       session = null;
+      await _saveSession();
       rethrow;
     }
     if (!snapshot.hasData) {
@@ -685,7 +733,6 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
     syncError = null;
     _changed(sync: false);
     if (!firstSync) _reportActivity(_entries.where((e) => !known.contains(e.id)));
-    runRecurring();
   }
 
   void _scheduleSync() {
@@ -767,11 +814,11 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
     await syncNow();
   }
 
-  Future<void> signOut({bool revoke = true, bool everywhere = false}) async {
+  Future<void> signOut({bool revoke = true}) async {
     _syncTimer?.cancel();
     final current = session;
     if (revoke && current != null) {
-      await _auth.logout(everywhere: everywhere, refreshToken: current.refreshToken).onError<ApiException>((_, __) {});
+      await _auth.logout(refreshToken: current.refreshToken).onError<ApiException>((_, __) {});
     }
     session = null;
     _pendingSnapshot = null;
@@ -781,6 +828,7 @@ class FinanceProvider extends ChangeNotifier with LedgerQueries, LedgerRules imp
     syncError = null;
     _resetData();
     await _pendingSave;
+    await _sessionStore.clear();
     await _local.clear();
     _notify();
   }

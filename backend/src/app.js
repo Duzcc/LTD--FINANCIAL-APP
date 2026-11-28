@@ -11,6 +11,7 @@ const { notFoundRoute, errorHandler } = require('./middleware/error');
 const RECEIPT_SCAN_PATH = '/api/ai/receipts/scan';
 const jsonBody = express.json({ limit: '2mb' });
 const receiptBody = express.json({ limit: '9mb' });
+const formBody = express.urlencoded({ extended: false, limit: '10kb' });
 
 const app = express();
 app.set('trust proxy', 1);
@@ -22,8 +23,19 @@ app.use(
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-Id'],
   }),
 );
-app.use((req, res, next) => (req.path === RECEIPT_SCAN_PATH ? receiptBody : jsonBody)(req, res, next));
-if (config.env !== 'test') app.use(morgan(config.isProduction ? 'combined' : 'dev'));
+app.use((req, res, next) => {
+  if (req.method === 'POST' && ['/api/auth/verify-email', '/api/auth/reset-password'].includes(req.path)) {
+    return (req.is('application/x-www-form-urlencoded') ? formBody : jsonBody)(req, res, next);
+  }
+  return (req.path === RECEIPT_SCAN_PATH ? receiptBody : jsonBody)(req, res, next);
+});
+if (config.env !== 'test') {
+  app.use(
+    morgan(config.isProduction ? 'combined' : 'dev', {
+      skip: (req) => req.method === 'GET' && ['/api/auth/verify-email', '/api/auth/reset-password'].includes(req.path),
+    }),
+  );
+}
 
 app.get('/', (_req, res) =>
   res.json({ name: 'Finance App API', version: require('../package.json').version, docs: '/api/openapi.yaml' }),

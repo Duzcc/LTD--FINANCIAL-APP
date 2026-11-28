@@ -12,13 +12,10 @@ import 'package:finance_app/app/main_screen.dart';
 import 'package:finance_app/features/transactions/presentation/screens/add_transaction_screen.dart';
 import 'package:finance_app/features/wallets/presentation/screens/create_wallet_screen.dart';
 import 'package:finance_app/features/wallets/presentation/screens/wallet_detail_screen.dart';
-import 'package:finance_app/features/statistics/presentation/screens/statistics_screen.dart';
 import 'package:finance_app/features/ledger/presentation/screens/ledger_screen.dart';
 import 'package:finance_app/features/auth/presentation/screens/auth_screen.dart';
 import 'package:finance_app/features/ai/presentation/screens/insights_screen.dart';
 import 'package:finance_app/features/ai/presentation/screens/assistant_screen.dart';
-import 'package:finance_app/features/recurring/presentation/screens/recurring_screen.dart';
-import 'package:finance_app/features/security/data/services/app_lock.dart';
 
 void main() {
   testWidgets('Chụp ảnh xem trước trên điện thoại', (tester) async {
@@ -94,16 +91,12 @@ void main() {
       });
     }
 
-    final lock = AppLock();
     Widget wrap(Widget child) => MultiProvider(
-            providers: [
-              ChangeNotifierProvider.value(value: p),
-              ChangeNotifierProvider.value(value: lock),
-            ],
-            child: MaterialApp(
-                theme: AppTheme.lightTheme,
-                debugShowCheckedModeBanner: false,
-                home: RepaintBoundary(key: const ValueKey('capture'), child: child)));
+        providers: [ChangeNotifierProvider.value(value: p)],
+        child: MaterialApp(
+            theme: AppTheme.lightTheme,
+            debugShowCheckedModeBanner: false,
+            home: RepaintBoundary(key: const ValueKey('capture'), child: child)));
     await tester.pumpWidget(wrap(const AuthScreen()));
     await capture('auth');
     await tester.pumpWidget(wrap(const MainScreen()));
@@ -129,8 +122,6 @@ void main() {
     await capture('wallet');
     await tester.pumpWidget(wrap(const WalletDetailScreen(walletId: 'saving')));
     await capture('wallet_detail');
-    await tester.pumpWidget(wrap(const StatisticsScreen()));
-    await capture('statistics');
     await tester.pumpWidget(wrap(const LedgerScreen()));
     await capture('ledger_page');
     await tester.pumpWidget(wrap(const InsightsScreen()));
@@ -139,9 +130,6 @@ void main() {
     await tester.tap(find.text('Hôm nay tôi được chi bao nhiêu?'));
     await tester.pumpAndSettle();
     await capture('assistant');
-    await tester.pumpWidget(wrap(const RecurringEditor()));
-    await capture('recurring_editor');
-
     await tester.pumpWidget(const SizedBox.shrink());
     p.dispose();
   }, skip: !const bool.fromEnvironment('CAPTURE_PREVIEWS'));

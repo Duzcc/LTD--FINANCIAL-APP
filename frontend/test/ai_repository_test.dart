@@ -4,18 +4,19 @@ import 'package:finance_app/features/finance/presentation/providers/finance_prov
 import 'package:finance_app/features/finance/domain/entities/entities.dart';
 import 'package:finance_app/features/ai/data/repositories/ai_repository.dart';
 import 'helpers/fake_backend.dart';
+import 'helpers/memory_session_store.dart';
 
 void main() {
   Future<(FinanceProvider, FakeBackend)> signedIn() async {
     final server = FakeBackend();
-    final p = FinanceProvider(api: ApiClient(client: server.client));
-    await signInWithOtp(p);
+    final p = FinanceProvider(api: ApiClient(client: server.client), sessionStore: MemorySessionStore());
+    await signIn(p);
     return (p, server);
   }
 
   test('Offline: dùng mô hình trên thiết bị, không gọi máy chủ', () async {
     final server = FakeBackend();
-    final p = FinanceProvider(api: ApiClient(client: server.client));
+    final p = FinanceProvider(api: ApiClient(client: server.client), sessionStore: MemorySessionStore());
     final repo = AiRepository(p);
     final (entry, remote) = await repo.parse('ăn phở 45k');
     expect(remote, isFalse);

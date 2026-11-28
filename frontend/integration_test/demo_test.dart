@@ -10,7 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:finance_app/main.dart' as app;
 import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
-import 'package:finance_app/features/auth/presentation/screens/otp_screen.dart';
+import 'package:finance_app/features/auth/presentation/screens/auth_screen.dart';
 import 'package:finance_app/app/main_screen.dart';
 import 'package:finance_app/features/ai/presentation/screens/insights_screen.dart';
 import 'package:finance_app/features/ai/presentation/screens/receipt_scan_screen.dart';
@@ -107,15 +107,19 @@ void main() {
     FocusManager.instance.primaryFocus?.unfocus();
     await shot(t, '01_dang_ky');
     await tapText(t, 'Tạo tài khoản');
-    await waitFor(t, find.byType(OtpScreen));
-    final otp = t.widget<OtpScreen>(find.byType(OtpScreen)).challenge.devCode;
-    expect(otp, isNotNull, reason: 'máy chủ thử nghiệm hiển thị mã OTP');
-    await shot(t, '01b_xac_thuc_otp');
-    await t.enterText(find.byKey(const ValueKey('otp-code')), otp!);
+    await waitFor(t, find.byType(VerificationPendingScreen));
+    final p = Provider.of<FinanceProvider>(t.element(find.byType(VerificationPendingScreen)), listen: false);
+    final resend = await p.resendVerification(email);
+    final token = Uri.parse(resend['devLink'] as String).queryParameters['token']!;
+    await p.api.send('POST', p.serverUrl, '/auth/verify-email', body: {'token': token});
+    await shot(t, '01b_xac_minh_email');
+    await tapText(t, 'Quay lại đăng nhập');
+    await tapText(t, 'Đăng nhập');
+    await t.enterText(find.byKey(const ValueKey('auth-password')), 'matkhau123');
+    await tapText(t, 'Đăng nhập');
     await waitFor(t, find.byType(MainScreen));
     await shot(t, '02_tong_quan_moi');
 
-    final p = Provider.of<FinanceProvider>(t.element(find.byType(MainScreen)), listen: false);
     expect(p.signedIn, isTrue);
 
     Future<void> quick(String text, String name) async {

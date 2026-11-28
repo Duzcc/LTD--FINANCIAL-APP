@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'helpers/memory_session_store.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:finance_app/features/finance/domain/entities/entities.dart';
 import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
@@ -109,7 +110,8 @@ void main() {
     p.deleteEntry('two');
     p.saveBudget(MoneyBudget(id: 'b', categoryId: 'food', month: month, amount: 200000));
     await p.flush();
-    final restored = FinanceProvider(storage: storage)..restore();
+    final restored = FinanceProvider(storage: storage, sessionStore: MemorySessionStore());
+    await restored.restore();
     expect(restored.entries.length, 1);
     expect(restored.balance('cash'), 300000);
     expect(restored.wallet('saving').target, 20000000);

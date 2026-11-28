@@ -45,6 +45,10 @@ class ApiClient {
 
   Future<Map<String, dynamic>> send(String method, String baseUrl, String path, {Object? body, String? token}) async {
     final uri = Uri.parse('${normalize(baseUrl)}/api$path');
+    const localHosts = {'localhost', '127.0.0.1', '::1', '10.0.2.2'};
+    if (!kDebugMode && uri.scheme != 'https' && !localHosts.contains(uri.host.toLowerCase())) {
+      throw const ApiException(0, 'HTTPS_REQUIRED', 'Máy chủ phải sử dụng HTTPS để bảo vệ thông tin đăng nhập.');
+    }
     final request = http.Request(method, uri);
     request.headers['Accept'] = 'application/json';
     if (token != null) request.headers['Authorization'] = 'Bearer $token';

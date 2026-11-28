@@ -2,27 +2,27 @@
 
 Đồ án học phần Lập trình di động (261IS26A01), Nhóm 03, GVHD ThS. Nguyễn Hoàng Anh.
 
-Ứng dụng giúp ghi chép thu chi hằng ngày, quản lý ví, vay nợ, ngân sách và xem thống kê. Dữ liệu lưu trên điện
-thoại nên không có mạng vẫn dùng được; khi đăng nhập thì dữ liệu được sao lưu lên tài khoản và dùng được trên
-nhiều máy. Ngoài ra có trợ lý AI để nhập giao dịch bằng câu tiếng Việt, đọc hóa đơn, dự báo chi tiêu cuối tháng.
+Ứng dụng giúp ghi chép thu chi hằng ngày, quản lý ví, vay nợ và ngân sách. Dữ liệu lưu trên điện
+thoại nên không có mạng vẫn dùng được; khi đăng nhập thì dữ liệu được đồng bộ giữa nhiều
+máy, nhưng mỗi tài khoản chỉ duy trì một phiên đăng nhập tại một thời điểm. Ngoài ra có trợ lý AI để nhập giao dịch
+bằng câu tiếng Việt, đọc hóa đơn, dự báo chi tiêu cuối tháng.
 
 ## Chức năng
 
-- Tài khoản: đăng ký, đăng nhập có mã OTP gửi qua email, quên và đổi mật khẩu, đăng xuất khỏi mọi thiết bị.
-- Ví: ví thường và ví tiết kiệm có mục tiêu, biểu tượng, thông báo; liên kết tài khoản ngân hàng để nhận tiền bằng VietQR.
-- Giao dịch: chi, thu, chuyển ví, cho vay, đi vay, thu nợ, trả nợ, tiền lãi; giao dịch định kỳ; đính kèm ảnh hóa đơn.
+- Tài khoản: đăng ký xác minh qua liên kết email, đăng nhập, đặt lại mật khẩu qua liên kết, đổi mật khẩu với mật khẩu hiện tại; mỗi tài khoản chỉ có một phiên hoạt động.
+- Ví: ví thường và ví tiết kiệm có mục tiêu, biểu tượng và thông báo.
+- Giao dịch: chi, thu, chuyển ví, cho vay, đi vay, thu nợ, trả nợ, tiền lãi; đính kèm ảnh hóa đơn.
 - Danh mục và đối tượng (người cho vay, cửa hàng…).
 - Ngân sách tháng tổng và theo danh mục, cảnh báo khi sắp vượt.
-- Tổng quan, sổ nợ, thống kê theo tháng/năm/khoảng ngày, tìm kiếm và lọc.
+- Tổng quan, sổ nợ, tìm kiếm và lọc giao dịch.
 - Trợ lý AI: nhập nhanh "ăn phở 45k sáng nay", quét hóa đơn, gợi ý danh mục, dự báo cuối tháng, phát hiện khoản chi bất thường.
-- Khác: khóa bằng mã PIN, nhắc ghi chép, tỷ giá, xuất Excel/CSV.
 
 ## Cấu trúc
 
 | Thư mục | Nội dung |
 |---|---|
 | `frontend/` | App Flutter (Android, iOS). Mỗi tính năng một thư mục trong `lib/features/` gồm `domain`, `data`, `presentation`; trạng thái quản lý bằng Provider |
-| `backend/` | REST API Node.js + Express + MongoDB: tài khoản, dữ liệu, sao lưu, kết nối SePay |
+| `backend/` | REST API Node.js + Express + MongoDB: tài khoản và đồng bộ dữ liệu |
 | `ai-service/` | Python + FastAPI + scikit-learn: phân loại danh mục, phân tích câu, dự báo, đọc hóa đơn |
 | `docs/` | Báo cáo môn học, sơ đồ kiến trúc |
 
@@ -72,7 +72,7 @@ Không chạy backend vẫn dùng được app: ở màn đăng nhập nhập t�
 
 Chạy toàn bộ phía máy chủ bằng Docker: `cp .env.example .env && docker compose up -d --build`.
 
-### Gửi OTP qua Gmail
+### Gửi liên kết xác minh và đặt lại mật khẩu qua Gmail
 
 Tạo mật khẩu ứng dụng tại myaccount.google.com/apppasswords rồi điền vào `backend/.env`:
 
@@ -84,13 +84,7 @@ SMTP_USER=<gmail>
 SMTP_PASS=<mật khẩu ứng dụng>
 ```
 
-Khi để trống SMTP, mã OTP được in ra log backend.
-
-### Nhận tiền qua SePay
-
-Đặt `SEPAY_API_TOKEN` (tạo ở my.sepay.vn, mục API Access) trong `backend/.env`. Backend sẽ kiểm tra tiền về khi có mã
-VietQR đang chờ và tự ghi giao dịch. Nếu muốn dùng webhook thì vào app: Tài khoản → Kết nối ngân hàng → Tạo khóa
-webhook, rồi dán URL và khóa vào phần Webhooks trên SePay.
+Đặt `PUBLIC_URL` thành địa chỉ HTTPS công khai của backend khi chạy production. Khi để trống SMTP ở chế độ phát triển, liên kết được in ra log backend và trả về trong `devLink` để kiểm tra; không dùng cách này ở production.
 
 Các biến môi trường khác có giải thích trong `backend/.env.example` và `ai-service/.env.example`.
 
@@ -107,8 +101,8 @@ flutter build ios --release --dart-define=API_URL=https://<tên miền>/api
 `render.yaml` mô tả hai dịch vụ chạy bằng Docker: `nhom3-chitieu-api` (backend) và `nhom3-chitieu-ai` (AI service). CSDL dùng MongoDB Atlas.
 
 1. MongoDB Atlas > Network Access: thêm `0.0.0.0/0` để Render kết nối được.
-2. Brevo > SMTP & API > tạo API key; Senders: xác minh email dùng làm người gửi. Gói miễn phí của Render chặn cổng SMTP nên backend gửi OTP qua API của Brevo.
-3. Render > New > Blueprint > chọn repo này, điền `MONGODB_URI`, `BREVO_API_KEY`, `MAIL_FROM` (ví dụ `Wisely <email-da-xac-minh@gmail.com>`), `AI_SERVICE_URL` (địa chỉ của dịch vụ AI, dạng `https://nhom3-chitieu-ai.onrender.com`).
+2. Brevo > SMTP & API > tạo API key; Senders: xác minh email dùng làm người gửi. Gói miễn phí của Render chặn cổng SMTP nên backend gửi email qua API của Brevo.
+3. Render > New > Blueprint > chọn repo này, điền `MONGODB_URI`, `PUBLIC_URL=https://nhom3-chitieu-api.onrender.com`, `BREVO_API_KEY`, `MAIL_FROM` (ví dụ `Wisely <email-da-xac-minh@gmail.com>`), `AI_SERVICE_URL` (địa chỉ của dịch vụ AI, dạng `https://nhom3-chitieu-ai.onrender.com`).
 4. Build lại app với `API_URL=https://nhom3-chitieu-api.onrender.com/api`.
 
 Gói miễn phí tự ngủ sau 15 phút không có request; lần gọi đầu tiên sau đó mất khoảng 1 phút để máy chủ thức dậy.

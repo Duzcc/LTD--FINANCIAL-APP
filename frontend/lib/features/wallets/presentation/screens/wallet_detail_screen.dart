@@ -9,8 +9,6 @@ import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/transactions/presentation/screens/add_transaction_screen.dart';
 import 'package:finance_app/features/wallets/presentation/screens/create_wallet_screen.dart';
 import 'package:finance_app/features/wallets/presentation/screens/wallets_screen.dart';
-import 'package:finance_app/features/recurring/presentation/screens/recurring_screen.dart';
-import 'package:finance_app/features/banking/presentation/screens/receive_qr_screen.dart';
 import 'package:finance_app/features/finance/presentation/widgets/entity_icons.dart';
 import 'package:finance_app/features/wallets/presentation/widgets/adjust_balance_sheet.dart';
 import 'package:finance_app/features/wallets/presentation/widgets/balance_history.dart';
@@ -71,7 +69,7 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
                 ]),
                 const SizedBox(height: 14),
                 const Text('Số dư hiện tại', style: TextStyle(fontSize: 12)),
-                Text(secret(p.hideBalance, balance, w.currency),
+                Text(money(balance, w.currency),
                     style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
@@ -154,40 +152,6 @@ class _WalletDetailScreenState extends State<WalletDetailScreen> {
                       icon: const Icon(Icons.swap_horiz),
                       label: const Text('Chuyển tiền'))),
             ]),
-          if (w.hasBank) ...[
-            const SizedBox(height: 8),
-            SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                    key: const ValueKey('receive-qr'),
-                    onPressed: () => openPage(context, ReceiveQrScreen(walletId: w.id)),
-                    icon: const Icon(Icons.qr_code_2),
-                    label: const Text('Nhận tiền bằng VietQR'))),
-          ],
-          if (w.savings) ...[
-            const SizedBox(height: 8),
-            SizedBox(
-                width: double.infinity,
-                child: TextButton.icon(
-                    onPressed: () {
-                      final source = spendingSource(p, w);
-                      final days =
-                          w.deadline == null ? 0 : dateOnly(w.deadline!).difference(dateOnly(DateTime.now())).inDays;
-                      final months = math.max(1, (days / 30).ceil());
-                      openPage(
-                          context,
-                          RecurringEditor(
-                              initialKind: EntryKind.transfer,
-                              initialWalletId: source?.id,
-                              initialDestinationId: w.id,
-                              initialAmount: w.target > balance && days > 0
-                                  ? ((w.target - balance) / months).ceilToDouble()
-                                  : null,
-                              initialNote: 'Nạp ${w.name}'));
-                    },
-                    icon: const Icon(Icons.event_repeat),
-                    label: const Text('Tự động nạp tiết kiệm hằng tháng'))),
-          ],
           const SizedBox(height: 12),
           BalanceHistory(walletId: w.id, color: w.savings ? const Color(0xFFBC956D) : AppColors.primaryGreen),
           const SizedBox(height: 12),

@@ -9,6 +9,7 @@ const { connectTestDb, disconnectTestDb } = require('./helpers/db');
 const app = require('../src/app');
 const config = require('../src/config');
 const { signup, login } = require('./helpers/auth');
+const { ensureSingleSessionPerUser } = require('../src/repositories/session.repository');
 
 let token;
 const api = () => request(app);
@@ -16,6 +17,7 @@ const auth = (r) => r.set('Authorization', `Bearer ${token}`);
 
 before(async () => {
   await connectTestDb('finance_app_test');
+  await ensureSingleSessionPerUser();
 });
 after(async () => {
   await disconnectTestDb();
@@ -40,6 +42,7 @@ test('Ràng buộc dữ liệu khi đăng ký', async () => {
     [{ password: '12345678' }, 'chữ cái và chữ số'],
     [{ password: 'Mat khau1' }, 'khoảng trắng'],
     [{ password: `A1${'a'.repeat(71)}` }, 'tối đa 72'],
+    [{ password: `A1${'é'.repeat(36)}` }, '72 byte'],
     [{ email: 'abc12345@x.vn', password: 'abc12345@x.vn' }, 'trùng email'],
   ];
   for (const [body, msg] of cases) {
@@ -49,25 +52,40 @@ test('Ràng buộc dữ liệu khi đăng ký', async () => {
   }
 });
 
-test('Đăng ký, đăng nhập bằng OTP gửi qua email, bảo vệ API', async () => {
+test('Đăng ký xác minh qua liên kết, đăng nhập trực tiếp, bảo vệ API', async () => {
   let r = await api()
     .post('/api/auth/register')
     .send({ name: '  Nguyễn   An ', email: 'an@test.vn', password: 'Matkhau1' });
   assert.equal(r.status, 201);
-  assert.equal(r.body.otpRequired, true);
-  assert.equal(r.body.token, undefined, 'chưa cấp token khi chưa nhập OTP');
-  assert.match(r.body.devCode, /^\d{6}$/);
-  const first = r.body;
-  r = await api().post('/api/auth/register').send({ name: 'An', email: 'an@test.vn', password: 'Matkhau1' });
-  assert.equal(r.status, 201);
-  assert.equal(
-    (await api().post('/api/auth/verify-otp').send({ otpToken: first.otpToken, code: first.devCode })).status,
-    400,
-  );
-  r = await api().post('/api/auth/verify-otp').send({ otpToken: r.body.otpToken, code: r.body.devCode });
+  assert.equal(r.headers['cache-control'], 'no-store');
+  assert.equal(r.body.token, undefined, 'đăng ký không tự đăng nhập');
+  const emailActionLink = new URL(r.body.devLink);
+  assert.equal(emailActionLink.pathname, '/api/auth/open-app/verify-email');
+  assert.equal(new URL(r.body.devAppLink).protocol, 'financeapp:');
+  const firstToken = emailActionLink.searchParams.get('token');
+  r = await api().get(emailActionLink.pathname + emailActionLink.search);
   assert.equal(r.status, 200);
-  assert.ok(r.body.token);
+  assert.match(r.text, /window\.location\.replace/);
+  assert.match(r.text, /financeapp:\/\/auth\/verify-email/);
+  assert.equal((await api().get(`/api/auth/verify-email?token=${firstToken}`)).status, 200);
+  assert.equal((await api().get(`/api/auth/verify-email?token=${firstToken}`)).status, 200);
+  assert.equal(
+    (await api().post('/api/auth/login').send({ email: 'an@test.vn', password: 'Matkhau1' })).status,
+    403,
+    'email chưa xác minh',
+  );
+  r = await api().post('/api/auth/resend-verification').send({ email: 'an@test.vn' });
+  assert.equal(r.status, 200);
+  const verificationToken = new URL(r.body.devLink).searchParams.get('token');
+  assert.equal((await api().post('/api/auth/verify-email').send({ token: firstToken })).status, 400);
+  r = await api().post('/api/auth/verify-email').send({ token: verificationToken });
+  assert.equal(r.status, 200);
   assert.equal(r.body.user.emailVerified, true);
+  assert.equal(
+    (await api().post('/api/auth/verify-email').send({ token: verificationToken })).status,
+    400,
+    'liên kết chỉ dùng một lần',
+  );
   r = await api().post('/api/auth/register').send({ name: 'An', email: 'AN@test.vn', password: 'Matkhau1' });
   assert.equal(r.status, 409);
   r = await api().post('/api/auth/login').send({ email: 'an@test.vn', password: 'sai-mat-khau' });
@@ -76,23 +94,8 @@ test('Đăng ký, đăng nhập bằng OTP gửi qua email, bảo vệ API', asy
   assert.equal(r.status, 400);
   r = await api().post('/api/auth/login').send({ email: 'an@test.vn', password: 'Matkhau1' });
   assert.equal(r.status, 200);
-  assert.equal(r.body.otpRequired, true);
-  assert.equal(r.body.token, undefined, 'đúng mật khẩu vẫn phải nhập OTP');
-  const step = r.body;
-  r = await api().post('/api/auth/verify-otp').send({ otpToken: step.otpToken, code: '12ab56' });
-  assert.equal(r.status, 400);
-  r = await api()
-    .post('/api/auth/verify-otp')
-    .send({ otpToken: step.otpToken, code: step.devCode === '000000' ? '111111' : '000000' });
-  assert.equal(r.status, 400);
-  assert.match(r.body.error.message, /còn 4 lần/);
-  r = await api().post('/api/auth/resend-otp').send({ otpToken: step.otpToken });
-  assert.equal(r.status, 429, 'phải đợi trước khi gửi lại');
-  r = await api().post('/api/auth/verify-otp').send({ otpToken: step.otpToken, code: step.devCode });
-  assert.equal(r.status, 200);
+  assert.ok(r.body.token, 'đăng nhập đúng mật khẩu tạo phiên');
   token = r.body.token;
-  r = await api().post('/api/auth/verify-otp').send({ otpToken: step.otpToken, code: step.devCode });
-  assert.equal(r.status, 400, 'mã OTP chỉ dùng một lần');
   r = await api().get('/api/wallets');
   assert.equal(r.status, 401);
   r = await auth(api().get('/api/wallets'));
@@ -100,6 +103,13 @@ test('Đăng ký, đăng nhập bằng OTP gửi qua email, bảo vệ API', asy
   assert.equal(r.body.items[0].id, 'cash');
   r = await auth(api().get('/api/categories?income=false'));
   assert.equal(r.body.items.length, 7);
+});
+
+test('JWT chỉ chấp nhận thuật toán HS256', async () => {
+  const jwt = require('jsonwebtoken');
+  const forged = jwt.sign({ sub: '000000000000000000000000' }, config.jwtSecret, { algorithm: 'HS384' });
+  const r = await api().get('/api/auth/me').set('Authorization', `Bearer ${forged}`);
+  assert.equal(r.status, 401);
 });
 
 test('Ví: thêm, trùng tên, sửa, số dư tính từ giao dịch, xóa có ràng buộc', async () => {
@@ -376,24 +386,72 @@ test('Đổi mật khẩu, quên mật khẩu, đăng xuất thu hồi token', a
   assert.equal(r.status, 401, 'token cũ bị thu hồi');
   r = await api().post('/api/auth/forgot-password').send({ email: 'an@test.vn' });
   assert.equal(r.status, 200);
-  assert.match(r.body.devCode, /^\d{6}$/);
-  const code = r.body.devCode;
+  assert.equal(r.body.registered, true);
+  assert.equal(r.body.verified, true);
+  const resetToken = new URL(r.body.devLink).searchParams.get('token');
+  r = await api().post('/api/auth/reset-password/validate').send({ token: resetToken });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.valid, true);
+  assert.equal(
+    (
+      await api()
+        .post('/api/auth/reset-password/validate')
+        .send({ token: 'x'.repeat(43) })
+    ).status,
+    400,
+  );
+  r = await api().get(`/api/auth/reset-password?token=${resetToken}`);
+  assert.equal(r.status, 200);
+  assert.match(r.text, /name="newPassword"/);
+  assert.match(r.text, /name="confirmPassword"/);
+  r = await api().get(`/api/auth/reset-password?token=${'x'.repeat(43)}`);
+  assert.equal(r.status, 400);
+  assert.match(r.headers['content-type'], /text\/html/);
+  assert.match(r.text, /không hợp lệ hoặc đã hết hạn/);
   r = await api()
     .post('/api/auth/reset-password')
-    .send({ email: 'an@test.vn', code: '000000' === code ? '111111' : '000000', newPassword: 'Moi12345' });
+    .send({ token: 'x'.repeat(43), newPassword: 'Moi12345' });
   assert.equal(r.status, 400);
-  r = await api().post('/api/auth/reset-password').send({ email: 'an@test.vn', code, newPassword: 'moi123' });
+  r = await api().post('/api/auth/reset-password').send({ token: resetToken, newPassword: 'moi123' });
   assert.equal(r.status, 400, 'mật khẩu mới yếu');
-  r = await api().post('/api/auth/reset-password').send({ email: 'an@test.vn', code, newPassword: 'Moi12345' });
+  r = await api().post('/api/auth/reset-password').type('form').send({
+    token: resetToken,
+    newPassword: 'Moi12345',
+    confirmPassword: 'Moi12345',
+  });
   assert.equal(r.status, 200);
-  token = r.body.token;
+  assert.match(r.headers['content-type'], /text\/html/);
+  assert.equal(
+    (await api().post('/api/auth/reset-password').send({ token: resetToken, newPassword: 'Khac12345' })).status,
+    400,
+  );
+  assert.equal((await api().get('/api/auth/me').set('Authorization', `Bearer ${token}`)).status, 401);
   token = (await login(app, 'an@test.vn', 'Moi12345')).token;
+  const unknownEmail = await api().post('/api/auth/forgot-password').send({ email: 'chua-dang-ky@test.vn' });
+  assert.equal(unknownEmail.status, 200);
+  assert.equal(unknownEmail.body.registered, false);
+  assert.equal(unknownEmail.body.verified, false);
+  assert.equal(unknownEmail.body.message, 'Email này chưa được đăng ký.');
+  assert.equal(unknownEmail.body.devLink, undefined, 'không gửi link cho email chưa đăng ký');
+
   r = await auth(api().put('/api/auth/me')).send({ name: 'An Nguyễn', currency: 'USD' });
   assert.equal(r.body.user.currency, 'USD');
   r = await auth(api().post('/api/auth/logout'));
   assert.equal(r.status, 204);
   r = await auth(api().get('/api/auth/me'));
   assert.equal(r.status, 401);
+});
+
+test('Liên kết đặt lại mật khẩu chỉ dùng được một lần khi gửi yêu cầu đồng thời', async () => {
+  await signup(app, 'Đổi mật khẩu', 'reset-race@test.vn', 'Matkhau1');
+  const reset = (await api().post('/api/auth/forgot-password').send({ email: 'reset-race@test.vn' })).body;
+  const resetToken = new URL(reset.devLink).searchParams.get('token');
+  const results = await Promise.all(
+    ['Moi12345', 'Khac12345'].map((newPassword) =>
+      api().post('/api/auth/reset-password').send({ token: resetToken, newPassword }),
+    ),
+  );
+  assert.deepEqual(results.map((response) => response.status).sort(), [200, 400]);
 });
 
 test('Dữ liệu tách biệt giữa người dùng', async () => {
@@ -405,24 +463,17 @@ test('Dữ liệu tách biệt giữa người dùng', async () => {
   assert.equal(w.body.items[0].balance, 0);
 });
 
-test('Đăng xuất chỉ thu hồi phiên của thiết bị đó; { all: true } đăng xuất mọi thiết bị', async () => {
+test('Đăng nhập mới thay thế phiên cũ; đăng xuất chỉ thu hồi phiên hiện tại', async () => {
   await signup(app, 'Đa', 'da@test.vn', 'Matkhau1');
   const a = await login(app, 'da@test.vn', 'Matkhau1');
   const b = await login(app, 'da@test.vn', 'Matkhau1');
   const me = (t) => api().get('/api/auth/me').set('Authorization', `Bearer ${t}`);
-  assert.equal((await me(a.token)).status, 200);
-  assert.equal((await api().post('/api/auth/logout').set('Authorization', `Bearer ${a.token}`)).status, 204);
-  assert.equal((await me(a.token)).status, 401, 'thiết bị A đã đăng xuất');
+  assert.equal((await me(a.token)).status, 401, 'phiên cũ bị thay thế');
+  assert.equal((await me(b.token)).status, 200, 'chỉ phiên mới còn hiệu lực');
+  assert.equal((await api().post('/api/auth/logout').set('Authorization', `Bearer ${b.token}`)).status, 204);
+  assert.equal((await me(b.token)).status, 401, 'phiên hiện tại đã đăng xuất');
   assert.equal((await api().post('/api/auth/refresh').send({ refreshToken: a.refreshToken })).status, 401);
-  assert.equal((await me(b.token)).status, 200, 'thiết bị B vẫn đăng nhập');
-  const b2 = (await api().post('/api/auth/refresh').send({ refreshToken: b.refreshToken })).body;
-  assert.equal((await me(b2.token)).status, 200);
-  const c = await login(app, 'da@test.vn', 'Matkhau1');
-  assert.equal(
-    (await api().post('/api/auth/logout').set('Authorization', `Bearer ${c.token}`).send({ all: true })).status,
-    204,
-  );
-  assert.equal((await me(b2.token)).status, 401, 'đăng xuất mọi thiết bị');
+  assert.equal((await api().post('/api/auth/refresh').send({ refreshToken: b.refreshToken })).status, 401);
 });
 
 test('Refresh token chỉ dùng được một lần kể cả khi gửi song song', async () => {
@@ -456,17 +507,9 @@ test('Đăng xuất bằng token cũ (chưa có sid) không đăng xuất thiế
   assert.equal((await api().get('/api/auth/me').set('Authorization', `Bearer ${b.token}`)).status, 200);
 });
 
-test('Khóa đăng nhập sau nhiều lần sai mật khẩu; giới hạn nhập sai OTP', async () => {
+test('Khóa đăng nhập sau nhiều lần nhập sai mật khẩu', async () => {
   await signup(app, 'Khóa', 'khoa@test.vn', 'Matkhau1');
-  const step = (await api().post('/api/auth/login').send({ email: 'khoa@test.vn', password: 'Matkhau1' })).body;
-  const wrong = step.devCode === '000000' ? '111111' : '000000';
   let r;
-  for (let i = 0; i < config.otp.maxAttempts; i += 1) {
-    r = await api().post('/api/auth/verify-otp').send({ otpToken: step.otpToken, code: wrong });
-  }
-  assert.equal(r.body.error.code, 'OTP_EXPIRED', 'sai quá số lần thì phiên OTP bị hủy');
-  r = await api().post('/api/auth/verify-otp').send({ otpToken: step.otpToken, code: step.devCode });
-  assert.equal(r.status, 400);
   for (let i = 0; i < config.maxFailedLogins; i += 1) {
     r = await api().post('/api/auth/login').send({ email: 'khoa@test.vn', password: 'SaiMatKhau9' });
     assert.equal(r.status, 401);
@@ -476,14 +519,25 @@ test('Khóa đăng nhập sau nhiều lần sai mật khẩu; giới hạn nhậ
   assert.equal(r.body.error.code, 'ACCOUNT_LOCKED');
 });
 
-test('Đăng ký lại email chưa xác thực không đổi được mật khẩu khi chưa nhập OTP; email cũ vẫn đăng nhập được', async () => {
+test('Thông báo thời gian khóa dưới một phút bằng giây', async () => {
+  await signup(app, 'Khóa ngắn', 'khoa-ngan@test.vn', 'Matkhau1');
+  const { User } = require('../src/models');
+  await User.updateOne({ email: 'khoa-ngan@test.vn' }, { lockUntil: new Date(Date.now() + 30000) });
+  const r = await api().post('/api/auth/login').send({ email: 'khoa-ngan@test.vn', password: 'Matkhau1' });
+  assert.equal(r.status, 429);
+  assert.equal(r.body.error.code, 'ACCOUNT_LOCKED');
+  assert.match(r.body.error.message, /Thử lại sau \d+ giây\./);
+});
+
+test('Đăng ký lại email chưa xác thực cập nhật thông tin và yêu cầu xác minh lại', async () => {
   const { User } = require('../src/models');
   const bcrypt = require('bcryptjs');
   await User.create({ name: 'Cũ', email: 'old_user@corp.com', passwordHash: await bcrypt.hash('cu123456', 10) });
   let r = await api()
     .post('/api/auth/register')
     .send({ name: 'Ke Gian', email: 'victim@test.vn', password: 'Matkhau1' });
-  await api().post('/api/auth/verify-otp').send({ otpToken: r.body.otpToken, code: r.body.devCode });
+  const firstToken = new URL(r.body.devLink).searchParams.get('token');
+  await api().post('/api/auth/verify-email').send({ token: firstToken });
   await User.updateOne({ email: 'victim@test.vn' }, { emailVerified: false });
   r = await api()
     .post('/api/auth/register')
@@ -491,30 +545,23 @@ test('Đăng ký lại email chưa xác thực không đổi được mật kh�
   assert.equal(r.status, 201);
   assert.equal(
     (await api().post('/api/auth/login').send({ email: 'victim@test.vn', password: 'Matkhau1' })).status,
-    200,
-    'mật khẩu cũ vẫn dùng được khi chưa nhập OTP',
+    401,
+    'mật khẩu cũ được thay khi đăng ký lại',
   );
   assert.equal(
     (await api().post('/api/auth/login').send({ email: 'victim@test.vn', password: 'Chiemquyen9' })).status,
-    401,
+    403,
+    'chưa xác minh email',
+  );
+  const nextToken = new URL(r.body.devLink).searchParams.get('token');
+  assert.equal((await api().post('/api/auth/verify-email').send({ token: nextToken })).status, 200);
+  assert.equal(
+    (await api().post('/api/auth/login').send({ email: 'victim@test.vn', password: 'Chiemquyen9' })).status,
+    200,
   );
   assert.equal(
     (await api().post('/api/auth/login').send({ email: 'Old_User@corp.com', password: 'cu123456' })).status,
-    200,
-  );
-});
-
-test('Đoán OTP song song không vượt quá số lần cho phép', async () => {
-  await signup(app, 'Song Song', 'race@test.vn', 'Matkhau1');
-  const step = (await api().post('/api/auth/login').send({ email: 'race@test.vn', password: 'Matkhau1' })).body;
-  const guesses = Array.from({ length: 12 }, (_, i) => String(100000 + i)).filter((c) => c !== step.devCode);
-  const rs = await Promise.all(
-    guesses.map((code) => api().post('/api/auth/verify-otp').send({ otpToken: step.otpToken, code })),
-  );
-  assert.ok(rs.filter((x) => x.body.error?.code === 'INVALID_CODE').length <= config.otp.maxAttempts - 1);
-  assert.equal(
-    (await api().post('/api/auth/verify-otp').send({ otpToken: step.otpToken, code: step.devCode })).status,
-    400,
-    'phiên OTP đã bị hủy sau khi hết lượt',
+    403,
+    'tài khoản cũ chưa được xác minh cũng không đăng nhập được',
   );
 });

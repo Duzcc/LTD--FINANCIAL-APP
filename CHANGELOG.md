@@ -2,6 +2,8 @@
 
 ## Chưa phát hành
 
+- Thay OTP bằng liên kết email xác minh và đặt lại mật khẩu; yêu cầu mật khẩu hiện tại khi đổi mật khẩu.
+- Mỗi tài khoản chỉ có một phiên hoạt động; đăng nhập mới thay thế phiên cũ và chỉ giữ đăng xuất phiên hiện tại.
 - Ví: điều chỉnh số dư theo số tiền thực tế (ghi khoản chênh lệch, mặc định không tính vào báo cáo).
 - Ví tiết kiệm có nút Nạp tiền / Rút tiền.
 - Màn chi tiết ví có biểu đồ số dư cuối mỗi tháng.

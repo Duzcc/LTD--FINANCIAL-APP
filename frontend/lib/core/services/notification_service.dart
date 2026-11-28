@@ -12,7 +12,7 @@ class NotificationService {
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _ready = false;
 
-  static const _dailyBase = 100, _debtBase = 1000, _customBase = 2000, _walletBase = 5000;
+  static const _customBase = 2000, _walletBase = 5000;
   static const _details = NotificationDetails(
       android: AndroidNotificationDetails('reminders', 'Nhắc nhở',
           channelDescription: 'Nhắc ghi chép thu chi và hạn trả nợ',
@@ -79,64 +79,27 @@ class NotificationService {
   Future<void> apply(FinanceProvider p) async {
     if (kIsWeb) return;
     await init();
-    // chỉ hủy lịch nhắc, không xóa thông báo đang hiện
     for (final pending in await _plugin.pendingNotificationRequests()) {
-      await _plugin.cancel(id: pending.id);
-    }
-    final now = DateTime.now();
-    if (p.remindersEnabled) {
-      for (final (i, minutes) in p.reminderMinutes.indexed) {
-        var at = DateTime(now.year, now.month, now.day, minutes ~/ 60, minutes % 60);
-        if (!at.isAfter(now)) at = at.add(const Duration(days: 1));
-        await _plugin.zonedSchedule(
-            id: _dailyBase + i,
-            title: 'Đừng quên ghi chép',
-            body: 'Dành một phút ghi lại các khoản thu chi hôm nay nhé.',
-            scheduledDate: _at(at),
-            notificationDetails: _details,
-            androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-            matchDateTimeComponents: DateTimeComponents.time);
+      final id = pending.id;
+      if ((id >= 100 && id <= 999) || (id >= 1000 && id <= 1060) || (id >= 2000 && id <= 2049)) {
+        await _plugin.cancel(id: id);
       }
     }
-    for (final (i, r) in p.reminders.where((r) => !r.expired(now)).take(50).indexed) {
+    final now = DateTime.now();
+    for (final (i, reminder) in p.reminders.where((r) => !r.expired(now)).take(50).indexed) {
       await _plugin.zonedSchedule(
           id: _customBase + i,
           title: 'Nhắc nhở chi tiêu',
-          body: r.title,
-          scheduledDate: _at(r.nextAfter(now)),
+          body: reminder.title,
+          scheduledDate: _at(reminder.nextAfter(now)),
           notificationDetails: _details,
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-          matchDateTimeComponents: switch (r.repeat) {
+          matchDateTimeComponents: switch (reminder.repeat) {
             ReminderRepeat.daily => DateTimeComponents.time,
             ReminderRepeat.weekly => DateTimeComponents.dayOfWeekAndTime,
             ReminderRepeat.monthly => DateTimeComponents.dayOfMonthAndTime,
             ReminderRepeat.none => null,
           });
-    }
-    if (p.debtReminders) {
-      var id = _debtBase;
-      for (final e
-          in p.entries.where((e) => (e.kind == EntryKind.lend || e.kind == EntryKind.borrow) && e.dueDate != null)) {
-        final unit = p.findWallet(e.walletId)?.currency ?? p.currency;
-        final left = p.debt(borrowed: e.kind == EntryKind.borrow, personId: e.personId, unit: unit);
-        if (left <= 0) continue;
-        final due = e.dueDate!;
-        for (final before in [1, 0]) {
-          final at = DateTime(due.year, due.month, due.day - before, 9);
-          if (!at.isAfter(now) || id > _debtBase + 60) continue;
-          await _plugin.zonedSchedule(
-              id: id++,
-              title: e.kind == EntryKind.lend
-                  ? 'Đến hạn thu nợ ${p.personName(e.personId)}'
-                  : 'Đến hạn trả nợ ${p.personName(e.personId)}',
-              body: before == 1
-                  ? 'Ngày mai đến hạn, còn lại ${left.toStringAsFixed(0)} $unit.'
-                  : 'Hôm nay đến hạn, còn lại ${left.toStringAsFixed(0)} $unit.',
-              scheduledDate: _at(at),
-              notificationDetails: _details,
-              androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle);
-        }
-      }
     }
   }
 }

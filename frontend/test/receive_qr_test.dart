@@ -8,6 +8,7 @@ import 'package:finance_app/features/finance/presentation/providers/finance_prov
 import 'package:finance_app/features/finance/domain/entities/entities.dart';
 import 'package:finance_app/features/banking/presentation/screens/receive_qr_screen.dart';
 import 'helpers/fake_backend.dart';
+import 'helpers/memory_session_store.dart';
 
 const _mb = MoneyWallet(id: 'mb', name: 'MB', bankBin: '970422', bankAccount: '0123456789', bankHolder: 'NGUYEN AN');
 
@@ -56,8 +57,8 @@ void main() {
 
   testWidgets('Đăng nhập: tạo yêu cầu đối soát và tự cập nhật khi tiền về', (tester) async {
     final server = FakeBackend();
-    final p = FinanceProvider(api: ApiClient(client: server.client));
-    await tester.runAsync(() => signInWithOtp(p));
+    final p = FinanceProvider(api: ApiClient(client: server.client), sessionStore: MemorySessionStore());
+    await tester.runAsync(() => signIn(p));
     p.saveWallet(_mb);
     await _open(tester, p, const ReceiveQrScreen(walletId: 'mb'));
     await tester.enterText(find.byKey(const ValueKey('qr-amount')), '150000');

@@ -18,25 +18,26 @@ Cách làm việc: mỗi người tạo nhánh `feature/<tên>`, commit bằng t
 
 ## 1. Đinh Tuấn Dũng – Xác thực, phiên, bảo mật, đồng bộ
 
-**Thư mục chính:** `frontend/lib/features/auth/`, `features/security/`, `core/network/`, `core/validation/`, `features/finance/data/`; backend `auth.*`, `session.service.js`, `otp.service.js`, `mail.service.js`, `sync.*`, `middleware/`.
+**Thư mục chính:** `frontend/lib/features/auth/`, `features/security/`, `core/network/`, `core/validation/`, `features/finance/data/`; backend `auth.*`, `session.service.js`, `mail.service.js`, `sync.*`, `middleware/`.
 
 **Chức năng phụ trách**
-- Đăng ký, xác thực email bằng OTP, đăng nhập 2 bước, quên mật khẩu, đổi mật khẩu.
-- Duy trì phiên (lưu trong SharedPreferences), tự làm mới token khi gặp 401, đăng xuất một máy hoặc mọi máy.
+- Đăng ký xác minh qua liên kết email; đăng nhập bằng mật khẩu đã xác minh; khôi phục mật khẩu qua email link và đổi mật khẩu bằng mật khẩu hiện tại.
+- Mỗi tài khoản chỉ có một phiên; đăng nhập mới thay thế phiên cũ, đăng xuất chỉ thu hồi phiên hiện tại.
+- Duy trì phiên trong kho bảo mật hệ điều hành và tự làm mới token khi gặp 401.
 - Khóa ứng dụng bằng PIN.
 - Sao lưu dữ liệu lên máy chủ (hàng chờ thay đổi, `/sync/batch`, `/sync`).
 
-**API:** `POST /auth/register`, `/auth/login`, `/auth/verify-otp`, `/auth/resend-otp`, `/auth/refresh`, `/auth/logout`, `/auth/forgot-password`, `/auth/reset-password`; `GET|PUT|DELETE /auth/me`; `PUT /auth/change-password`; `GET /sync`, `POST /sync/batch`.
+**API:** `/auth/register`, `/auth/login`, `GET|POST /auth/verify-email`, `/auth/resend-verification`, `/auth/refresh`, `/auth/logout`, `/auth/forgot-password`, `GET|POST /auth/reset-password`; `GET|PUT|DELETE /auth/me`; `PUT /auth/change-password`; `GET /sync`, `POST /sync/batch`.
 
-**Bảng dữ liệu:** `users`, `refreshtokens`, `otpchallenges`.
+**Bảng dữ liệu:** `users`, `refreshtokens` (unique theo user).
 
-**Luồng demo:** Đăng ký → nhận OTP qua email → vào Tổng quan → tắt mở app vẫn còn đăng nhập → nhập sai mật khẩu 5 lần thì bị khóa 15 phút → đăng xuất.
+**Luồng demo:** Đăng ký → xác minh bằng liên kết trong email → đăng nhập → phiên đăng nhập mới thay thế phiên trước → nhập sai mật khẩu 5 lần thì bị khóa 15 phút → đăng xuất.
 
 **Phải giải thích được:** JWT (sub, v, sid) và refresh token dùng một lần; `SessionClient` tự làm mới phiên; `requireAuth` ở backend; vì sao gọi id của người khác trả 404; validator mật khẩu và email.
 
 **Việc cần làm và commit**
-1. Sửa `backend/docs/openapi.yaml`: thay `verify-email` bằng `verify-otp`, thêm `resend-otp`, `refresh`, `logout`.
-2. Thêm test backend: đăng xuất mọi thiết bị thì token cũ trả 401.
+1. Cấu hình SMTP/Brevo và `PUBLIC_URL` HTTPS trước khi chạy luồng email trên production.
+2. Giữ test xác minh/reset token dùng một lần và đăng nhập một phiên cho mỗi tài khoản.
 
 **Báo cáo:** 2.3, 3.3, 3.5; ca ngoại lệ NE-01 đến NE-05. **Slide:** 1–6 (giới thiệu, kiến trúc, xác thực).
 

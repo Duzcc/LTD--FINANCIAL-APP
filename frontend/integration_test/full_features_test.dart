@@ -7,7 +7,6 @@ import 'package:integration_test/integration_test.dart';
 import 'package:finance_app/app/app.dart';
 import 'package:finance_app/app/main_screen.dart';
 import 'package:finance_app/core/network/api_client.dart';
-import 'package:finance_app/features/security/data/services/app_lock.dart';
 import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
 import 'package:finance_app/features/finance/domain/entities/entities.dart';
 import 'package:finance_app/features/ai/data/repositories/ai_repository.dart';
@@ -19,14 +18,7 @@ import 'package:finance_app/features/auth/presentation/screens/auth_screen.dart'
 import 'package:finance_app/features/auth/presentation/screens/forgot_password_screen.dart';
 import 'package:finance_app/features/budgets/presentation/screens/budgets_screen.dart';
 import 'package:finance_app/features/ledger/presentation/screens/ledger_screen.dart';
-import 'package:finance_app/features/recurring/presentation/screens/recurring_screen.dart';
-import 'package:finance_app/features/security/presentation/screens/lock_screen.dart';
-import 'package:finance_app/features/settings/data/services/excel_export.dart';
 import 'package:finance_app/features/settings/presentation/screens/account_screen.dart';
-import 'package:finance_app/features/settings/presentation/screens/rates_screen.dart';
-import 'package:finance_app/features/settings/presentation/screens/reminders_screen.dart';
-import 'package:finance_app/features/settings/presentation/screens/security_screen.dart';
-import 'package:finance_app/features/statistics/presentation/screens/statistics_screen.dart';
 import 'package:finance_app/features/transactions/presentation/screens/add_transaction_screen.dart';
 import 'package:finance_app/features/categories/presentation/screens/select_category_screen.dart';
 import 'package:finance_app/features/categories/presentation/screens/select_person_screen.dart';
@@ -42,40 +34,39 @@ void main() {
   final email = 'full${now.millisecondsSinceEpoch % 1000000}@nhom3.vn';
   const pass1 = 'matkhau123', pass2 = 'matkhau456', pass3 = 'matkhau789';
 
-  Future<bool> withOtp(FinanceProvider x, Future<OtpChallenge> step) async {
-    final challenge = await step;
-    expect(challenge.devCode, isNotNull, reason: 'máy chủ dev trả mã OTP');
-    return x.verifyOtp(challenge, challenge.devCode!);
+  Future<String> linkToken(FinanceProvider x, Map<String, dynamic> response) async {
+    final link = Uri.parse(response['devLink'] as String);
+    final token = link.queryParameters['token']!;
+    await x.api.send('POST', x.serverUrl, '/auth/verify-email', body: {'token': token});
+    return token;
   }
 
   void expectRejected(void Function() action, String reason) {
     expect(action, throwsA(isA<ArgumentError>()), reason: reason);
   }
 
-  testWidgets('Chức năng: 9 nhóm chức năng + mở rộng, đồng bộ hai thiết bị', (t) async {
+  testWidgets('Chức năng hiện có + mở phiên mới thay thế phiên cũ', (t) async {
     final p = FinanceProvider(storage: null, api: ApiClient());
 
     expect(await p.checkServer(), isNull, reason: 'backend phải chạy');
     final signup = await p.register(name: 'Kiểm Thử', email: email, password: pass1);
-    expect(p.signedIn, isFalse, reason: 'chưa nhập OTP thì chưa đăng nhập');
-    await expectLater(
-        p.verifyOtp(signup, signup.devCode == '000000' ? '111111' : '000000'), throwsA(isA<ApiException>()));
-    await p.verifyOtp(signup, signup.devCode!);
+    await linkToken(p, signup);
+    await p.signIn(email: email, password: pass1);
     expect(p.signedIn, isTrue);
-    expect(p.emailVerified, isTrue, reason: 'nhập đúng OTP là đã xác thực email');
+    expect(p.emailVerified, isTrue, reason: 'email đã xác minh qua liên kết');
     await p.changePassword(pass1, pass2);
     final other = FinanceProvider(storage: null, api: ApiClient());
     await expectLater(other.signIn(email: email, password: pass1), throwsA(isA<ApiException>()),
         reason: 'mật khẩu cũ không còn dùng được');
     final reset = await other.forgotPassword(email);
-    expect(reset, isNotNull, reason: 'máy chủ dev trả mã khôi phục');
-    await other.resetPassword(email: email, code: reset!, newPassword: pass3);
-    expect(other.signedIn, isTrue);
-    await other.signOut();
+    final resetToken = Uri.parse(reset['devLink'] as String).queryParameters['token']!;
+    await other.api
+        .send('POST', other.serverUrl, '/auth/reset-password', body: {'token': resetToken, 'newPassword': pass3});
+    expect(other.signedIn, isFalse, reason: 'đặt lại mật khẩu cần đăng nhập lại');
     await p.syncNow();
     expect(p.syncError, isNotNull, reason: 'phiên cũ phải bị thu hồi sau khi đặt lại mật khẩu');
     await p.signOut(revoke: false);
-    if (await withOtp(p, p.signIn(email: email, password: pass3))) await p.resolveLogin(useAccount: true);
+    if (await p.signIn(email: email, password: pass3)) await p.resolveLogin(useAccount: true);
     expect(p.signedIn, isTrue);
 
     p.saveWallet(const MoneyWallet(id: 'bank', name: 'Vietcombank', opening: 10000000));
@@ -159,29 +150,15 @@ void main() {
     expect(p.copyBudgets(month, nextMonth), 3, reason: 'sao chép mục tiêu sang tháng sau');
     expect(p.copyBudgets(month, nextMonth), 0, reason: 'không sao chép trùng');
 
-    p.saveRecurring(RecurringRule(
-        id: 'r_cf',
-        kind: EntryKind.expense,
-        amount: 29000,
-        walletId: 'cash',
-        frequency: RepeatFrequency.daily,
-        startDate: ago(3),
-        categoryId: 'coffee',
-        note: 'Cà phê sáng'));
-    final created = p.runRecurring();
-    expect(created, greaterThanOrEqualTo(3), reason: 'tự ghi các lần đến hạn');
-    expect(p.runRecurring(), 0, reason: 'không ghi trùng');
-
     final tomorrow = DateTime(now.year, now.month, now.day + 1);
     final earned = p.sumBetween(ago(30), tomorrow, income: true);
     final spent = p.sumBetween(ago(30), tomorrow, income: false);
     expect(earned, 18000000 + 20000, reason: 'thu = lương + lãi (chuyển tiền, gốc vay không tính)');
-    expect(spent, greaterThan(5000000 + 50000 + 35000 + 10000));
+    expect(spent, greaterThanOrEqualTo(5000000 + 50000 + 35000 + 10000));
     expect(p.total(month, income: false) + p.total(DateTime(month.year, month.month - 1), income: false),
         greaterThanOrEqualTo(spent - 1e-6),
         reason: 'tổng theo tháng khớp tổng theo khoảng');
-    expect(p.sumBetween(ago(400), now.add(const Duration(days: 1)), income: false, categoryId: 'coffee'),
-        35000 + 29000 * created);
+    expect(p.sumBetween(ago(400), now.add(const Duration(days: 1)), income: false, categoryId: 'coffee'), 35000);
 
     final hits = p.entries.where((e) => e.note.toLowerCase().contains('phở')).toList();
     expect(hits, hasLength(1));
@@ -189,25 +166,12 @@ void main() {
 
     p.setRate('USD', 25000);
     expect(p.convertedTotal('VND'), closeTo(p.totalBalance('VND') + 100 * 25000, 1));
-    final csv = p.exportCsv();
-    expect(csv.split('\r\n').length, greaterThan(10));
-    final xlsx = ExcelExport.build(p);
-    expect(String.fromCharCodes(xlsx.take(2)), 'PK', reason: '.xlsx là tệp zip');
-    final lock = AppLock();
-    await lock.setPin('2468');
-    lock.lock();
-    expect(lock.unlock('1111'), isNotNull);
-    expect(lock.unlock('2468'), isNull);
-    for (var i = 0; i < 5; i++) {
-      lock.unlock('0000');
-    }
-    expect(lock.blockedUntil, isNotNull, reason: 'chặn sau 5 lần sai');
 
     await p.syncNow();
     expect(p.syncError, isNull);
     expect(p.pendingChanges, 0);
     final device2 = FinanceProvider(storage: null, api: ApiClient());
-    if (await withOtp(device2, device2.signIn(email: email, password: pass3))) {
+    if (await device2.signIn(email: email, password: pass3)) {
       await device2.resolveLogin(useAccount: true);
     }
     expect(device2.entries.length, p.entries.length, reason: 'thiết bị 2 nhận đủ giao dịch');
@@ -217,6 +181,8 @@ void main() {
     device2.deleteEntry(pho.id);
     await device2.syncNow();
     await p.syncNow();
+    expect(p.syncError, isNotNull, reason: 'phiên cũ bị thu hồi khi đăng nhập thiết bị 2');
+    if (await p.signIn(email: email, password: pass3)) await p.resolveLogin(useAccount: true);
     expect(p.entries.any((e) => e.id == pho.id), isFalse, reason: 'xóa trên thiết bị 2 → thiết bị 1 cập nhật');
 
     final ai = AiRepository(p);
@@ -235,7 +201,7 @@ void main() {
 
     await device2.signOut();
     await p.syncNow();
-    expect(p.syncError, isNull, reason: 'đăng xuất thiết bị 2 không làm thiết bị 1 mất phiên');
+    expect(p.syncError, isNull, reason: 'đăng nhập lại ở thiết bị 1 tạo một phiên đang hoạt động');
     await p.deleteAccount(pass3);
     expect(p.signedIn, isFalse);
     await expectLater(device2.signIn(email: email, password: pass3), throwsA(isA<ApiException>()));
@@ -283,7 +249,7 @@ void main() {
         categoryId: 'house',
         note: 'Tiền nhà'));
 
-    await t.pumpWidget(FinanceApp(finance: p, lock: AppLock(), returning: true));
+    await t.pumpWidget(FinanceApp(finance: p, returning: true));
     await t.pumpAndSettle();
     expect(find.byType(MainScreen), findsOneWidget);
     final nav = Navigator.of(t.element(find.byType(MainScreen)));
@@ -305,14 +271,13 @@ void main() {
       await t.pumpAndSettle();
       expect(t.takeException(), isNull, reason: 'tab $tab');
     }
-    for (final tab in ['Sổ nợ', 'Ví', 'Báo cáo']) {
+    for (final tab in ['Sổ nợ', 'Ví', 'Tổng quan']) {
       await t.tap(find.text(tab).first);
       await t.pumpAndSettle();
       expect(t.takeException(), isNull, reason: 'tab tổng quan $tab');
     }
 
     final pages = <String, Widget>{
-      'thong_ke': const StatisticsScreen(),
       'so_giao_dich': const LedgerScreen(),
       'ngan_sach': const BudgetsScreen(),
       'tai_khoan': const AccountScreen(),
@@ -326,12 +291,6 @@ void main() {
       'tra_lai': const AddTransactionScreen(initialKind: EntryKind.interestExpense),
       'chon_danh_muc': const SelectCategoryScreen(),
       'quan_ly_doi_tuong': const SelectPersonScreen(manage: true),
-      'dinh_ky': const RecurringScreen(),
-      'ty_gia': const RatesScreen(),
-      'nhac_nho': const RemindersScreen(),
-      'bao_mat': const SecurityScreen(),
-      'dat_pin': const PinSetupScreen(),
-      'xuat_du_lieu': const ExportScreen(),
       'phan_tich_ai': const InsightsScreen(),
       'tro_ly_ai': const AssistantScreen(),
       'quet_hoa_don': const ReceiptScanScreen(),

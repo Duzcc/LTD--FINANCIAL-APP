@@ -29,14 +29,16 @@ await check('Backend & AI service sống', async () => {
 await check('AI service từ chối gọi trực tiếp không có khóa', async () => {
   const r = await call('POST', '/v1/parse', { text: 'phở 45k' }, { base: AI, auth: false }); expect(r.status === 401, `status ${r.status}`); return '401';
 });
-await check('Đăng ký + xác thực OTP', async () => {
+await check('Đăng ký + xác minh email qua liên kết', async () => {
   const r = await call('POST', '/auth/register', { name: 'Kiểm Tra', email, password: 'matkhau123' }, { auth: false });
   expect(r.status === 201 || r.status === 200, JSON.stringify(r.data));
-  expect(r.data.devCode, 'máy chủ không trả devCode — hãy chạy backend với SMTP tắt (SMTP_HOST= npm run dev:mem)');
-  const wrong = await call('POST', '/auth/verify-otp', { otpToken: r.data.otpToken, code: r.data.devCode === '000000' ? '111111' : '000000' }, { auth: false });
-  expect(wrong.status === 400 || wrong.status === 401, `mã sai vẫn qua: ${wrong.status}`);
-  const v = await call('POST', '/auth/verify-otp', { otpToken: r.data.otpToken, code: r.data.devCode }, { auth: false });
-  expect(v.status === 200 && v.data.token, JSON.stringify(v.data)); token = v.data.token; refresh = v.data.refreshToken; return email;
+  expect(r.data.devLink, 'máy chủ dev cần SMTP tắt để trả liên kết thử nghiệm');
+  const linkToken = new URL(r.data.devLink).searchParams.get('token');
+  const v = await call('POST', '/auth/verify-email', { token: linkToken }, { auth: false });
+  expect(v.status === 200 && v.data.user.emailVerified, JSON.stringify(v.data));
+  const login = await call('POST', '/auth/login', { email, password: 'matkhau123' }, { auth: false });
+  expect(login.status === 200 && login.data.token, JSON.stringify(login.data));
+  token = login.data.token; refresh = login.data.refreshToken; return email;
 });
 await check('Đăng nhập sai mật khẩu bị chặn', async () => {
   const r = await call('POST', '/auth/login', { email, password: 'sai' }, { auth: false }); expect(r.status === 401, r.status); return '401';

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'helpers/fake_backend.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -5,26 +6,21 @@ import 'package:finance_app/features/finance/domain/entities/entities.dart';
 import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
 import 'package:finance_app/core/network/api_client.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
+import 'helpers/memory_session_store.dart';
 
 void main() {
   test('Sai mật khẩu thì hiện đúng thông báo lỗi', () async {
     final server = FakeBackend();
-    final p = FinanceProvider(api: ApiClient(client: server.client));
+    final p = FinanceProvider(api: ApiClient(client: server.client), sessionStore: MemorySessionStore());
     await expectLater(p.signIn(email: 'an@test.vn', password: 'sai'),
         throwsA(isA<ApiException>().having((e) => e.message, 'message', contains('không đúng'))));
     p.dispose();
   });
 
-  test('Phải nhập OTP gửi qua email mới tạo phiên đăng nhập', () async {
+  test('Đăng nhập tạo phiên và tải dữ liệu tài khoản', () async {
     final server = FakeBackend();
-    final p = FinanceProvider(api: ApiClient(client: server.client));
-    final challenge = await p.signIn(email: ' AN@test.vn ', password: '123456');
-    expect(challenge.email, 'an@test.vn');
-    expect(p.signedIn, isFalse, reason: 'chưa nhập OTP thì chưa đăng nhập');
-    await expectLater(
-        p.verifyOtp(challenge, '000000'), throwsA(isA<ApiException>().having((e) => e.code, 'code', 'INVALID_CODE')));
-    expect(p.signedIn, isFalse);
-    await p.verifyOtp(challenge, FakeBackend.otpCode);
+    final p = FinanceProvider(api: ApiClient(client: server.client), sessionStore: MemorySessionStore());
+    await p.signIn(email: ' AN@test.vn ', password: '123456');
     expect(p.signedIn, isTrue);
     p.dispose();
   });
@@ -33,8 +29,9 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final storage = await SharedPreferences.getInstance();
     final server = FakeBackend();
-    final p = FinanceProvider(storage: storage, api: ApiClient(client: server.client));
-    expect(await signInWithOtp(p), isFalse);
+    final sessionStore = MemorySessionStore();
+    final p = FinanceProvider(storage: storage, api: ApiClient(client: server.client), sessionStore: sessionStore);
+    expect(await signIn(p), isFalse);
     expect(p.signedIn, isTrue);
     expect(p.displayName, 'An');
 
@@ -62,7 +59,10 @@ void main() {
     expect(p.wallets.map((w) => w.id), ['cash']);
 
     await p.flush();
-    final again = FinanceProvider(storage: storage, api: ApiClient(client: server.client))..restore();
+    expect(storage.getString(FinanceProvider.storageKey), isNot(contains('refreshToken')));
+    expect(storage.getString(FinanceProvider.storageKey), isNot(contains('"token":"tok"')));
+    final again = FinanceProvider(storage: storage, api: ApiClient(client: server.client), sessionStore: sessionStore);
+    await again.restore();
     expect(again.session?.token, 'tok');
     again.dispose();
 
@@ -71,6 +71,34 @@ void main() {
     expect(storage.containsKey(FinanceProvider.storageKey), isFalse);
     expect(server.requests.last.url.path, '/api/auth/logout');
     p.dispose();
+  });
+
+  test('Chuyển token cũ khỏi SharedPreferences sang kho phiên bảo mật', () async {
+    SharedPreferences.setMockInitialValues({});
+    final storage = await SharedPreferences.getInstance();
+    final p = FinanceProvider(storage: storage);
+    p.preferences(name: 'An');
+    await p.flush();
+    final saved = jsonDecode(storage.getString(FinanceProvider.storageKey)!) as Map<String, dynamic>;
+    saved['session'] = const AccountSession(
+      baseUrl: 'http://localhost:3000',
+      token: 'legacy-access',
+      refreshToken: 'legacy-refresh',
+      email: 'an@test.vn',
+      userId: 'user-1',
+    ).toJson();
+    await storage.setString(FinanceProvider.storageKey, jsonEncode(saved));
+
+    final sessionStore = MemorySessionStore();
+    final restored = FinanceProvider(storage: storage, sessionStore: sessionStore);
+    await restored.restore();
+
+    expect(restored.session?.token, 'legacy-access');
+    expect(sessionStore.value, contains('legacy-refresh'));
+    final migrated = jsonDecode(storage.getString(FinanceProvider.storageKey)!) as Map<String, dynamic>;
+    expect(migrated.containsKey('session'), isFalse);
+    p.dispose();
+    restored.dispose();
   });
 
   test('Có dữ liệu trên máy thì hỏi trước khi thay bằng dữ liệu tài khoản', () async {
@@ -83,7 +111,7 @@ void main() {
       'categoryId': 'salary',
       'date': '2026-10-01T02:00:00.000Z'
     });
-    final p = FinanceProvider(api: ApiClient(client: server.client));
+    final p = FinanceProvider(api: ApiClient(client: server.client), sessionStore: MemorySessionStore());
     p.saveEntry(MoneyEntry(
         id: 'local',
         kind: EntryKind.expense,
@@ -91,7 +119,7 @@ void main() {
         walletId: 'cash',
         categoryId: 'food',
         date: DateTime(2026, 10, 2)));
-    expect(await signInWithOtp(p), isTrue);
+    expect(await signIn(p), isTrue);
     expect(p.needsLoginDecision, isTrue);
     await p.resolveLogin(useAccount: false);
     expect(p.entries.map((e) => e.id).toSet(), {'local', 'remote'});
@@ -101,8 +129,8 @@ void main() {
 
   test('Hết phiên thì báo lỗi mà không mất thay đổi đang chờ', () async {
     final server = FakeBackend();
-    final p = FinanceProvider(api: ApiClient(client: server.client));
-    await signInWithOtp(p);
+    final p = FinanceProvider(api: ApiClient(client: server.client), sessionStore: MemorySessionStore());
+    await signIn(p);
     p.session = p.session!.withToken('expired', refresh: 'revoked');
     p.preferences(name: 'Bình');
     await p.syncNow();

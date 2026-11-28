@@ -10,9 +10,7 @@ import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/transactions/presentation/widgets/entry_tile.dart';
 import 'package:finance_app/features/wallets/presentation/screens/wallets_screen.dart';
 import 'package:finance_app/features/wallets/presentation/screens/create_wallet_screen.dart';
-import 'package:finance_app/features/wallets/presentation/screens/currency_selection_screen.dart';
 import 'package:finance_app/features/wallets/presentation/screens/wallet_detail_screen.dart';
-import 'package:finance_app/features/statistics/presentation/screens/statistics_screen.dart';
 import 'package:finance_app/features/ledger/presentation/screens/ledger_screen.dart';
 import 'package:finance_app/features/budgets/presentation/screens/budgets_screen.dart';
 import 'package:finance_app/features/transactions/presentation/screens/add_transaction_screen.dart';
@@ -21,7 +19,6 @@ import 'package:finance_app/features/ai/presentation/screens/insights_screen.dar
 import 'package:finance_app/features/ai/presentation/widgets/insight_tile.dart';
 import 'package:finance_app/features/ai/data/repositories/ai_repository.dart';
 import 'package:finance_app/features/ai/domain/services/insights.dart';
-import 'package:finance_app/features/banking/presentation/screens/receive_qr_screen.dart';
 import 'package:finance_app/features/finance/presentation/widgets/entity_icons.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -44,20 +41,12 @@ class HomeScreen extends StatelessWidget {
                         icon: const Icon(Icons.menu)),
                     Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Row(children: [
-                        Flexible(
-                            child: Text(secret(p.hideBalance, p.totalBalance(p.currency), p.currency),
-                                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis)),
-                        IconButton(
-                            tooltip: p.hideBalance ? 'Hiện số dư' : 'Ẩn số dư',
-                            onPressed: () => p.preferences(hidden: !p.hideBalance),
-                            icon: Icon(p.hideBalance ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                                size: 18))
-                      ]),
+                      Text(money(p.totalBalance(p.currency), p.currency),
+                          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
                       Text(
-                          p.hasManyCurrencies && !p.hideBalance
+                          p.hasManyCurrencies
                               ? 'Tổng số dư • quy đổi mọi ví ≈ ${money(p.convertedTotal(p.currency), p.currency)}'
                               : 'Tổng số dư • Xin chào, ${p.displayName}',
                           maxLines: 1,
@@ -73,16 +62,8 @@ class HomeScreen extends StatelessWidget {
                         tooltip: 'Tìm giao dịch',
                         onPressed: () => openPage(context, const LedgerScreen()),
                         icon: const Icon(Icons.search)),
-                    IconButton(
-                        tooltip: 'Chọn tiền tệ báo cáo',
-                        onPressed: () async {
-                          final unit =
-                              await openPage<String>(context, CurrencySelectionScreen(selectedCurrency: p.currency));
-                          if (unit != null) p.preferences(unit: unit);
-                        },
-                        icon: const Icon(Icons.currency_exchange, size: 22)),
                   ])),
-              const TabBar(tabs: [Tab(text: 'Báo cáo'), Tab(text: 'Sổ nợ'), Tab(text: 'Ví')]),
+              const TabBar(tabs: [Tab(text: 'Tổng quan'), Tab(text: 'Sổ nợ'), Tab(text: 'Ví')]),
               const Expanded(child: TabBarView(children: [OverviewTab(), DebtOverview(), WalletList()])),
             ])));
   }
@@ -120,8 +101,7 @@ class OverviewTab extends StatelessWidget {
               ListTile(
                   leading: RoundIcon(w.icon),
                   title: Text(w.name),
-                  subtitle: Text(
-                      '${secret(p.hideBalance, p.balance(w.id), w.currency)}${w.excluded ? ' • không tính tổng' : ''}'),
+                  subtitle: Text('${money(p.balance(w.id), w.currency)}${w.excluded ? ' • không tính tổng' : ''}'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => openPage(context, WalletDetailScreen(walletId: w.id))),
             if (wallets.isEmpty)
@@ -130,9 +110,6 @@ class OverviewTab extends StatelessWidget {
                   trailing: const Icon(Icons.add),
                   onTap: () => openPage(context, const CreateWalletScreen())),
           ])),
-      SectionTitle('Báo cáo tháng này',
-          action: 'Xem báo cáo', onTap: () => openPage(context, const StatisticsScreen())),
-      const ReportCarousel(),
       ValueListenableBuilder<int>(
           valueListenable: AiRepository.insightsVersion,
           builder: (context, _, __) {
@@ -304,176 +281,6 @@ class BudgetBar extends StatelessWidget {
   }
 }
 
-class ReportCarousel extends StatefulWidget {
-  const ReportCarousel({super.key});
-  @override
-  State<ReportCarousel> createState() => _ReportCarouselState();
-}
-
-class _ReportCarouselState extends State<ReportCarousel> {
-  final controller = PageController();
-  int page = 0;
-  bool weekly = false, trendIncome = false;
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
-  void go(int i) => controller.animateToPage(i, duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
-
-  @override
-  Widget build(BuildContext context) {
-    final p = context.watch<FinanceProvider>();
-    final now = DateTime.now();
-    final scale = MediaQuery.textScalerOf(context).scale(1);
-    return Panel(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-        child: Column(children: [
-          SizedBox(
-              height: 250 + 40 * scale,
-              child: PageView(
-                  controller: controller,
-                  onPageChanged: (i) => setState(() => page = i),
-                  children: [spending(p, now), trend(p, now)])),
-          Row(children: [
-            IconButton(
-                tooltip: 'Báo cáo trước',
-                onPressed: page == 0 ? null : () => go(0),
-                icon: const Icon(Icons.chevron_left)),
-            Expanded(
-                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              for (var i = 0; i < 2; i++)
-                AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: page == i ? 18 : 7,
-                    height: 7,
-                    decoration: BoxDecoration(
-                        color: page == i ? AppColors.primaryGreen : AppColors.divider,
-                        borderRadius: BorderRadius.circular(4))),
-            ])),
-            IconButton(
-                tooltip: 'Báo cáo tiếp theo',
-                onPressed: page == 1 ? null : () => go(1),
-                icon: const Icon(Icons.chevron_right)),
-          ]),
-        ]));
-  }
-
-  Widget spending(FinanceProvider p, DateTime now) {
-    final today = dateOnly(now);
-    final DateTime start, prevStart, end;
-    if (weekly) {
-      start = today.subtract(Duration(days: today.weekday - 1));
-      prevStart = start.subtract(const Duration(days: 7));
-      end = start.add(const Duration(days: 7));
-    } else {
-      start = DateTime(now.year, now.month);
-      prevStart = DateTime(now.year, now.month - 1);
-      end = DateTime(now.year, now.month + 1);
-    }
-    final current = p.sumBetween(start, end, income: false);
-    final previous = p.sumBetween(prevStart, start, income: false);
-    final change = previous == 0 ? null : (current - previous) / previous;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [
-        const Expanded(child: Text('Báo cáo chi tiêu', style: TextStyle(fontWeight: FontWeight.w700))),
-        SegmentedButton<bool>(
-            showSelectedIcon: false,
-            style: const ButtonStyle(
-                visualDensity: VisualDensity.compact, tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-            segments: const [
-              ButtonSegment(value: true, label: Text('Tuần')),
-              ButtonSegment(value: false, label: Text('Tháng')),
-            ],
-            selected: {weekly},
-            onSelectionChanged: (v) => setState(() => weekly = v.first)),
-      ]),
-      const SizedBox(height: 8),
-      Text(money(current, p.currency),
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.accentRed)),
-      Text(
-          change == null
-              ? 'Tổng đã chi ${weekly ? 'tuần' : 'tháng'} này'
-              : 'Tổng đã chi • ${change >= 0 ? 'tăng' : 'giảm'} ${(change.abs() * 100).toStringAsFixed(0)}% so với ${weekly ? 'tuần' : 'tháng'} trước',
-          style: const TextStyle(fontSize: 12)),
-      const SizedBox(height: 12),
-      Expanded(
-          child: current == 0 && previous == 0
-              ? const Center(child: Text('Nhập giao dịch để xem báo cáo', textAlign: TextAlign.center))
-              : CompareBarChart(
-                  labels: weekly ? const ['Tuần trước', 'Tuần này'] : const ['Tháng trước', 'Tháng này'],
-                  values: [previous, current],
-                  colors: const [Color(0xFFD9BEA9), AppColors.accentRed])),
-    ]);
-  }
-
-  Widget trend(FinanceProvider p, DateTime now) {
-    final prev = DateTime(now.year, now.month - 1);
-    List<double> cumulative(DateTime month, int days) {
-      final values = <double>[];
-      var sum = 0.0;
-      for (var d = 1; d <= days; d++) {
-        final from = DateTime(month.year, month.month, d);
-        sum += p.sumBetween(from, from.add(const Duration(days: 1)), income: trendIncome);
-        values.add(sum);
-      }
-      return values;
-    }
-
-    final daysPrev = DateTime(prev.year, prev.month + 1, 0).day;
-    final current = cumulative(DateTime(now.year, now.month), now.day);
-    final previous = cumulative(prev, daysPrev);
-    final income = p.total(now, income: true), expense = p.total(now, income: false);
-    final color = trendIncome ? AppColors.primaryGreen : AppColors.accentRed;
-    Widget metric(String label, double value, bool forIncome) => Expanded(
-        child: InkWell(
-            borderRadius: BorderRadius.circular(10),
-            onTap: () => setState(() => trendIncome = forIncome),
-            child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Column(children: [
-                  Text(label, style: const TextStyle(fontSize: 12)),
-                  const SizedBox(height: 4),
-                  FittedBox(
-                      child: Text(money(value, p.currency),
-                          style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: forIncome ? AppColors.primaryGreen : AppColors.accentRed))),
-                  const SizedBox(height: 6),
-                  Container(
-                      height: 3,
-                      color: trendIncome == forIncome
-                          ? (forIncome ? AppColors.primaryGreen : AppColors.accentRed)
-                          : Colors.transparent),
-                ]))));
-    return Column(children: [
-      const Align(
-          alignment: Alignment.centerLeft,
-          child: Text('Báo cáo xu hướng', style: TextStyle(fontWeight: FontWeight.w700))),
-      const SizedBox(height: 6),
-      Row(children: [
-        metric('Tổng đã chi', expense, false),
-        const SizedBox(width: 8),
-        metric('Tổng thu', income, true),
-      ]),
-      const SizedBox(height: 10),
-      Expanded(
-          child: current.every((v) => v == 0) && previous.every((v) => v == 0)
-              ? const Center(child: Text('Nhập giao dịch để xem báo cáo'))
-              : TrendLineChart(current: current, previous: previous, color: color)),
-      const SizedBox(height: 4),
-      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Container(width: 14, height: 3, color: color),
-        const Text('  Tháng này     ', style: TextStyle(fontSize: 11)),
-        Container(width: 14, height: 3, color: AppColors.textGrey),
-        const Text('  Tháng trước', style: TextStyle(fontSize: 11)),
-      ]),
-    ]);
-  }
-}
-
 class _Metric extends StatelessWidget {
   const _Metric(this.label, this.value, this.color);
   final String label, value;
@@ -507,9 +314,9 @@ class _DebtOverviewState extends State<DebtOverview> {
           const SizedBox(height: 12),
           PercentRing(value: t.principal == 0 ? 0 : t.settled / t.principal, color: color),
           const SizedBox(height: 12),
-          _Metric('Tổng cộng', secret(p.hideBalance, t.principal, p.currency), AppColors.textPrimary),
+          _Metric('Tổng cộng', money(t.principal, p.currency), AppColors.textPrimary),
           const SizedBox(height: 8),
-          _Metric('Còn lại', secret(p.hideBalance, left, p.currency), color),
+          _Metric('Còn lại', money(left, p.currency), color),
         ]));
   }
 
@@ -537,7 +344,7 @@ class _DebtOverviewState extends State<DebtOverview> {
                 : balance > 0
                     ? 'Cân bằng • bạn đang được nợ'
                     : 'Cân bằng • bạn đang nợ')),
-        Text(secret(p.hideBalance, balance, p.currency),
+        Text(money(balance, p.currency),
             style: TextStyle(
                 fontWeight: FontWeight.w700, color: balance >= 0 ? AppColors.primaryGreen : AppColors.accentRed)),
       ])),
@@ -598,10 +405,6 @@ class _PersonDebt extends StatelessWidget {
     final payable = p.debt(borrowed: true, personId: personId);
     final own = entries.where((e) => e.personId == personId).toList();
     final wallet = own.first.walletId;
-    final debtWallet = p.findWallet(wallet);
-    final bankWallet =
-        debtWallet != null && debtWallet.hasBank ? debtWallet : p.wallets.where((w) => w.hasBank).firstOrNull;
-    final receivableVnd = p.debt(borrowed: false, personId: personId, unit: 'VND');
     return Panel(
         padding: EdgeInsets.zero,
         child: ExpansionTile(
@@ -609,8 +412,7 @@ class _PersonDebt extends StatelessWidget {
             collapsedShape: const Border(),
             leading: const RoundIcon(Icons.person_outline),
             title: Text(p.personName(personId), style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text(
-                'Cần thu ${secret(p.hideBalance, receivable, p.currency)} • Phải trả ${secret(p.hideBalance, payable, p.currency)}'),
+            subtitle: Text('Cần thu ${money(receivable, p.currency)} • Phải trả ${money(payable, p.currency)}'),
             childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
             children: [
               Wrap(spacing: 8, children: [
@@ -624,12 +426,6 @@ class _PersonDebt extends StatelessWidget {
                               initialWalletId: wallet,
                               initialAmount: receivable)),
                       child: const Text('Thu nợ')),
-                if (receivableVnd > 0 && bankWallet != null)
-                  OutlinedButton.icon(
-                      onPressed: () => openPage(
-                          context, ReceiveQrScreen(walletId: bankWallet.id, personId: personId, amount: receivableVnd)),
-                      icon: const Icon(Icons.qr_code_2, size: 18),
-                      label: const Text('Đòi nợ bằng QR')),
                 if (payable > 0)
                   OutlinedButton(
                       onPressed: () => openPage(

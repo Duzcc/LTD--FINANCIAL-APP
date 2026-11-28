@@ -46,7 +46,7 @@ class _WalletListState extends State<WalletList> {
         Text(spendableOnly ? 'Tài sản có thể dùng ngay' : 'Tổng tài sản', style: const TextStyle(fontSize: 12)),
         for (final unit in units)
           if (p.wallets.any((w) => w.currency == unit))
-            Text(secret(p.hideBalance, p.totalBalance(unit, spendableOnly: spendableOnly), unit),
+            Text(money(p.totalBalance(unit, spendableOnly: spendableOnly), unit),
                 style: Theme.of(context).textTheme.headlineSmall),
         SwitchListTile(
             contentPadding: EdgeInsets.zero,
@@ -99,7 +99,7 @@ class WalletCard extends StatelessWidget {
                   title: Text(w.name),
                   subtitle: Text(
                       '${w.savings ? 'Tiết kiệm' : 'Cơ bản'} • ${w.currency}${w.excluded ? ' • không tính vào tổng' : ''}'),
-                  trailing: Text(secret(p.hideBalance, balance, w.currency),
+                  trailing: Text(money(balance, w.currency),
                       style: TextStyle(
                           fontWeight: FontWeight.w700,
                           color: balance < 0 ? AppColors.accentRed : AppColors.textPrimary))),

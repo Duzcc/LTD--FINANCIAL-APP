@@ -1,7 +1,4 @@
-import 'dart:convert';
-import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:finance_app/features/ai/domain/entities/ai_models.dart';
 import 'package:finance_app/features/ai/domain/services/local_assistant.dart';
 import 'package:finance_app/features/ai/domain/services/category_model.dart';
@@ -9,8 +6,6 @@ import 'package:finance_app/features/ai/domain/services/insights.dart';
 import 'package:finance_app/features/ai/domain/services/quick_parser.dart';
 import 'package:finance_app/features/finance/domain/entities/entities.dart';
 import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
-import 'package:finance_app/features/security/data/services/app_lock.dart';
-import 'package:finance_app/features/settings/data/services/excel_export.dart';
 
 void main() {
   final now = DateTime(2026, 10, 20, 10);
@@ -228,38 +223,5 @@ void main() {
     expect(p.convert(3000000, 'VND', 'USD'), 120);
     expect(() => p.setRate('USD', 0), throwsArgumentError);
     p.dispose();
-  });
-
-  test('Xuất Excel tạo tệp xlsx hợp lệ có 3 trang', () {
-    final p = FinanceProvider();
-    p.saveEntry(spend('e', 45000, 'food', now, note: 'Phở & <trà>'));
-    final bytes = ExcelExport.build(p);
-    final zip = ZipDecoder().decodeBytes(bytes);
-    final names = zip.files.map((f) => f.name).toSet();
-    expect(names, containsAll(['[Content_Types].xml', 'xl/workbook.xml', 'xl/worksheets/sheet3.xml']));
-    final sheet = utf8.decode(zip.findFile('xl/worksheets/sheet1.xml')!.content as List<int>);
-    expect(sheet, contains('Phở &amp; &lt;trà&gt;'));
-    expect(sheet, contains('<v>45000.0</v>'));
-    p.dispose();
-  });
-
-  test('Khóa PIN: băm có muối, khóa tạm sau 5 lần sai', () async {
-    SharedPreferences.setMockInitialValues({});
-    final storage = await SharedPreferences.getInstance();
-    final lock = AppLock(storage: storage);
-    expect(lock.enabled, isFalse);
-    await lock.setPin('2468');
-    expect(storage.getString(AppLock.key), isNot(contains('2468')));
-    final again = AppLock(storage: storage);
-    expect(again.locked, isTrue);
-    for (var i = 0; i < 4; i++) {
-      expect(again.unlock('0000', now: now), contains('không đúng'));
-    }
-    expect(again.unlock('0000', now: now), contains('30 giây'));
-    expect(again.unlock('2468', now: now), contains('Thử lại'));
-    expect(again.unlock('2468', now: now.add(const Duration(seconds: 31))), isNull);
-    expect(again.locked, isFalse);
-    await again.disable();
-    expect(storage.containsKey(AppLock.key), isFalse);
   });
 }

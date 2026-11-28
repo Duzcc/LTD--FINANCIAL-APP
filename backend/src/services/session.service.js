@@ -10,12 +10,13 @@ const EXPIRED = 'Phiên đăng nhập đã hết hạn, vui lòng đăng nhập 
 
 const signAccessToken = (user, sid) =>
   jwt.sign({ sub: String(user._id), v: user.tokenVersion, ...(sid ? { sid } : {}) }, config.jwtSecret, {
+    algorithm: 'HS256',
     expiresIn: config.jwtExpiresIn,
   });
 
 function verifyAccessToken(token) {
   try {
-    return jwt.verify(token, config.jwtSecret);
+    return jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] });
   } catch {
     throw unauthorized();
   }
@@ -33,13 +34,13 @@ async function authenticate(token) {
 
 async function issue(user, sid = crypto.randomUUID()) {
   const refreshToken = randomToken(48);
-  await sessions.create({
-    user: user._id,
+  const stored = await sessions.replaceForUser(user._id, {
     tokenHash: sha256(refreshToken),
     version: user.tokenVersion,
     sid,
     expiresAt: new Date(Date.now() + config.refreshDays * 86400000),
   });
+  if (!stored) throw unauthorized();
   return { token: signAccessToken(user, sid), refreshToken, user: user.toJSON() };
 }
 
@@ -52,25 +53,23 @@ async function rotate(rawRefreshToken) {
     await sessions.deleteById(current._id);
     throw unauthorized('Phiên đăng nhập đã bị thu hồi.');
   }
-  // refresh token chỉ dùng một lần; hai request cùng lúc thì chỉ cái xóa được token cũ mới có phiên mới
-  const next = await issue(user, current.sid || undefined);
-  if (!(await sessions.deleteById(current._id))) {
-    await sessions.deleteByTokenHash(sha256(next.refreshToken));
-    throw unauthorized(EXPIRED);
-  }
-  return next;
+  const refreshToken = randomToken(48);
+  const rotated = await sessions.rotate(current._id, current.tokenHash, {
+    tokenHash: sha256(refreshToken),
+    version: user.tokenVersion,
+    expiresAt: new Date(Date.now() + config.refreshDays * 86400000),
+  });
+  if (!rotated) throw unauthorized(EXPIRED);
+  return { token: signAccessToken(user, current.sid), refreshToken, user: user.toJSON() };
 }
 
-async function revokeAll(user) {
-  user.tokenVersion += 1;
+async function revokeAll(user, { incrementVersion = true } = {}) {
+  if (incrementVersion) user.tokenVersion += 1;
   await sessions.deleteForUser(user._id);
 }
 
-async function signOut(user, { sessionId, everywhere, refreshToken }) {
-  if (everywhere) {
-    await revokeAll(user);
-    await users.save(user);
-  } else if (sessionId) {
+async function signOut(user, { sessionId, refreshToken }) {
+  if (sessionId) {
     await sessions.deleteForDevice(user._id, sessionId);
   } else if (refreshToken) {
     await sessions.deleteByTokenHash(sha256(String(refreshToken)), user._id);

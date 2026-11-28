@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:finance_app/app/app.dart';
 import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
-import 'package:finance_app/features/security/data/services/app_lock.dart';
 import 'package:finance_app/core/services/notification_service.dart';
 
 // không mở được bộ nhớ thì app vẫn chạy, chỉ là không lưu được
@@ -21,17 +20,15 @@ Future<void> main() async {
   SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(statusBarColor: Colors.transparent, statusBarIconBrightness: Brightness.dark));
   final storage = await _openStorage();
-  final finance = FinanceProvider(storage: storage)..restore();
-  if (storage == null) {
+  await storage?.remove('finance_pin_v1');
+  final finance = FinanceProvider(storage: storage);
+  await finance.restore();
+  if (storage == null && finance.storageError == null) {
     finance.storageError = 'Không mở được bộ nhớ thiết bị. Dữ liệu hiện chỉ lưu trong phiên sử dụng này.';
   }
   finance.onScheduleChanged = NotificationService.instance.apply;
   finance.onWalletActivity = NotificationService.instance.walletActivity;
-  finance.runRecurring();
-  runApp(FinanceApp(
-      finance: finance,
-      lock: AppLock(storage: storage),
-      returning: storage?.containsKey(FinanceProvider.storageKey) ?? false));
+  runApp(FinanceApp(finance: finance, returning: storage?.containsKey(FinanceProvider.storageKey) ?? false));
   unawaited(NotificationService.instance.apply(finance));
   if (finance.signedIn) unawaited(finance.syncNow());
 }

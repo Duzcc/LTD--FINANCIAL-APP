@@ -40,7 +40,7 @@
 # ============================================================================
 # Đinh Tuấn Dũng (trưởng nhóm) – xác thực, phiên đăng nhập, bảo mật, đồng bộ
 # ============================================================================
-/frontend/lib/features/auth/                                       @Duzcc   # đăng ký, đăng nhập OTP, quên mật khẩu, phiên
+/frontend/lib/features/auth/                                       @Duzcc   # đăng ký, đăng nhập, email link, phiên
 /frontend/lib/features/security/                                   @Duzcc   # khóa ứng dụng bằng PIN
 /frontend/lib/features/settings/presentation/screens/security_screen.dart  @Duzcc   # cài đặt PIN
 /frontend/lib/features/settings/presentation/screens/account_screen.dart   @Duzcc   # tài khoản, sao lưu, đăng xuất
@@ -48,7 +48,7 @@
 /frontend/lib/core/network/                                        @Duzcc   # ApiClient – điểm gọi HTTP duy nhất
 /frontend/lib/core/validation/                                     @Duzcc   # hàm kiểm tra email, mật khẩu, số tiền
 /frontend/lib/features/finance/data/                               @Duzcc   # lưu SharedPreferences, hàng chờ và đồng bộ
-/frontend/test/auth_otp_test.dart                                  @Duzcc
+/frontend/test/auth_email_link_test.dart                           @Duzcc
 /frontend/test/validators_test.dart                                @Duzcc
 /frontend/test/sync_test.dart                                      @Duzcc
 /backend/src/routes/auth.routes.js                                 @Duzcc
@@ -56,18 +56,15 @@
 /backend/src/validators/auth.validator.js                          @Duzcc
 /backend/src/services/auth.service.js                              @Duzcc
 /backend/src/services/session.service.js                           @Duzcc   # JWT, refresh token
-/backend/src/services/otp.service.js                               @Duzcc
-/backend/src/services/mail.service.js                              @Duzcc   # gửi OTP qua Brevo/SMTP
+/backend/src/services/mail.service.js                              @Duzcc   # gửi email link qua Brevo/SMTP
 /backend/src/services/sync.service.js                              @Duzcc
 /backend/src/routes/sync.routes.js                                 @Duzcc
 /backend/src/controllers/sync.controller.js                        @Duzcc
 /backend/src/middleware/                                           @Duzcc   # requireAuth, giới hạn số lần gọi, xử lý lỗi
 /backend/src/models/User.js                                        @Duzcc
 /backend/src/models/RefreshToken.js                                @Duzcc
-/backend/src/models/OtpChallenge.js                                @Duzcc
 /backend/src/repositories/user.repository.js                       @Duzcc
 /backend/src/repositories/session.repository.js                    @Duzcc
-/backend/src/repositories/otp.repository.js                        @Duzcc
 /backend/docs/openapi.yaml                                         @Duzcc   # tài liệu API
 
 # ============================================================================

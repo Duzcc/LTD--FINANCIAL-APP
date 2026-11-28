@@ -41,6 +41,41 @@ flowchart LR
 | Con người quyết định | LLM chỉ *đề xuất* (`propose_transaction`, `propose_budget`), người dùng bấm xác nhận |
 | Quyền riêng tư | Snapshot không chứa email/mật khẩu; có thể chạy LLM cục bộ bằng Ollama |
 
+## Luồng quên mật khẩu
+
+```mermaid
+sequenceDiagram
+  participant U as Người dùng
+  participant App as Flutter
+  participant BE as Backend
+  participant DB as MongoDB
+  participant Mail as SMTP/Brevo
+  U->>App: Nhập email và yêu cầu đặt lại mật khẩu
+  App->>BE: POST /api/auth/forgot-password
+  BE->>DB: Tìm tài khoản đã xác minh
+  alt Email chưa đăng ký
+    BE-->>App: Báo email chưa được đăng ký
+  else Email đã đăng ký nhưng chưa xác minh
+    BE-->>App: Báo cần xác minh email trước
+  else Email đã xác minh
+    BE->>DB: Lưu hash token và thời hạn
+    BE->>Mail: Gửi liên kết đặt lại
+    Mail-->>U: Email có nút HTTPS chuyển sang app deep link
+  end
+  U->>App: Bấm xác nhận trong email
+  App->>BE: POST /api/auth/reset-password/validate
+  BE->>DB: Kiểm tra hash token và hạn dùng, không tiêu thụ token
+  BE-->>App: Token hợp lệ
+  App-->>U: Hiện form mật khẩu mới và xác nhận trên máy ảo
+  U->>BE: POST /api/auth/reset-password
+  BE->>DB: Đổi mật khẩu, tiêu thụ token và thu hồi phiên
+  BE-->>U: Xác nhận đã đổi mật khẩu
+```
+
+Token chỉ bị tiêu thụ khi form đổi mật khẩu được gửi thành công. Phản hồi riêng cho email chưa đăng ký giúp người dùng sửa địa chỉ nhanh hơn nhưng cũng cho phép suy đoán email nào có tài khoản; với dịch vụ công khai, nên cân nhắc dùng phản hồi chung.
+
+Nút email dùng URL HTTPS công khai để mở ứng dụng qua Android App Links; ở môi trường emulator, debug manifest cũng nhận URL `http://10.0.2.2:3000/api/auth/open-app/`. App gửi token lên backend bằng POST rồi tự chuyển tới màn hình đăng nhập hoặc đặt lại mật khẩu. Trang bridge chỉ là dự phòng và không tự tiêu thụ token.
+
 ## Luồng "nhập nhanh"
 
 ```mermaid

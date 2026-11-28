@@ -1,8 +1,6 @@
 import 'dart:math' as math;
-import 'package:finance_app/features/finance/domain/entities/entities.dart';
 import 'package:finance_app/features/finance/domain/ledger_queries.dart';
 import 'package:finance_app/features/ai/domain/entities/ai_models.dart';
-import 'package:finance_app/features/ai/domain/services/category_model.dart';
 
 enum InsightLevel { good, info, warning, danger }
 
@@ -150,11 +148,6 @@ class FinanceInsights {
       }
     }
 
-    for (final s in subscriptions()) {
-      out.add(Insight(InsightLevel.info, 'Có vẻ là khoản cố định: ${s.$1}',
-          'Khoảng ${_m(s.$2)} lặp lại ${s.$3} tháng gần đây. Bạn có thể tạo giao dịch định kỳ để ghi tự động.'));
-    }
-
     final income = p.total(now, income: true), expense = p.total(now, income: false);
     if (income > 0) {
       final rate = (income - expense) / income;
@@ -174,26 +167,6 @@ class FinanceInsights {
     const order = [InsightLevel.danger, InsightLevel.warning, InsightLevel.info, InsightLevel.good];
     out.sort((a, b) => order.indexOf(a.level).compareTo(order.indexOf(b.level)));
     return out;
-  }
-
-  List<(String, double, int)> subscriptions() {
-    final groups = <String, List<MoneyEntry>>{};
-    final from = DateTime(now.year, now.month - 3);
-    for (final e in p.between(from, now.add(const Duration(days: 1)), unit: p.currency)) {
-      if (!e.kind.isExpense || e.note.trim().isEmpty || e.recurringId != null) continue;
-      groups.putIfAbsent(foldVietnamese(e.note), () => []).add(e);
-    }
-    final result = <(String, double, int)>[];
-    final covered = p.recurring.map((r) => foldVietnamese(r.note)).toSet();
-    groups.forEach((key, list) {
-      if (covered.contains(key)) return;
-      final months = list.map((e) => e.date.year * 12 + e.date.month).toSet().length;
-      if (months < 2) return;
-      final avg = list.fold(0.0, (s, e) => s + e.amount) / list.length;
-      final similar = list.every((e) => (e.amount - avg).abs() <= avg * .15);
-      if (similar) result.add((list.first.note, avg, months));
-    });
-    return result.take(3).toList();
   }
 
   Map<String, Object> summary() {

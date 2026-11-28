@@ -10,29 +10,22 @@ import 'package:finance_app/features/finance/presentation/providers/finance_prov
 import 'package:finance_app/app/main_screen.dart';
 import 'package:finance_app/features/transactions/presentation/screens/add_transaction_screen.dart';
 import 'package:finance_app/features/wallets/presentation/screens/create_wallet_screen.dart';
+import 'package:finance_app/features/settings/presentation/screens/account_screen.dart';
 import 'package:finance_app/features/categories/presentation/screens/select_category_screen.dart';
 import 'package:finance_app/features/categories/presentation/screens/select_person_screen.dart';
 import 'package:finance_app/features/budgets/presentation/screens/budgets_screen.dart';
-import 'package:finance_app/features/statistics/presentation/screens/statistics_screen.dart';
 import 'package:finance_app/features/ai/presentation/screens/insights_screen.dart';
 import 'package:finance_app/features/ai/presentation/screens/assistant_screen.dart';
-import 'package:finance_app/features/recurring/presentation/screens/recurring_screen.dart';
-import 'package:finance_app/features/settings/presentation/screens/rates_screen.dart';
-import 'package:finance_app/features/settings/presentation/screens/reminders_screen.dart';
-import 'package:finance_app/features/settings/presentation/screens/security_screen.dart';
-import 'package:finance_app/features/settings/presentation/screens/account_screen.dart';
-import 'package:finance_app/features/security/data/services/app_lock.dart';
 
 void main() {
-  testWidgets('Bắt đầu không cần tài khoản thì vào thẳng màn chính', (tester) async {
+  testWidgets('Màn đăng nhập không còn chức năng bắt đầu không cần tài khoản', (tester) async {
     await tester.pumpWidget(const FinanceApp());
     await tester.pumpAndSettle();
     expect(find.text('Đăng nhập'), findsWidgets);
-    await tester.scrollUntilVisible(find.text('Bắt đầu sử dụng'), 200, scrollable: find.byType(Scrollable).first);
-    await tester.tap(find.text('Bắt đầu sử dụng'));
-    await tester.pumpAndSettle();
-    expect(find.byType(MainScreen), findsOneWidget);
-    expect(tester.takeException(), isNull);
+    expect(find.text('Bạn muốn được gọi là gì?'), findsNothing);
+    expect(find.text('Bắt đầu sử dụng'), findsNothing);
+    expect(find.textContaining('Không cần tài khoản'), findsNothing);
+    expect(find.text('hoặc'), findsNothing);
   });
   for (final width in [320.0, 390.0, 430.0]) {
     testWidgets('Chuyển tab và lưu giao dịch trên màn rộng $width px', (tester) async {
@@ -77,7 +70,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
-  testWidgets('Màn nhập liệu và báo cáo vừa màn hẹp khi phóng to chữ', (tester) async {
+  testWidgets('Màn nhập liệu vừa màn hẹp khi phóng to chữ', (tester) async {
     tester.view.physicalSize = const Size(320, 740);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -92,22 +85,12 @@ void main() {
       const SelectCategoryScreen(),
       const SelectPersonScreen(),
       BudgetEditor(month: DateTime.now(), income: false),
-      const StatisticsScreen(),
       const InsightsScreen(),
       const AssistantScreen(),
-      const RecurringScreen(),
-      const RecurringEditor(),
-      const SecurityScreen(),
-      const RatesScreen(),
-      const RemindersScreen(),
-      const ExportScreen(),
       const AccountScreen(),
     ]) {
       await tester.pumpWidget(MultiProvider(
-          providers: [
-            ChangeNotifierProvider.value(value: p),
-            ChangeNotifierProvider(create: (_) => AppLock()),
-          ],
+          providers: [ChangeNotifierProvider.value(value: p)],
           child: MaterialApp(
               theme: AppTheme.lightTheme,
               builder: (context, child) => MediaQuery(
@@ -121,6 +104,25 @@ void main() {
       expect(tester.takeException(), isNull, reason: 'scrolled ${page.runtimeType}');
     }
     await tester.pumpWidget(const SizedBox.shrink());
+    p.dispose();
+  });
+  testWidgets('Tài khoản không còn các chức năng đã gỡ, vẫn giữ đăng nhập', (tester) async {
+    final p = FinanceProvider();
+    await tester.pumpWidget(ChangeNotifierProvider.value(value: p, child: const MaterialApp(home: AccountScreen())));
+    await tester.pumpAndSettle();
+    for (final label in [
+      'TRỢ LÝ AI',
+      'ỨNG DỤNG',
+      'Kết nối ngân hàng • VietQR',
+      'Báo cáo thống kê',
+      'Giao dịch định kỳ',
+      'Xuất Excel / CSV',
+      'Khóa ứng dụng bằng PIN',
+      'Sao lưu',
+    ]) {
+      expect(find.text(label), findsNothing, reason: label);
+    }
+    expect(find.text('Đăng nhập / Đăng ký'), findsOneWidget);
     p.dispose();
   });
   testWidgets('Chuyển tiền vượt số dư bị chặn, không có nút vẫn lưu', (tester) async {

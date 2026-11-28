@@ -3,8 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:finance_app/core/widgets/brand_logo.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
-import 'package:finance_app/features/recurring/presentation/screens/recurring_screen.dart';
-import 'package:finance_app/features/statistics/presentation/screens/statistics_screen.dart';
 import 'package:finance_app/features/categories/presentation/screens/select_category_screen.dart';
 import 'package:finance_app/features/wallets/presentation/screens/wallets_screen.dart';
 
@@ -68,14 +66,6 @@ class AppDrawer extends StatelessWidget {
                   leading: const Icon(Icons.category_outlined),
                   title: const Text('Danh mục'),
                   onTap: () => _open(context, const SelectCategoryScreen(manage: true))),
-              ListTile(
-                  leading: const Icon(Icons.pie_chart_outline),
-                  title: const Text('Báo cáo thống kê'),
-                  onTap: () => _open(context, const StatisticsScreen())),
-              ListTile(
-                  leading: const Icon(Icons.event_repeat),
-                  title: const Text('Giao dịch định kỳ'),
-                  onTap: () => _open(context, const RecurringScreen())),
             ])));
   }
 }

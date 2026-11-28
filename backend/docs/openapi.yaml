@@ -4,7 +4,7 @@ info:
   version: 1.3.0
   description: |
     RESTful API của ứng dụng Quản lý chi tiêu cá nhân (Nhóm 03 – Lập trình di động).
-    Xác thực bằng JWT (access token 1 giờ) + refresh token xoay vòng. Lỗi luôn có dạng
+    Xác thực bằng JWT (access token 15 phút) + refresh token xoay vòng, mỗi tài khoản chỉ có một phiên hoạt động. Lỗi luôn có dạng
     `{ "error": { "code": "...", "message": "..." } }`.
 servers:
   - url: http://localhost:3000
@@ -25,14 +25,14 @@ paths:
       security: []
       summary: Đăng ký
       requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/Register' } } } }
-      responses: { '201': { $ref: '#/components/responses/Session' }, '409': { $ref: '#/components/responses/Error' } }
+      responses: { '201': { description: Đã gửi liên kết xác minh email }, '409': { $ref: '#/components/responses/Error' } }
   /api/auth/login:
     post:
       tags: [auth]
       security: []
       summary: Đăng nhập
       requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/Login' } } } }
-      responses: { '200': { $ref: '#/components/responses/Session' }, '401': { $ref: '#/components/responses/Error' } }
+      responses: { '200': { $ref: '#/components/responses/Session' }, '401': { $ref: '#/components/responses/Error' }, '403': { description: Email chưa xác minh } }
   /api/auth/refresh:
     post:
       tags: [auth]
@@ -40,16 +40,26 @@ paths:
       summary: Đổi refresh token lấy phiên mới (xoay vòng)
       requestBody: { content: { application/json: { schema: { type: object, properties: { refreshToken: { type: string } } } } } }
       responses: { '200': { $ref: '#/components/responses/Session' } }
-  /api/auth/verify-email: { post: { tags: [auth], summary: Xác minh email bằng mã 6 số, responses: { '200': { description: OK } } } }
-  /api/auth/resend-verification: { post: { tags: [auth], summary: Gửi lại mã xác minh, responses: { '200': { description: OK } } } }
-  /api/auth/forgot-password: { post: { tags: [auth], security: [], summary: Gửi mã đặt lại mật khẩu, responses: { '200': { description: OK } } } }
-  /api/auth/reset-password: { post: { tags: [auth], security: [], summary: Đặt lại mật khẩu bằng mã, responses: { '200': { description: OK } } } }
+  /api/auth/verify-email:
+    get: { tags: [auth], security: [], summary: Mở trang xác minh (GET không tiêu thụ token), responses: { '200': { description: Trang HTML xác minh } } }
+    post: { tags: [auth], security: [], summary: Xác nhận email bằng token một lần, requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/ActionToken' } }, application/x-www-form-urlencoded: { schema: { $ref: '#/components/schemas/ActionToken' } } } }, responses: { '200': { description: Email đã xác minh } } }
+  /api/auth/open-app/{action}:
+    get: { tags: [auth], security: [], summary: Chuyển liên kết web từ email sang deep link của ứng dụng, parameters: [{ in: path, name: action, required: true, schema: { type: string, enum: [verify-email, reset-password] } }, { in: query, name: token, required: true, schema: { type: string } }], responses: { '200': { description: Trang chuyển tiếp không tiêu thụ token } } }
+  /api/auth/resend-verification:
+    post: { tags: [auth], security: [], summary: Gửi lại liên kết xác minh, requestBody: { content: { application/json: { schema: { type: object, required: [email], properties: { email: { type: string, format: email } } } } } }, responses: { '200': { description: Nếu cần, liên kết đã được gửi } } }
+  /api/auth/forgot-password:
+    post: { tags: [auth], security: [], summary: Gửi liên kết đặt lại mật khẩu, requestBody: { content: { application/json: { schema: { type: object, required: [email], properties: { email: { type: string, format: email } } } } } }, responses: { '200': { description: Trả registered và verified; nếu email chưa đăng ký hiển thị thông báo, nếu đã xác minh thì gửi liên kết } } }
+  /api/auth/reset-password:
+    get: { tags: [auth], security: [], summary: Mở trang đặt mật khẩu mới, responses: { '200': { description: Form HTML đặt mật khẩu } } }
+    post: { tags: [auth], security: [], summary: Đặt mật khẩu mới bằng token một lần, requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/ResetPassword' } }, application/x-www-form-urlencoded: { schema: { $ref: '#/components/schemas/ResetPassword' } } } }, responses: { '200': { description: Mật khẩu đã cập nhật; cần đăng nhập lại } } }
+  /api/auth/reset-password/validate:
+    post: { tags: [auth], security: [], summary: Kiểm tra liên kết đặt lại mật khẩu trước khi mở form trong ứng dụng, requestBody: { content: { application/json: { schema: { $ref: '#/components/schemas/ActionToken' } } } }, responses: { '200': { description: Token còn hiệu lực } } }
   /api/auth/me:
     get: { tags: [auth], summary: Thông tin tài khoản, responses: { '200': { description: OK } } }
     put: { tags: [auth], summary: Cập nhật tên, tiền tệ, tỷ giá, responses: { '200': { description: OK } } }
     delete: { tags: [auth], summary: Xóa tài khoản và toàn bộ dữ liệu, responses: { '200': { description: OK } } }
   /api/auth/change-password: { put: { tags: [auth], summary: Đổi mật khẩu, responses: { '200': { description: OK } } } }
-  /api/auth/logout: { post: { tags: [auth], summary: 'Đăng xuất thiết bị hiện tại; body { all: true } để đăng xuất mọi thiết bị', responses: { '204': { description: Đã đăng xuất } } } }
+  /api/auth/logout: { post: { tags: [auth], summary: Đăng xuất phiên hiện tại, responses: { '204': { description: Đã đăng xuất } } }
   /api/{resource}:
     parameters:
       - { name: resource, in: path, required: true, schema: { type: string, enum: [wallets, categories, people, transactions, budgets, recurring] } }
@@ -157,11 +167,22 @@ components:
     Register:
       type: object
       required: [name, email, password]
-      properties: { name: { type: string }, email: { type: string, format: email }, password: { type: string, minLength: 6 } }
+      properties: { name: { type: string }, email: { type: string, format: email }, password: { type: string, minLength: 8, maxLength: 72 } }
     Login:
       type: object
       required: [email, password]
       properties: { email: { type: string }, password: { type: string } }
+    ActionToken:
+      type: object
+      required: [token]
+      properties: { token: { type: string, minLength: 40, maxLength: 128 } }
+    ResetPassword:
+      type: object
+      required: [token, newPassword]
+      properties:
+        token: { type: string, minLength: 40, maxLength: 128 }
+        newPassword: { type: string, minLength: 8, maxLength: 72 }
+        confirmPassword: { type: string }
     Error:
       type: object
       properties: { error: { type: object, properties: { code: { type: string }, message: { type: string } } } }

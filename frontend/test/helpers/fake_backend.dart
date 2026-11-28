@@ -21,9 +21,15 @@ class FakeBackend {
     'budgets': <dynamic>[],
   }));
   List<Map<String, dynamic>> batches = [];
-  static const otpCode = '123456';
-
   Map<String, dynamic>? bankRequest;
+  String? verifiedEmailToken;
+  Map<String, dynamic>? resetRequest;
+  Map<String, dynamic> forgotPasswordResult = {
+    'registered': true,
+    'verified': true,
+    'mailEnabled': true,
+    'message': 'Đã gửi liên kết đặt lại mật khẩu. Hãy kiểm tra hộp thư.',
+  };
 
   final ai = <String, Map<String, dynamic> Function(Map<String, dynamic>)>{};
   final aiCalls = <String>[];
@@ -45,21 +51,33 @@ class FakeBackend {
             }, 401);
           }
           return json({
-            'otpRequired': true,
-            'otpToken': 'otp1',
-            'email': body()['email'],
-            'devCode': otpCode,
-            'expiresIn': 300,
-            'resendAfter': 60,
+            'token': token,
+            'refreshToken': refreshToken,
+            'user': snapshot['user'],
           });
         }
-        if (path == '/api/auth/verify-otp') {
-          if (body()['otpToken'] != 'otp1' || body()['code'] != otpCode) {
-            return json({
-              'error': {'code': 'INVALID_CODE', 'message': 'Mã OTP không đúng. Bạn còn 4 lần thử.'}
-            }, 400);
-          }
-          return json({'token': token, 'refreshToken': refreshToken, 'user': snapshot['user']});
+        if (path == '/api/auth/register') {
+          return json({
+            'message': 'Hãy xác minh email.',
+            'devLink': 'http://10.0.2.2:3000/api/auth/open-app/verify-email?token=testing'
+          });
+        }
+        if (path == '/api/auth/verify-email') {
+          verifiedEmailToken = body()['token'] as String?;
+          return json({'message': 'Email đã được xác minh.'});
+        }
+        if (path == '/api/auth/forgot-password') {
+          return json(forgotPasswordResult);
+        }
+        if (path == '/api/auth/reset-password/validate') {
+          return json({'valid': true});
+        }
+        if (path == '/api/auth/reset-password') {
+          resetRequest = body();
+          return json({'message': 'Mật khẩu đã được cập nhật.'});
+        }
+        if (path == '/api/auth/resend-verification') {
+          return json({'message': 'Nếu email đã đăng ký, hãy kiểm tra hộp thư.'});
         }
         if (path == '/api/auth/refresh') {
           refreshCalls++;
@@ -122,7 +140,5 @@ class FakeBackend {
       });
 }
 
-Future<bool> signInWithOtp(FinanceProvider p, {String email = 'an@test.vn', String password = '123456'}) async {
-  final challenge = await p.signIn(email: email, password: password);
-  return p.verifyOtp(challenge, challenge.devCode!);
-}
+Future<bool> signIn(FinanceProvider p, {String email = 'an@test.vn', String password = '123456'}) =>
+    p.signIn(email: email, password: password);

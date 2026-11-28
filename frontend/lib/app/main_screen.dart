@@ -17,29 +17,8 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
+class _MainScreenState extends State<MainScreen> {
   int index = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) return;
-    final p = context.read<FinanceProvider>();
-    final created = p.runRecurring();
-    if (created > 0) message(context, 'Đã tự ghi $created giao dịch định kỳ đến hạn.');
-    if (p.signedIn) p.syncNow();
-  }
 
   @override
   Widget build(BuildContext context) {

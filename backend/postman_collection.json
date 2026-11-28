@@ -201,7 +201,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"a@example.com\",\n  \"code\": \"123456\",\n  \"newPassword\": \"moi123\"\n}"
+              "raw": "{\n  \"token\": \"<token-from-reset-link>\",\n  \"newPassword\": \"Moi12345\",\n  \"confirmPassword\": \"Moi12345\"\n}"
             }
           }
         },
@@ -283,7 +283,7 @@
           }
         },
         {
-          "name": "Gửi lại mã xác thực email",
+          "name": "Gửi lại liên kết xác minh email",
           "request": {
             "method": "POST",
             "header": [
@@ -302,11 +302,15 @@
                 "auth",
                 "resend-verification"
               ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"a@example.com\"\n}"
             }
           }
         },
         {
-          "name": "Xác thực email",
+          "name": "Xác minh email bằng liên kết",
           "request": {
             "method": "POST",
             "header": [
@@ -328,7 +332,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"123456\"\n}"
+              "raw": "{\n  \"token\": \"<token-from-verification-link>\"\n}"
             }
           }
         }

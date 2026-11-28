@@ -36,9 +36,12 @@ services:
       MONGODB_URI: mongodb://mongo:27017/finance_app
       JWT_SECRET: ${JWT_SECRET:?Đặt JWT_SECRET trong .env}
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      PUBLIC_URL: ${PUBLIC_URL:-}
       AI_SERVICE_URL: http://ai-service:8000
       AI_SERVICE_KEY: ${AI_SERVICE_KEY}
       SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       MAIL_FROM: ${MAIL_FROM:-}

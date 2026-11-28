@@ -9,7 +9,6 @@ import 'package:finance_app/app/main_screen.dart';
 import 'package:finance_app/core/network/api_client.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
-import 'package:finance_app/features/statistics/presentation/screens/statistics_screen.dart';
 import 'package:finance_app/features/transactions/presentation/screens/add_transaction_screen.dart';
 import 'package:finance_app/features/wallets/presentation/screens/wallet_detail_screen.dart';
 import 'package:finance_app/features/wallets/presentation/screens/wallets_screen.dart';
@@ -80,11 +79,12 @@ void main() {
     await settle(t);
   }
 
-  testWidgets('Các luồng trong báo cáo, thao tác trên giao diện', (t) async {
+  testWidgets('Các luồng ứng dụng còn lại, thao tác trên giao diện', (t) async {
     final p = FinanceProvider(storage: null, api: ApiClient());
     final signup = await p.register(name: 'Kiểm Thử Luồng', email: email, password: password);
-    expect(signup.devCode, isNotNull, reason: 'máy chủ thử nghiệm trả mã OTP');
-    await p.verifyOtp(signup, signup.devCode!);
+    final token = Uri.parse(signup['devLink'] as String).queryParameters['token']!;
+    await p.api.send('POST', p.serverUrl, '/auth/verify-email', body: {'token': token});
+    await p.signIn(email: email, password: password);
     expect(p.signedIn, isTrue);
 
     await t.pumpWidget(FinanceApp(finance: p, returning: true));
@@ -343,17 +343,10 @@ void main() {
 
     // Bảng 20: Tổng quan
     await tab(t, 'Tổng quan');
-    await t.tap(find.widgetWithText(Tab, 'Báo cáo'));
+    await t.tap(find.widgetWithText(Tab, 'Tổng quan'));
     await settle(t);
-    await tap(t, find.byTooltip('Ẩn số dư'));
-    expect(p.hideBalance, isTrue);
-    expect(find.text(money(p.totalBalance('VND'), 'VND')), findsNothing, reason: 'ẩn số dư thì che số tiền');
-    await shot(t, 'tong_quan_an_so_du');
-    await tap(t, find.byTooltip('Hiện số dư'));
-    await tapText(t, 'Xem báo cáo');
-    expect(find.byType(StatisticsScreen), findsOneWidget);
-    await shot(t, 'thong_ke');
-    await back(t);
+    expect(find.text(money(p.totalBalance('VND'), 'VND')), findsOneWidget);
+    await shot(t, 'tong_quan');
 
     // Bảng 34 + 2.5: đồng bộ và dữ liệu trên máy chủ thống nhất
     await tab(t, 'Tài khoản');
@@ -364,8 +357,7 @@ void main() {
     await shot(t, 'tai_khoan_dong_bo');
 
     final device2 = FinanceProvider(storage: null, api: ApiClient());
-    final login = await device2.signIn(email: email, password: password);
-    if (await device2.verifyOtp(login, login.devCode!)) await device2.resolveLogin(useAccount: true);
+    if (await device2.signIn(email: email, password: password)) await device2.resolveLogin(useAccount: true);
     expect(device2.wallets.map((w) => w.name).toSet(), {'Tiền mặt', 'Ngân hàng ACB', 'Heo đất'});
     expect(device2.balance(bank.id), p.balance(bank.id));
     expect((device2.balance(cash.id), device2.balance(pig.id)), (200000.0, 100000.0));
@@ -375,6 +367,7 @@ void main() {
     expect(device2.categories.any((c) => c.name == 'Cà phê'), isTrue);
     expect(device2.overallBudget(DateTime(DateTime.now().year, DateTime.now().month), income: false)?.amount, 3000000);
     await device2.signOut();
+    if (await p.signIn(email: email, password: password)) await p.resolveLogin(useAccount: true);
     await p.deleteAccount(password);
   });
 }

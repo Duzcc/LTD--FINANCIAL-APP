@@ -1,16 +1,12 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:finance_app/features/finance/presentation/providers/finance_provider.dart';
 import 'package:finance_app/core/validation/validators.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
-import 'package:finance_app/features/auth/presentation/screens/auth_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
-  const ForgotPasswordScreen({super.key, this.email = '', this.fromSettings = false});
+  const ForgotPasswordScreen({super.key, this.email = ''});
   final String email;
-  final bool fromSettings;
   @override
   State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
@@ -18,15 +14,15 @@ class ForgotPasswordScreen extends StatefulWidget {
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with BusyState {
   final form = GlobalKey<FormState>();
   late final email = TextEditingController(text: widget.email);
-  final code = TextEditingController(), password = TextEditingController(), confirm = TextEditingController();
-  bool codeSent = false;
+  bool requested = false;
+  bool? registered;
+  bool? verified;
   String? hint;
+  String? devLink;
 
   @override
   void dispose() {
-    for (final c in [email, code, password, confirm]) {
-      c.dispose();
-    }
+    email.dispose();
     super.dispose();
   }
 
@@ -35,75 +31,43 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with BusySt
     await runBusy(() => action(context.read<FinanceProvider>()));
   }
 
-  Future<void> sendCode(FinanceProvider p) async {
-    final dev = await p.forgotPassword(email.text);
+  Future<void> sendLink(FinanceProvider p) async {
+    final result = await p.forgotPassword(email.text.trim());
     if (!mounted) return;
     setState(() {
-      codeSent = true;
-      hint = dev != null && kDebugMode
-          ? 'Mã khôi phục của bạn: $dev'
-          : 'Nếu email đã đăng ký, mã gồm 6 chữ số đã được gửi tới hộp thư. Mã có hiệu lực 15 phút.';
+      registered = result['registered'] as bool?;
+      verified = result['verified'] as bool?;
+      requested = result['mailEnabled'] == true;
+      devLink = result['devLink'] as String?;
+      hint = result['message'] as String?;
     });
-  }
-
-  Future<void> reset(FinanceProvider p) async {
-    final needs = await p.resetPassword(email: email.text, code: code.text, newPassword: password.text);
-    if (!mounted) return;
-    message(context, 'Đã đặt lại mật khẩu.');
-    await finishSignIn(context, needs, fromSettings: widget.fromSettings);
   }
 
   @override
   Widget build(BuildContext context) => FinancePage(
       title: 'Quên mật khẩu',
       child: Form(
-          autovalidateMode: AutovalidateMode.onUserInteraction,
+          autovalidateMode: AutovalidateMode.disabled,
           key: form,
           child: ListView(padding: const EdgeInsets.all(20), children: [
-            Text(
-                codeSent
-                    ? 'Nhập mã khôi phục và mật khẩu mới.'
-                    : 'Nhập email đã đăng ký để nhận mã khôi phục mật khẩu.',
-                style: const TextStyle(height: 1.5)),
+            const Text('Nhập email đã đăng ký. Một liên kết an toàn sẽ được gửi để bạn đặt mật khẩu mới.',
+                style: TextStyle(height: 1.5)),
             const SizedBox(height: 16),
             TextFormField(
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 controller: email,
-                enabled: !codeSent,
                 keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Email', prefixIcon: Icon(Icons.mail_outline)),
+                decoration: InputDecoration(
+                  labelText: 'Email',
+                  prefixIcon: const Icon(Icons.mail_outline),
+                ),
                 validator: validateLoginEmail),
             if (hint != null) ...[
               const SizedBox(height: 12),
-              Panel(color: AppColors.primaryGreenSurface, child: Text(hint!, style: const TextStyle(height: 1.5))),
-            ],
-            if (codeSent) ...[
-              const SizedBox(height: 12),
-              TextFormField(
-                  controller: code,
-                  keyboardType: TextInputType.number,
-                  maxLength: 6,
-                  decoration:
-                      const InputDecoration(labelText: 'Mã khôi phục (6 số)', prefixIcon: Icon(Icons.pin_outlined)),
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: (v) => validateOtp(v) == null ? null : 'Mã khôi phục gồm đúng 6 chữ số'),
-              const SizedBox(height: 4),
-              TextFormField(
-                  controller: password,
-                  obscureText: true,
-                  maxLength: 72,
-                  decoration: const InputDecoration(
-                      labelText: 'Mật khẩu mới',
-                      helperText: passwordRules,
-                      counterText: '',
-                      prefixIcon: Icon(Icons.lock_outline)),
-                  validator: (v) => validatePassword(v, email: email.text)),
-              const SizedBox(height: 12),
-              TextFormField(
-                  controller: confirm,
-                  obscureText: true,
-                  decoration:
-                      const InputDecoration(labelText: 'Nhập lại mật khẩu mới', prefixIcon: Icon(Icons.lock_outline)),
-                  validator: (v) => v != password.text ? 'Mật khẩu nhập lại không khớp' : null),
+              if (registered == false || (registered == true && verified == false))
+                Text(hint!, style: const TextStyle(color: AppColors.accentRed, height: 1.5))
+              else
+                Panel(color: AppColors.primaryGreenSurface, child: Text(hint!, style: const TextStyle(height: 1.5))),
             ],
             if (error != null) ...[
               const SizedBox(height: 12),
@@ -111,23 +75,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> with BusySt
             ],
             const SizedBox(height: 20),
             FilledButton(
-                onPressed: busy ? null : () => run(codeSent ? reset : sendCode),
+                onPressed: busy ? null : () => run(sendLink),
                 child: Padding(
                     padding: const EdgeInsets.all(14),
                     child: Text(busy
-                        ? 'Đang xử lý…'
-                        : codeSent
-                            ? 'Đặt lại mật khẩu'
-                            : 'Gửi mã khôi phục'))),
-            if (codeSent)
-              TextButton(
-                  onPressed: busy
-                      ? null
-                      : () => setState(() {
-                            codeSent = false;
-                            hint = null;
-                          }),
-                  child: const Text('Gửi lại mã / đổi email')),
+                        ? 'Đang gửi…'
+                        : requested
+                            ? 'Gửi lại liên kết'
+                            : 'Gửi liên kết đặt lại mật khẩu'))),
+            if (devLink != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: SelectableText('Liên kết kiểm tra: $devLink'),
+              ),
           ])));
 }
 
@@ -152,7 +112,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> with BusySt
     if (!form.currentState!.validate()) return;
     final failure = await runBusy(() => context.read<FinanceProvider>().changePassword(current.text, next.text));
     if (failure != null || !mounted) return;
-    message(context, 'Đã đổi mật khẩu. Các thiết bị khác cần đăng nhập lại.');
+    message(context, 'Đã đổi mật khẩu.');
     Navigator.pop(context);
   }
 
@@ -160,33 +120,36 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> with BusySt
   Widget build(BuildContext context) => FinancePage(
       title: 'Đổi mật khẩu',
       child: Form(
-          autovalidateMode: AutovalidateMode.onUserInteraction,
+          autovalidateMode: AutovalidateMode.disabled,
           key: form,
           child: ListView(padding: const EdgeInsets.all(20), children: [
             TextFormField(
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 controller: current,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: 'Mật khẩu hiện tại', prefixIcon: Icon(Icons.lock_outline)),
+                decoration: InputDecoration(labelText: 'Mật khẩu hiện tại', prefixIcon: const Icon(Icons.lock_outline)),
                 validator: (v) => (v ?? '').isEmpty ? 'Nhập mật khẩu hiện tại' : null),
             const SizedBox(height: 12),
             TextFormField(
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 controller: next,
                 obscureText: true,
                 maxLength: 72,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                     labelText: 'Mật khẩu mới',
                     helperText: passwordRules,
                     counterText: '',
-                    prefixIcon: Icon(Icons.lock_reset)),
+                    prefixIcon: const Icon(Icons.lock_outline)),
                 validator: (v) =>
                     validatePassword(v, email: context.read<FinanceProvider>().session?.email) ??
                     (v == current.text ? 'Mật khẩu mới phải khác mật khẩu hiện tại' : null)),
             const SizedBox(height: 12),
             TextFormField(
+                autovalidateMode: AutovalidateMode.onUserInteraction,
                 controller: confirm,
                 obscureText: true,
                 decoration:
-                    const InputDecoration(labelText: 'Nhập lại mật khẩu mới', prefixIcon: Icon(Icons.lock_reset)),
+                    InputDecoration(labelText: 'Nhập lại mật khẩu mới', prefixIcon: const Icon(Icons.lock_reset)),
                 validator: (v) => v != next.text ? 'Mật khẩu nhập lại không khớp' : null),
             if (error != null) ...[
               const SizedBox(height: 12),

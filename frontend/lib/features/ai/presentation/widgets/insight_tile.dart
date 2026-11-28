@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:finance_app/core/widgets/finance_ui.dart';
 import 'package:finance_app/features/ai/domain/services/insights.dart';
 import 'package:finance_app/features/ledger/presentation/screens/ledger_screen.dart';
-import 'package:finance_app/features/recurring/presentation/screens/recurring_screen.dart';
 
 class InsightTile extends StatelessWidget {
   const InsightTile({super.key, required this.insight});
@@ -15,7 +14,6 @@ class InsightTile extends StatelessWidget {
       InsightLevel.good => (Icons.verified_outlined, AppColors.primaryGreen),
       InsightLevel.info => (Icons.lightbulb_outline, const Color(0xFF8D7564)),
     };
-    final isSubscription = insight.title.startsWith('Có vẻ là khoản cố định');
     return Padding(
         padding: const EdgeInsets.only(bottom: 10),
         child: Panel(
@@ -27,8 +25,6 @@ class InsightTile extends StatelessWidget {
                 subtitle: Text(insight.detail, style: const TextStyle(height: 1.4)),
                 onTap: insight.categoryId != null
                     ? () => openPage(context, LedgerScreen(initialCategoryId: insight.categoryId))
-                    : isSubscription
-                        ? () => openPage(context, const RecurringScreen())
-                        : null)));
+                    : null)));
   }
 }

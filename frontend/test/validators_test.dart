@@ -22,22 +22,16 @@ void main() {
     expect(validateLoginEmail('khongphaiemail'), isNotNull);
   });
 
-  test('Mật khẩu mới: 8–72 ký tự, chữ + số, không khoảng trắng, khác email', () {
+  test('Mật khẩu mới: 8–72 byte UTF-8, chữ + số, không khoảng trắng, khác email', () {
     expect(validatePassword('Matkhau1'), isNull);
     expect(validatePassword('Ab1'), contains('8'));
     expect(validatePassword('abcdefgh'), contains('chữ cái và chữ số'));
     expect(validatePassword('12345678'), contains('chữ cái và chữ số'));
     expect(validatePassword('Mat khau1'), contains('khoảng trắng'));
     expect(validatePassword('A1${'a' * 71}'), contains('72'));
+    expect(validatePassword('A1${'é' * 36}'), contains('72'));
     expect(validatePassword('abc12345@x.vn', email: 'ABC12345@x.vn'), contains('trùng email'));
     expect(validateLoginPassword('123'), isNull, reason: 'đăng nhập không kiểm độ mạnh');
     expect(validateLoginPassword(''), isNotNull);
-  });
-
-  test('OTP: đúng 6 chữ số', () {
-    expect(validateOtp('012345'), isNull);
-    for (final c in ['', '12345', '1234567', '12a456']) {
-      expect(validateOtp(c), isNotNull, reason: c);
-    }
   });
 }

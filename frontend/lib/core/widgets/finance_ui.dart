@@ -9,8 +9,6 @@ export 'package:finance_app/core/theme/app_colors.dart';
 String money(num value, [String unit = 'VND']) =>
     '${NumberFormat('#,##0.##', 'vi_VN').format(value)} ${unit == 'VND' ? '₫' : unit}';
 
-String secret(bool hidden, num value, [String unit = 'VND']) => hidden ? '••••••' : money(value, unit);
-
 String compactMoney(num value) {
   final v = value.abs();
   if (v >= 1e9) return '${NumberFormat('#,##0.#', 'vi_VN').format(value / 1e9)}tỷ';

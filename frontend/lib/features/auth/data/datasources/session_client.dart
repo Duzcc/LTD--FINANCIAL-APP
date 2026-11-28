@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:finance_app/core/network/api_client.dart';
 import 'package:finance_app/features/auth/domain/entities/account_session.dart';
 
@@ -7,7 +8,7 @@ class SessionClient {
   final ApiClient api;
   final AccountSession? Function() session;
   final String Function() serverUrl;
-  final void Function(AccountSession) onRefreshed;
+  final FutureOr<void> Function(AccountSession) onRefreshed;
   Future<void>? _refreshing;
 
   Future<Map<String, dynamic>> send(String method, String path, {Object? body, bool auth = true}) async {
@@ -33,6 +34,6 @@ class SessionClient {
 
   Future<void> _refresh(AccountSession current) async {
     final r = await api.send('POST', current.baseUrl, '/auth/refresh', body: {'refreshToken': current.refreshToken});
-    onRefreshed(current.withToken(r['token'] as String, refresh: r['refreshToken'] as String?));
+    await onRefreshed(current.withToken(r['token'] as String, refresh: r['refreshToken'] as String?));
   }
 }
