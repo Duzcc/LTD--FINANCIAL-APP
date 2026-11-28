@@ -12,6 +12,9 @@ from app.schemas.finance import FinanceSnapshot
 from app.services import anomaly, budget, forecaster
 from app.services.parser import get_parser
 
+DAY_PARTS = [("sáng", 5, 11), ("trưa", 11, 14), ("chiều", 14, 18), ("tối", 18, 23), ("khuya", 23, 5)]
+WEEKDAYS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"]
+
 
 def _thousand(x: float) -> int:
     # số tiết kiệm là ước tính nên làm tròn nghìn cho dễ đọc
@@ -90,6 +93,18 @@ TOOL_SPECS: list[dict[str, Any]] = [
             "type": "object",
             "properties": {
                 "savings_rate": {"type": "number", "description": "Tỷ lệ tiết kiệm mục tiêu 0..0.6, mặc định 0.2"}
+            },
+        },
+    },
+    {
+        "name": "spending_habits",
+        "description": "Thói quen chi tiêu theo buổi trong ngày và thứ trong tuần (sáng/trưa/chiều/tối, ngày thường so với "
+        "cuối tuần), có thể lọc theo từ khóa hoặc danh mục. Trả về số liệu và các nhận xét đã tính sẵn.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Từ khóa hoặc tên danh mục, ví dụ 'cà phê' (tùy chọn)"},
+                "days": {"type": "integer", "description": "Số ngày gần nhất để xét, mặc định 90"},
             },
         },
     },
@@ -367,6 +382,91 @@ class FinanceToolkit:
                 }
                 for s in r["suggestions"]
             ],
+        }
+
+    def spending_habits(self, query: str | None = None, days: int = 90) -> dict:
+        days = max(7, min(int(days or 90), 365))
+        since = self.now - timedelta(days=days)
+        word = re.compile(rf"\b{re.escape(fold(query).strip())}\b") if query and fold(query).strip() else None
+        txs = [
+            (self._local(t.date), t)
+            for t in self.s.transactions
+            if not t.excluded
+            and t.kind in EXPENSE_KINDS
+            and self._local(t.date) >= since
+            and (word is None or word.search(fold(f"{t.note} {self.names.get(t.categoryId or '', '')}")))
+        ]
+        if not txs:
+            return {"query": query, "count": 0, "note": "Chưa đủ giao dịch để nhận ra thói quen."}
+        total = sum(t.amount for _, t in txs)
+        notes: list[str] = []
+
+        # giao dịch nhập không kèm giờ đều nằm ở 00:00, khi đó không xét theo buổi
+        timed = [(d, t) for d, t in txs if (d.hour, d.minute) != (0, 0)]
+        by_part = []
+        if len(timed) >= len(txs) / 2:
+            slots = {}
+            for d, t in timed:
+                name = next(n for n, a, b in DAY_PARTS if a <= d.hour < b or (a > b and (d.hour >= a or d.hour < b)))
+                c, s, cats = slots.get(name, (0, 0.0, {}))
+                cats[t.categoryId] = cats.get(t.categoryId, 0.0) + t.amount
+                slots[name] = (c + 1, s + t.amount, cats)
+            timed_total = sum(t.amount for _, t in timed)
+            for name, _, _ in DAY_PARTS:
+                if name in slots:
+                    c, s, cats = slots[name]
+                    top = max(cats, key=cats.get)
+                    by_part.append(
+                        {
+                            "part": name,
+                            "count": c,
+                            "total": round(s),
+                            "share": round(s / timed_total, 3),
+                            "top_category": self.names.get(top or "", "Khác"),
+                        }
+                    )
+            peak = max(by_part, key=lambda x: x["total"])
+            notes.append(
+                f"Chi nhiều nhất vào buổi {peak['part']}: {peak['share'] * 100:.0f}% tổng chi, chủ yếu {peak['top_category']}."
+            )
+        else:
+            notes.append("Phần lớn giao dịch không ghi giờ nên chưa xét được theo buổi trong ngày.")
+
+        week = [0.0] * 7
+        for d, t in txs:
+            week[d.weekday()] += t.amount
+        # số lần mỗi thứ xuất hiện trong khoảng xét, để so trung bình mỗi ngày cho công bằng
+        seen = [0] * 7
+        day = since.date()
+        while day <= self.now.date():
+            seen[day.weekday()] += 1
+            day += timedelta(days=1)
+        by_weekday = [
+            {"weekday": WEEKDAYS[i], "total": round(week[i]), "per_day": round(week[i] / seen[i]) if seen[i] else 0}
+            for i in range(7)
+        ]
+        weekday_avg = sum(week[:5]) / max(1, sum(seen[:5]))
+        weekend_avg = sum(week[5:]) / max(1, sum(seen[5:]))
+        top_day = max(by_weekday, key=lambda x: x["per_day"])
+        notes.append(
+            f"Ngày chi nhiều nhất trong tuần: {top_day['weekday']} (trung bình {top_day['per_day']:,}đ/ngày).".replace(
+                ",", "."
+            )
+        )
+        if weekday_avg and weekend_avg > weekday_avg * 1.2:
+            notes.append(f"Cuối tuần chi gấp {weekend_avg / weekday_avg:.1f} lần ngày thường.".replace(".", ",", 1))
+        elif weekend_avg and weekday_avg > weekend_avg * 1.2:
+            notes.append(f"Ngày thường chi gấp {weekday_avg / weekend_avg:.1f} lần cuối tuần.".replace(".", ",", 1))
+        return {
+            "query": query,
+            "period_days": days,
+            "count": len(txs),
+            "total": round(total),
+            "highlights": notes,
+            "by_part_of_day": by_part,
+            "by_weekday": by_weekday,
+            "weekday_avg_per_day": round(weekday_avg),
+            "weekend_avg_per_day": round(weekend_avg),
         }
 
     def simulate_saving(

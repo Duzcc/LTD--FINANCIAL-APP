@@ -19,7 +19,10 @@ log = logging.getLogger(__name__)
 SYSTEM_PROMPT = """Bạn là trợ lý tài chính cá nhân trong ứng dụng quản lý chi tiêu, trả lời bằng tiếng Việt, \
 ngắn gọn, thân thiện, xưng "mình" và gọi người dùng là "bạn".
 Nguyên tắc:
-- Luôn dùng công cụ để lấy số liệu; tuyệt đối không bịa con số. Tiền hiển thị dạng 1.250.000đ.
+- Câu hỏi nào liên quan tới tiền, chi tiêu, tiết kiệm, ngân sách, nợ đều phải gọi ít nhất một công cụ trước khi \
+trả lời; tuyệt đối không bịa con số. Tiền hiển thị dạng 1.250.000đ.
+- Xin lời khuyên tiết kiệm: gọi get_overview và get_category_spending rồi khuyên dựa trên số liệu của chính họ.
+- Hỏi về thói quen, buổi nào hay thứ nào chi nhiều: gọi spending_habits.
 - Hôm nay là {today}. Đơn vị tiền tệ chính: {currency}.
 - Mọi con số trong câu trả lời phải lấy nguyên từ kết quả công cụ; không tự cộng trừ, không ước lượng.
 - Khi người dùng hỏi nếu bớt một khoản thì tiết kiệm được bao nhiêu, gọi simulate_saving và nói rõ đó là \
@@ -32,6 +35,9 @@ nói rõ đây là đề xuất và họ cần bấm Xác nhận.
 - Không đưa lời khuyên đầu tư chứng khoán/tiền số cụ thể; có thể gợi ý nguyên tắc chi tiêu, tiết kiệm chung.
 - Trả lời tối đa khoảng 120 từ, có thể dùng gạch đầu dòng."""
 
+
+# những câu có dấu hiệu rất rõ thì phải gọi đúng công cụ này, gọi công cụ khác coi như hiểu sai câu hỏi
+MUST_CALL = {"simulate": "simulate_saving", "habits": "spending_habits", "record": "propose_transaction"}
 
 _MONEY = re.compile(
     r"(?<![\d.,])(\d{1,3}(?:[.,]\d{3})+|\d+(?:[.,]\d+)?)\s*(triệu|tr\b|nghìn|ngàn|k\b|đ|vnd)?",
@@ -127,10 +133,20 @@ class Assistant:
             try:
                 text, used = await self.provider.run(system, messages, TOOL_SPECS, execute)
                 bad = unverified_money(text, results) if text else []
-                if text and used and not bad:
+                need = MUST_CALL.get(rules.detect_intent(question))
+                wrong = bool(used) and need is not None and need not in used
+                if text and used and not bad and not wrong:
                     return AssistantReply(text, self.provider.name, used, kit.actions)
-                # không tra dữ liệu, hoặc nói ra số không có trong dữ liệu, thì không dùng câu trả lời đó
-                reason = "unverified_numbers" if bad else "no_tool_used" if text else "empty_response"
+                # không tra dữ liệu, gọi nhầm công cụ hoặc nói ra số không có trong dữ liệu thì không dùng câu trả lời đó
+                reason = (
+                    "unverified_numbers"
+                    if bad
+                    else "wrong_tool"
+                    if wrong
+                    else "no_tool_used"
+                    if text
+                    else "empty_response"
+                )
                 if bad:
                     log.warning("LLM đưa ra số không có trong dữ liệu: %s", bad)
             except (LLMError, httpx.HTTPError, KeyError, ValueError) as exc:

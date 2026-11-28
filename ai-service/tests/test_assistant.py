@@ -105,3 +105,46 @@ async def test_ollama_mac_dinh_va_chan_so_bia(monkeypatch):
 @pytest.fixture
 def anyio_backend():
     return "asyncio"
+
+
+def test_thoi_quen_theo_buoi_va_thu():
+    kit = FinanceToolkit(snap())
+    r = kit.spending_habits(days=30)
+    since = kit.now - timedelta(days=30)
+    expense = [t for t in kit.s.transactions if t.kind == "expense" and kit._local(t.date) >= since]
+    assert r["count"] == len(expense)
+    assert sum(x["total"] for x in r["by_weekday"]) == pytest.approx(r["total"], abs=7)
+    assert abs(sum(x["share"] for x in r["by_part_of_day"]) - 1) < 0.01
+    assert len(r["by_weekday"]) == 7 and r["highlights"]
+    # cà phê trong dữ liệu mẫu luôn ghi lúc 9 giờ sáng
+    coffee = kit.spending_habits(query="cà phê", days=30)
+    assert [x["part"] for x in coffee["by_part_of_day"]] == ["sáng"]
+
+
+def test_thoi_quen_khi_khong_ghi_gio():
+    data = snap()
+    for t in data.transactions:
+        t.date = t.date.replace(hour=0, minute=0)
+    r = FinanceToolkit(data).spending_habits(days=30)
+    assert r["by_part_of_day"] == [] and "không ghi giờ" in r["highlights"][0]
+
+
+def test_tro_ly_luat_tra_loi_thoi_quen():
+    text, used = rules.answer("Mình hay tiêu tiền vào buổi nào?", FinanceToolkit(snap()))
+    assert used == ["spending_habits"] and "buổi" in text
+
+
+@pytest.mark.anyio
+async def test_ollama_goi_nham_cong_cu_thi_dung_luat(monkeypatch):
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        if body["messages"][-1]["role"] != "tool":
+            return _tool_call("get_overview")
+        return httpx.Response(200, json={"choices": [{"message": {"content": "Bạn tiêu đều mọi ngày."}}]})
+
+    s = get_settings()
+    for k, v in {"llm_provider": "ollama", "llm_model": "", "llm_base_url": ""}.items():
+        monkeypatch.setattr(s, k, v)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        r = await Assistant(http).chat(snap(), [{"role": "user", "content": "cuối tuần mình có tiêu nhiều hơn không"}])
+    assert r.provider == "rules" and r.fallback_reason == "wrong_tool" and r.tools_used == ["spending_habits"]

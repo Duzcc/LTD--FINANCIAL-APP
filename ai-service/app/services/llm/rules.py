@@ -18,6 +18,7 @@ def _vnd(x: float | None) -> str:
 INTENTS: list[tuple[str, str]] = [
     (r"\b(neu|thu)\b.*\b(bot|giam|cat|it|han che|bo)\b|\btiet kiem duoc bao nhieu\b|\bmo phong\b", "simulate"),
     (r"\b(ghi|them|nhap|luu)\b.*\d", "record"),
+    (r"\b(thoi quen|hanh vi|khung gio|buoi nao|luc nao|thu may|ngay nao trong tuan|cuoi tuan)\b", "habits"),
     (r"\b(so du|con bao nhieu tien|tong tai san)\b", "balance"),
     (r"\b(duoc chi|nen chi|chi duoc|chi toi da|goi y chi tieu|moi ngay chi)\b", "allowance"),
     (r"\b(bat thuong|la|dot bien|kha nghi|trung)\b", "anomaly"),
@@ -64,6 +65,13 @@ def simulate_args(question: str) -> dict:
 
 def answer(question: str, kit: FinanceToolkit) -> tuple[str, list[str]]:
     intent = detect_intent(question)
+    if intent == "habits":
+        r = kit.spending_habits()
+        if not r["count"]:
+            return r["note"], ["spending_habits"]
+        lines = [f"Trong {r['period_days']} ngày qua (tổng chi {_vnd(r['total'])}):"]
+        lines += [f"• {x}" for x in r["highlights"]]
+        return "\n".join(lines), ["spending_habits"]
     if intent == "simulate":
         args = simulate_args(question)
         if not args["query"]:

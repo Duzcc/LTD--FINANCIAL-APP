@@ -17,6 +17,7 @@ INTENT_TOOL = {
     "recommend": "recommend_budgets",
     "record": "propose_transaction",
     "simulate": "simulate_saving",
+    "habits": "spending_habits",
 }
 
 QUESTIONS: list[tuple[str, str]] = [
@@ -77,6 +78,12 @@ QUESTIONS: list[tuple[str, str]] = [
     ("thử cắt ăn ngoài 20% xem", "simulate"),
     ("mô phỏng tiết kiệm khi bớt grab", "simulate"),
     ("nếu hạn chế mua sắm thì để dành được bao nhiêu", "simulate"),
+    # thói quen
+    ("Mình hay tiêu tiền vào buổi nào?", "habits"),
+    ("thói quen chi tiêu của mình thế nào", "habits"),
+    ("cuối tuần mình có tiêu nhiều hơn không", "habits"),
+    ("thứ mấy trong tuần mình chi nhiều nhất", "habits"),
+    ("mình hay uống cà phê lúc nào", "habits"),
     # lời khuyên
     ("Làm sao để tiết kiệm hơn?", "advice"),
     ("cho mình lời khuyên tiết kiệm", "advice"),
