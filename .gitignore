@@ -13,6 +13,7 @@ frontend/.idea/
 frontend/*.iml
 frontend/ios/Pods/
 frontend/android/.gradle/
+frontend/.widget_preview/
 
 # Backend
 backend/node_modules/
