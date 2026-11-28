@@ -18,12 +18,14 @@ from app.core.config import get_settings
 from app.schemas.finance import FinanceSnapshot
 from app.services.llm import rules
 from app.services.llm.assistant import Assistant
-from tests.conftest import CATEGORIES, NOW, PEOPLE, WALLETS, make_transactions
 
 from .data.assistant_eval import INTENT_TOOL, QUESTIONS
 
 
 def snapshot() -> FinanceSnapshot:
+    # tests.conftest xóa biến LLM_* khi nạp, nên chỉ nạp sau khi đã đọc cấu hình
+    from tests.conftest import CATEGORIES, NOW, PEOPLE, WALLETS, make_transactions
+
     return FinanceSnapshot(
         now=NOW, wallets=WALLETS, categories=CATEGORIES, people=PEOPLE, transactions=make_transactions()
     )
@@ -80,10 +82,14 @@ def main(argv: list[str] | None = None) -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--llm", action="store_true")
     args = ap.parse_args(argv)
+    get_settings()
     result = asyncio.run(eval_llm()) if args.llm else eval_rules()
     print(json.dumps({k: v for k, v in result.items() if k not in ("rows", "wrong")}, ensure_ascii=False, indent=2))
     for row in result.get("wrong", []):
         print("SAI:", row)
+    for row in result.get("rows", []):
+        if row["want_tool"] not in row["tools"]:
+            print("SAI:", row["question"], "| cần", row["want_tool"], "| đã gọi", row["tools"], row["fallback"] or "")
 
 
 if __name__ == "__main__":

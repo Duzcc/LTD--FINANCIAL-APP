@@ -393,7 +393,13 @@ class FinanceToolkit:
         # quy về một tháng 30 ngày để các phương án so sánh được với nhau
         scale = 30 / days
         monthly, monthly_times = total * scale, times * scale
-        percents = sorted({10, 20, 30} | ({round(reduce_percent)} if reduce_percent else set()))
+        # chỉ đưa phương án người dùng hỏi, mô hình nhỏ dễ lấy nhầm số khi có nhiều phương án
+        if reduce_percent:
+            percents = [round(reduce_percent)]
+        elif target_times is None:
+            percents = [10, 20, 30]
+        else:
+            percents = []
         by_percent = [
             {
                 "reduce_percent": p,
@@ -411,15 +417,24 @@ class FinanceToolkit:
             "average_price": round(avg),
             "monthly_saving": _thousand(max(0.0, monthly_times - keep) * avg),
         }
+        summary = [
+            f"Giảm còn {keep} lần/tháng: tiết kiệm khoảng {by_frequency['monthly_saving']:,}đ/tháng".replace(",", ".")
+        ] + [
+            f"Giảm {x['reduce_percent']}%: tiết kiệm khoảng {x['monthly_saving']:,}đ/tháng".replace(",", ".")
+            for x in by_percent
+        ]
+        if target_times is None and reduce_percent:
+            summary = summary[1:]
         return {
+            "summary": summary,
             "query": query,
             "period_days": days,
             "count": times,
             "total_spent": round(total),
             "average_price": round(avg),
             "monthly_spending": round(monthly),
-            "by_percent": by_percent,
             "by_frequency": by_frequency,
+            "by_percent": by_percent,
             "note": "Đây là tiền tiết kiệm tiềm năng nếu thay đổi thói quen, chưa phải tiền đã tiết kiệm.",
         }
 

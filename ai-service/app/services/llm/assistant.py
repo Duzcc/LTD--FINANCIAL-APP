@@ -79,6 +79,19 @@ def unverified_money(text: str, results: list[Any]) -> list[float]:
     return [v for v in money_in(text) if not ok(v)]
 
 
+def as_money_text(obj: Any) -> Any:
+    """Đổi số tiền sang chuỗi "18.000.000đ" trước khi đưa cho LLM: mô hình nhỏ hay đọc sai số nguyên dài."""
+    if isinstance(obj, bool):
+        return obj
+    if isinstance(obj, (int, float)) and abs(obj) >= 1000:
+        return f"{round(obj):,}".replace(",", ".") + "đ"
+    if isinstance(obj, dict):
+        return {k: as_money_text(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [as_money_text(v) for v in obj]
+    return obj
+
+
 @dataclass
 class AssistantReply:
     reply: str
@@ -109,15 +122,15 @@ class Assistant:
             def execute(name: str, args: dict[str, Any] | None) -> Any:
                 out = kit.call(name, args)
                 results.append(out)
-                return out
+                return as_money_text(out)
 
             try:
                 text, used = await self.provider.run(system, messages, TOOL_SPECS, execute)
                 bad = unverified_money(text, results) if text else []
-                if text and not bad:
+                if text and used and not bad:
                     return AssistantReply(text, self.provider.name, used, kit.actions)
-                # mô hình nói ra số không có trong dữ liệu thì không dùng câu trả lời đó
-                reason = "unverified_numbers" if bad else "empty_response"
+                # không tra dữ liệu, hoặc nói ra số không có trong dữ liệu, thì không dùng câu trả lời đó
+                reason = "unverified_numbers" if bad else "no_tool_used" if text else "empty_response"
                 if bad:
                     log.warning("LLM đưa ra số không có trong dữ liệu: %s", bad)
             except (LLMError, httpx.HTTPError, KeyError, ValueError) as exc:

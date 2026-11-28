@@ -34,7 +34,9 @@ def test_mo_phong_tiet_kiem_tinh_tu_lich_su():
     since = kit.now - timedelta(days=30)
     hits = [t for t in kit.s.transactions if t.categoryId == "coffee" and kit._local(t.date) >= since]
     assert r["count"] == len(hits) and r["total_spent"] == round(sum(t.amount for t in hits))
-    assert {x["reduce_percent"] for x in r["by_percent"]} == {10, 20, 25, 30}
+    assert [x["reduce_percent"] for x in r["by_percent"]] == [25]
+    assert r["summary"][0].startswith("Giảm còn 10 lần/tháng")
+    assert [x["reduce_percent"] for x in kit.simulate_saving("cà phê")["by_percent"]] == [10, 20, 30]
     fq = r["by_frequency"]
     assert fq["suggested_times_per_month"] == 10
     assert abs(fq["monthly_saving"] - (r["count"] - 10) * r["total_spent"] / r["count"]) <= 500
@@ -84,7 +86,8 @@ async def test_ollama_mac_dinh_va_chan_so_bia(monkeypatch):
         if body["messages"][-1]["role"] != "tool":
             return _tool_call("get_overview")
         real = json.loads(body["messages"][-1]["content"])["this_month"]["expense"]
-        text = next(answers) or f"Tháng này bạn đã chi {real:,}đ.".replace(",", ".")
+        assert real.endswith("đ")
+        text = next(answers) or f"Tháng này bạn đã chi {real}."
         return httpx.Response(200, json={"choices": [{"message": {"content": text}}]})
 
     s = get_settings()

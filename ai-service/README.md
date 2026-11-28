@@ -69,6 +69,18 @@ python -m ml.evaluate_assistant          # trợ lý luật: tỷ lệ chọn đ
 python -m ml.evaluate_assistant --llm    # mô hình đang cấu hình: chọn đúng công cụ, số lần lùi về luật, thời gian
 ```
 
+Kết quả với Qwen2.5 3B qua Ollama (máy Mac Apple Silicon, 50 câu):
+
+| Chỉ số | Kết quả |
+|---|---|
+| Gọi đúng công cụ (kể cả lùi về luật) | 50/50 |
+| Qwen tự trả lời | 37/50, mọi lần Qwen gọi công cụ đều gọi đúng |
+| Lùi về luật | 9 câu Qwen không tra dữ liệu, 2 câu có số không khớp dữ liệu, 2 câu trả lời rỗng |
+| Thời gian trả lời (trung vị) | 1,8 giây |
+
+Hai điều chỉnh giúp mô hình nhỏ đọc đúng số: đưa số tiền cho LLM dưới dạng chuỗi `18.000.000đ` thay vì số nguyên dài
+(số câu bị chặn vì số sai giảm từ 13 xuống 2), và mỗi kết quả mô phỏng có sẵn câu tóm tắt chỉ chứa phương án người dùng hỏi.
+
 ## Cấu trúc
 
 ```
