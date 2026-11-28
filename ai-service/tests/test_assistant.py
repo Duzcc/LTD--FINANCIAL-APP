@@ -185,3 +185,119 @@ def test_simulate_args_follow_question():
     got = pin_simulate_args("nếu giảm 20% cà phê thì sao", {"query": "cà phê", "target_times": 3})
     assert got == {"query": "cà phê", "reduce_percent": 20}
     assert pin_simulate_args("nếu bớt trà sữa", {"query": "trà sữa"}) == {"query": "trà sữa"}
+
+
+@pytest.mark.parametrize(
+    ("question", "intent", "query"),
+    [
+        ("nếu ít tiền thì nên làm gì", "advice", None),
+        ("nếu tôi giảm chi 20% thì tiết kiệm được bao nhiêu", "simulate", ""),
+        ("nếu giảm chi tiêu cho cà phê thì sao", "simulate", "cà phê"),
+        ("thử cắt trà sữa 50%", "simulate", "trà sữa"),
+    ],
+)
+def test_simulate_needs_target(question, intent, query):
+    assert rules.detect_intent(question) == intent
+    if query is not None:
+        assert rules.simulate_args(question)["query"] == query
+
+
+def test_rules_empty_data_reads_cleanly():
+    empty = FinanceSnapshot(now=NOW, wallets=[], categories=[], people=[], transactions=[])
+    text, _ = rules.answer("ví nào còn nhiều tiền nhất", FinanceToolkit(empty))
+    assert text == "Tổng số dư các ví: 0đ."
+    text, _ = rules.answer("dự báo cuối tháng", FinanceToolkit(empty))
+    assert "Chưa có khoản chi" in text
+
+
+@pytest.mark.anyio
+async def test_ollama_cham_qua_thi_dung_luat(monkeypatch):
+    import asyncio
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        await asyncio.sleep(1)
+        return _tool_call("get_overview")
+
+    s = get_settings()
+    for k, v in {"llm_provider": "ollama", "llm_model": "", "llm_base_url": "", "llm_total_seconds": 0.05}.items():
+        monkeypatch.setattr(s, k, v)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        r = await Assistant(http).chat(snap(), [{"role": "user", "content": "tháng này chi bao nhiêu"}])
+    assert r.provider == "rules" and r.fallback_reason == "llm_timeout" and r.tools_used == ["get_overview"]
+
+
+@pytest.mark.anyio
+async def test_ollama_doi_so_lan_thanh_phan_tram_van_tinh_dung(monkeypatch):
+    seen: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        if body["messages"][-1]["role"] != "tool":
+            # mô hình hiểu nhầm "xuống 5 lần" thành giảm 50%
+            return _tool_call("simulate_saving", {"query": "trà sữa", "reduce_percent": 50})
+        seen.append(json.loads(body["messages"][-1]["content"]))
+        return httpx.Response(200, json={"choices": [{"message": {"content": seen[-1]["summary"][0]}}]})
+
+    s = get_settings()
+    for k, v in {"llm_provider": "ollama", "llm_model": "", "llm_base_url": ""}.items():
+        monkeypatch.setattr(s, k, v)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        q = "Nếu bớt trà sữa xuống 2 lần thì tiết kiệm được bao nhiêu?"
+        r = await Assistant(http).chat(snap(), [{"role": "user", "content": q}])
+    assert seen[0]["by_frequency"]["suggested_times_per_month"] == 2 and seen[0]["by_percent"] == []
+    assert r.provider == "ollama" and "còn 2 lần" in r.reply
+
+
+def test_mo_phong_bot_chung_va_chi_theo_phan_tram():
+    kit = FinanceToolkit(snap())
+    since = kit.now - timedelta(days=30)
+    spent = sum(t.amount for t in kit.s.transactions if t.kind == "expense" and kit._local(t.date) >= since)
+    r = kit.simulate_saving("tất cả", reduce_percent=20)
+    assert r["query"] == "tổng chi tiêu" and r["by_frequency"] is None
+    assert r["by_percent"][0]["monthly_saving"] == round(spent * 0.2, -3)
+    # hỏi theo % thì chỉ trả phương án % để mô hình không lấy nhầm số
+    only = kit.simulate_saving("cà phê", reduce_percent=30)
+    assert only["by_frequency"] is None and len(only["summary"]) == 1
+    text, _ = rules.answer("nếu tôi giảm chi 20% thì tiết kiệm được bao nhiêu", kit)
+    assert "tổng cộng" in text and "Giảm 20%" in text
+
+
+def test_trung_binh_moi_ngay_va_thu_nhap_thang_truoc():
+    kit = FinanceToolkit(snap())
+    o = kit.get_overview()["this_month"]
+    assert o["daily_average_spent"] == round(o["expense"] / NOW.day)
+    text, _ = rules.answer("chi trung bình mỗi ngày là bao nhiêu", kit)
+    assert "/ngày" in text
+    text, _ = rules.answer("thu nhập tháng này có giảm không", kit)
+    assert "Tháng trước bạn thu" in text
+
+
+def test_chao_hoi():
+    text, used = rules.answer("xin chào", FinanceToolkit(snap()))
+    assert text.startswith("Chào bạn") and used == []
+    assert rules.detect_intent("chào bạn, ghi cà phê 30k") != "greet"
+
+
+@pytest.mark.anyio
+async def test_ollama_lo_ten_tham_so_thi_dung_luat(monkeypatch):
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        if body["messages"][-1]["role"] != "tool":
+            return _tool_call("get_overview")
+        text = 'Mình không so sánh được vì thiếu tham số "end".'
+        return httpx.Response(200, json={"choices": [{"message": {"content": text}}]})
+
+    s = get_settings()
+    for k, v in {"llm_provider": "ollama", "llm_model": "", "llm_base_url": ""}.items():
+        monkeypatch.setattr(s, k, v)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        r = await Assistant(http).chat(snap(), [{"role": "user", "content": "thu nhập tháng này có giảm không"}])
+    assert r.provider == "rules" and r.fallback_reason == "leaked_internals"
+
+
+def test_chi_vuot_xa_thang_truoc_noi_gap_may_lan():
+    data = snap()
+    last = NOW.replace(day=1) - timedelta(days=3)
+    data.transactions = [t for t in data.transactions if t.date.month == NOW.month or t.date.date() == last.date()]
+    text, _ = rules.answer("tháng này chi bao nhiêu", FinanceToolkit(data))
+    assert "lần cả tháng trước" in text and "%" not in text

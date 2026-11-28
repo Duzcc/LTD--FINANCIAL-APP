@@ -16,6 +16,13 @@ DAY_PARTS = [("sáng", 5, 11), ("trưa", 11, 14), ("chiều", 14, 18), ("tối",
 WEEKDAYS = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"]
 
 
+GENERAL_SPENDING = {"", "tat ca", "chi tieu", "chi", "tieu", "moi thu", "tong chi", "tong chi tieu"}
+
+
+def _vnd_text(x: float) -> str:
+    return f"{round(x):,}đ".replace(",", ".")
+
+
 def _thousand(x: float) -> int:
     # số tiết kiệm là ước tính nên làm tròn nghìn cho dễ đọc
     return int(round(x, -3))
@@ -193,6 +200,7 @@ class FinanceToolkit:
     def get_overview(self) -> dict:
         ms, me = self._range("this_month")
         ls, le = self._range("last_month")
+        expense = self._sum(ms, me, EXPENSE_KINDS)
         return {
             "today": self.now.date().isoformat(),
             "currency": self.s.currency,
@@ -200,7 +208,10 @@ class FinanceToolkit:
             "total_balance": round(sum(w.balance for w in self.s.wallets)),
             "this_month": {
                 "income": round(self._sum(ms, me, INCOME_KINDS)),
-                "expense": round(self._sum(ms, me, EXPENSE_KINDS)),
+                "expense": round(expense),
+                # số đã chi thật, khác với mức nên chi của get_spending_allowance
+                "days_passed": self.now.day,
+                "daily_average_spent": round(expense / self.now.day),
             },
             "last_month": {
                 "income": round(self._sum(ls, le, INCOME_KINDS)),
@@ -470,26 +481,28 @@ class FinanceToolkit:
         }
 
     def simulate_saving(
-        self, query: str, reduce_percent: float | None = None, target_times: int | None = None, days: int = 30
+        self, query: str = "", reduce_percent: float | None = None, target_times: int | None = None, days: int = 30
     ) -> dict:
         # mô hình nhỏ đôi khi gửi số dạng chuỗi như "20"
         reduce_percent = float(reduce_percent) if reduce_percent not in (None, "") else None
         target_times = int(float(target_times)) if target_times not in (None, "") else None
         since = self.now - timedelta(days=days)
-        q = fold(query).strip()
+        q = fold(query or "").strip()
+        # "giảm chi 20%" không nói khoản nào thì tính trên toàn bộ chi tiêu
+        general = q in GENERAL_SPENDING
         # khớp cả từ để "phở" không dính "văn phòng"
-        word = re.compile(rf"\b{re.escape(q)}\b") if q else None
+        word = re.compile(rf"\b{re.escape(q)}\b")
         hits = [
             t
             for t in self.s.transactions
-            if word
-            and not t.excluded
+            if not t.excluded
             and t.kind in EXPENSE_KINDS
             and self._local(t.date) >= since
-            and word.search(fold(f"{t.note} {self.names.get(t.categoryId or '', '')}"))
+            and (general or word.search(fold(f"{t.note} {self.names.get(t.categoryId or '', '')}")))
         ]
+        label = "tổng chi tiêu" if general else query
         if not hits:
-            return {"query": query, "count": 0, "note": f"Không có khoản chi nào khớp '{query}' trong {days} ngày qua."}
+            return {"query": label, "count": 0, "note": f"Không có khoản chi nào khớp '{label}' trong {days} ngày qua."}
         total = sum(t.amount for t in hits)
         times = len(hits)
         avg = total / times
@@ -512,25 +525,32 @@ class FinanceToolkit:
             for p in percents
             if 0 < p < 100
         ]
-        keep = target_times if target_times is not None else int(monthly_times * 0.7)
-        keep = max(0, min(keep, round(monthly_times)))
-        by_frequency = {
-            "current_times_per_month": round(monthly_times, 1),
-            "suggested_times_per_month": keep,
-            "average_price": round(avg),
-            "monthly_saving": _thousand(max(0.0, monthly_times - keep) * avg),
-        }
-        summary = [
-            f"Giảm còn {keep} lần/tháng: tiết kiệm khoảng {by_frequency['monthly_saving']:,}đ/tháng".replace(",", ".")
-        ] + [
-            f"Giảm {x['reduce_percent']}%: tiết kiệm khoảng {x['monthly_saving']:,}đ/tháng".replace(",", ".")
-            for x in by_percent
+        by_frequency = None
+        only_percent = bool(reduce_percent and by_percent and target_times is None)
+        # bớt số lần chỉ có nghĩa với một khoản cụ thể; người dùng hỏi theo % thì không đưa thêm để khỏi lẫn
+        if not general and not only_percent:
+            keep = target_times if target_times is not None else int(monthly_times * 0.7)
+            keep = max(0, min(keep, round(monthly_times)))
+            by_frequency = {
+                "current_times_per_month": round(monthly_times, 1),
+                "suggested_times_per_month": keep,
+                "average_price": round(avg),
+                "monthly_saving": _thousand(max(0.0, monthly_times - keep) * avg),
+            }
+        summary = (
+            [
+                f"Giảm còn {by_frequency['suggested_times_per_month']} lần/tháng: tiết kiệm khoảng "
+                f"{_vnd_text(by_frequency['monthly_saving'])}/tháng"
+            ]
+            if by_frequency
+            else []
+        )
+        summary += [
+            f"Giảm {x['reduce_percent']}%: tiết kiệm khoảng {_vnd_text(x['monthly_saving'])}/tháng" for x in by_percent
         ]
-        if target_times is None and reduce_percent:
-            summary = summary[1:]
         return {
             "summary": summary,
-            "query": query,
+            "query": label,
             "period_days": days,
             "count": times,
             "total_spent": round(total),

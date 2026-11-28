@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from dataclasses import dataclass, field
@@ -28,7 +29,7 @@ trả lời; tuyệt đối không bịa con số. Tiền hiển thị dạng 1.
 - Mọi con số trong câu trả lời phải lấy nguyên từ kết quả công cụ; không tự cộng trừ, không ước lượng.
 - Khi người dùng hỏi nếu bớt một khoản thì tiết kiệm được bao nhiêu, gọi simulate_saving và nói rõ đó là \
 khoản tiết kiệm tiềm năng.
-- Khi người dùng hỏi nên chi bao nhiêu, gọi get_spending_allowance. Khi tìm giao dịch, danh sách đã hiển thị \
+- Khi người dùng hỏi nên chi bao nhiêu, gọi get_spending_allowance (đó là mức nên chi, số đã chi nằm ở get_overview). Khi tìm giao dịch, danh sách đã hiển thị \
 dưới câu trả lời nên chỉ cần tóm tắt.
 - Khi người dùng muốn ghi giao dịch hoặc đặt ngân sách, gọi propose_transaction / propose_budget; \
 nói rõ đây là đề xuất và họ cần bấm Xác nhận.
@@ -38,12 +39,24 @@ nói rõ đây là đề xuất và họ cần bấm Xác nhận.
 
 
 # những câu có dấu hiệu rất rõ thì phải gọi đúng công cụ này, gọi công cụ khác coi như hiểu sai câu hỏi
-MUST_CALL = {"simulate": "simulate_saving", "habits": "spending_habits", "record": "propose_transaction"}
+MUST_CALL = {
+    "simulate": "simulate_saving",
+    "habits": "spending_habits",
+    "record": "propose_transaction",
+    "categories": "get_category_spending",
+    "budget": "get_budget_status",
+    "recommend": "recommend_budgets",
+    "forecast": "forecast_month",
+    "anomaly": "get_anomalies",
+    "debts": "get_debts",
+}
 
 _MONEY = re.compile(
     r"(?<![\d.,])(\d{1,3}(?:[.,]\d{3})+|\d+(?:[.,]\d+)?)\s*(triệu|tr\b|nghìn|ngàn|k\b|đ|vnd)?",
     re.IGNORECASE,
 )
+# lộ chi tiết bên trong như "không có tham số end" thì người dùng không hiểu
+_INTERNALS = re.compile(r"tham số|parameter|\bjson\b|\bfunction\b|\btool|công cụ \w+_\w+|\w+_\w+\(", re.I)
 _UNIT = {"triệu": 1e6, "tr": 1e6, "nghìn": 1e3, "ngàn": 1e3, "k": 1e3, "đ": 1, "vnd": 1}
 
 
@@ -150,18 +163,25 @@ class Assistant:
                 return as_money_text(out)
 
             try:
-                text, used = await self.provider.run(system, messages, TOOL_SPECS, execute)
+                text, used = await asyncio.wait_for(
+                    self.provider.run(system, messages, TOOL_SPECS, execute), self.settings.llm_total_seconds
+                )
                 bad = unverified_money(text, results) if text else []
                 intent = rules.detect_intent(question)
                 # "ghi" mà không có số tiền thì chưa chắc là muốn ghi giao dịch
                 need = MUST_CALL.get(intent) if intent != "record" or find_amount(question) else None
                 wrong = bool(used) and need is not None and need not in used
-                if text and used and not bad and not wrong:
+                leaked = bool(text and _INTERNALS.search(text))
+                # câu chào không cần tra dữ liệu, miễn là không nói ra con số nào
+                chat_only = intent == "greet" and not used and not money_in(text or "")
+                if text and (used or chat_only) and not bad and not wrong and not leaked:
                     return AssistantReply(text, self.provider.name, used, kit.actions)
                 # không tra dữ liệu, gọi nhầm công cụ hoặc nói ra số không có trong dữ liệu thì không dùng câu trả lời đó
                 reason = (
                     "unverified_numbers"
                     if bad
+                    else "leaked_internals"
+                    if leaked
                     else "wrong_tool"
                     if wrong
                     else "no_tool_used"
@@ -170,6 +190,11 @@ class Assistant:
                 )
                 if bad:
                     log.warning("LLM đưa ra số không có trong dữ liệu: %s", bad)
+                if leaked:
+                    log.warning("LLM nhắc chi tiết kỹ thuật: %s", text[:160])
+            except TimeoutError:
+                log.warning("LLM trả lời quá %ss, dùng trợ lý luật", self.settings.llm_total_seconds)
+                reason = "llm_timeout"
             except (LLMError, httpx.HTTPError, KeyError, ValueError) as exc:
                 log.warning("LLM lỗi, dùng trợ lý luật: %s", exc)
                 reason = "llm_error"

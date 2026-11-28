@@ -20,6 +20,8 @@ class Settings(BaseSettings):
     llm_base_url: str = ""
     llm_max_tokens: int = 900
     llm_timeout_seconds: float = 45.0
+    # cả lượt hỏi phải xong trước AI_SERVICE_TIMEOUT_MS (30s) của backend, quá thì trả lời bằng luật
+    llm_total_seconds: float = 25.0
     vision_model: str = ""
 
     @property

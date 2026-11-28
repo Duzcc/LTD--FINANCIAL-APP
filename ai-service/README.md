@@ -54,14 +54,19 @@ LLM **không thấy toàn bộ dữ liệu**: nó gọi 13 công cụ (`get_over
 `forecast_month`, `get_budget_status`, `get_debts`, `get_anomalies`, `recommend_budgets`, `simulate_saving`, `spending_habits`,
 `propose_transaction`, `propose_budget`…) để lấy đúng con số cần thiết.
 
-- `simulate_saving`: tính tiền tiết kiệm **tiềm năng** khi bớt một khoản (giảm 10/20/30%, giảm số lần mua mỗi tháng)
+- `simulate_saving`: tính tiền tiết kiệm **tiềm năng** khi bớt một khoản (giảm 10/20/30%, giảm số lần mua mỗi tháng),
+  hoặc bớt chung toàn bộ chi tiêu ("giảm chi 20%")
   từ lịch sử 30 ngày; LLM chỉ diễn giải kết quả. Số lần hoặc % người dùng nói trong câu hỏi được lấy thẳng từ câu hỏi,
   mô hình nhỏ không đổi được "xuống 5 lần" thành "giảm 50%".
 - `spending_habits`: chi theo buổi trong ngày, theo thứ trong tuần, ngày thường so với cuối tuần (90 ngày).
 - **Chặn số bịa**: mọi số tiền trong câu trả lời của LLM phải có trong kết quả công cụ (cho phép làm tròn).
   Có số lạ thì bỏ câu trả lời đó và trả lời bằng luật (`fallbackReason: unverified_numbers`).
-- **Kiểm tra chéo công cụ**: câu hỏi mô phỏng, thói quen, ghi giao dịch (có số tiền) bắt buộc gọi đúng công cụ tương ứng;
+- **Kiểm tra chéo công cụ**: câu hỏi có dấu hiệu rõ (mô phỏng, thói quen, ghi giao dịch có số tiền, danh mục, ngân sách,
+  dự báo, bất thường, nợ) bắt buộc gọi đúng công cụ tương ứng;
   gọi nhầm thì lùi về luật (`wrong_tool`), không tra dữ liệu thì cũng lùi về luật (`no_tool_used`).
+- Câu trả lời nhắc tên công cụ/tham số ("thiếu tham số end") bị bỏ (`leaked_internals`).
+- Cả lượt hỏi LLM tối đa `LLM_TOTAL_SECONDS` (mặc định 25 giây, ngắn hơn 30 giây chờ của backend); quá thì trả lời bằng luật
+  (`llm_timeout`), app không bị báo lỗi.
 - Các công cụ `propose_*` chỉ tạo **đề xuất**, người dùng phải bấm *Xác nhận* trên ứng dụng.
 
 ### Đánh giá trợ lý
@@ -78,9 +83,9 @@ Kết quả với Qwen2.5 3B qua Ollama (máy Mac, 55 câu):
 | Chỉ số | Kết quả |
 |---|---|
 | Gọi đúng công cụ (kể cả lùi về luật) | 55/55 |
-| Qwen tự trả lời | 45/55 |
-| Lùi về luật | 6 câu Qwen không tra dữ liệu, 2 câu gọi nhầm công cụ, 2 câu có số không khớp dữ liệu |
-| Thời gian trả lời (trung vị) | 2,5 giây |
+| Qwen tự trả lời | 40–45/55 tùy lần chạy |
+| Lùi về luật (lần chạy cuối) | 9 câu Qwen không tra dữ liệu, 3 câu có số không khớp, 2 câu nhắc tên công cụ, 1 câu gọi nhầm |
+| Thời gian trả lời (trung vị) | 2,2 giây |
 
 Hai điều chỉnh giúp mô hình nhỏ đọc đúng số: đưa số tiền cho LLM dưới dạng chuỗi `18.000.000đ` thay vì số nguyên dài
 (số câu bị chặn vì số sai giảm từ 13 xuống 2), và mỗi kết quả mô phỏng có sẵn câu tóm tắt chỉ chứa phương án người dùng hỏi.

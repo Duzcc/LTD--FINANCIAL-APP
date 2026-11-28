@@ -25,7 +25,7 @@ INTENTS: list[tuple[str, str]] = [
     (r"\b(no|vay|muon|cho vay)\b", "debts"),
     (r"\bvi\b", "balance"),
     (r"\b(danh muc|nhieu nhat|tieu vao|chi vao|co cau)\b", "categories"),
-    (r"\b(tiet kiem|meo|loi khuyen|lam sao|bot tieu|lam gi de)\b", "advice"),
+    (r"\b(tiet kiem|meo|loi khuyen|lam sao|bot tieu|lam gi de|nen lam gi)\b", "advice"),
     (r"\b(tim|giao dich|khoan|lan nao|nhung lan|mua o dau)\b", "find"),
     (r"\b(tong quan|thang nay|chi bao nhieu|thu bao nhieu|tinh hinh)\b", "overview"),
 ]
@@ -40,6 +40,7 @@ STRICT_INTENTS: list[tuple[str, str]] = [
         r"|cuối tuần.*(nhiều hơn|ít hơn|so với|hay)|(nhiều hơn|ít hơn).*cuối tuần",
         "habits",
     ),
+    (r"^\W*(xin chào|chào|hello|hi|hey|alo)\b(?!.*\d)", "greet"),
     # "lạ", "trùng" bỏ dấu thành "la", "trung" sẽ khớp cả "là", "trung bình"
     (r"\b(lạ|trùng)\b", "anomaly"),
 ]
@@ -48,7 +49,8 @@ STRICT_INTENTS: list[tuple[str, str]] = [
 def detect_intent(question: str) -> str:
     text = unicodedata.normalize("NFC", question).lower()
     for pattern, intent in STRICT_INTENTS:
-        if re.search(pattern, text):
+        # "nếu ít tiền thì..." có chữ "ít" nhưng không nói bớt khoản nào, để luật thường xử lý
+        if re.search(pattern, text) and (intent != "simulate" or _has_target(simulate_args(question))):
             return intent
     f = fold(question)
     for pattern, intent in INTENTS:
@@ -69,7 +71,9 @@ def simulate_args(question: str) -> dict:
     m = _SIM_TARGET.search(f)
     # fold giữ nguyên độ dài chuỗi nên cắt lại được bản có dấu để hiển thị
     query = text[m.start(1) : m.end(1)] if m else ""
-    query = re.sub(r"\b(tiền|khoản|các|những|việc)\b", " ", query).strip()
+    query = re.sub(r"\b(tiền|khoản|các|những|việc)\b|\d+\s*%?", " ", query)
+    # "giảm chi 20%" là bớt chung chung, không phải một khoản cụ thể
+    query = re.sub(r"^((chi tiêu|chi|tiêu)\s*)?(cho|vào)\s+|^(chi tiêu|chi|tiêu)$", "", " ".join(query.split()))
     args: dict = {"query": query}
     if p := re.search(r"(\d{1,2})\s*%", f):
         args["reduce_percent"] = int(p.group(1))
@@ -78,8 +82,18 @@ def simulate_args(question: str) -> dict:
     return args
 
 
+def _has_target(args: dict) -> bool:
+    # bớt một khoản cụ thể, hoặc bớt chung chung nhưng có nói bao nhiêu %
+    return bool(args["query"] or "reduce_percent" in args)
+
+
 def answer(question: str, kit: FinanceToolkit) -> tuple[str, list[str]]:
     intent = detect_intent(question)
+    if intent == "greet":
+        return (
+            "Chào bạn! Mình có thể xem tình hình thu chi, dự báo cuối tháng, gợi ý ngân sách, "
+            'tìm giao dịch hay ghi nhanh một khoản như "ăn trưa 45k". Bạn muốn xem gì?'
+        ), []
     if intent == "habits":
         r = kit.spending_habits()
         if not r["count"]:
@@ -89,21 +103,19 @@ def answer(question: str, kit: FinanceToolkit) -> tuple[str, list[str]]:
         return "\n".join(lines), ["spending_habits"]
     if intent == "simulate":
         args = simulate_args(question)
-        if not args["query"]:
+        if not _has_target(args):
             return 'Bạn muốn bớt khoản nào? Ví dụ: "nếu bớt trà sữa thì tiết kiệm được bao nhiêu".', []
         r = kit.simulate_saving(**args)
         if not r["count"]:
             return r["note"], ["simulate_saving"]
-        fq = r["by_frequency"]
-        lines = [
-            f"30 ngày qua bạn chi cho {args['query']} {r['count']} lần, tổng {_vnd(r['total_spent'])} "
-            f"(trung bình {_vnd(r['average_price'])}/lần).",
-            f"• Giảm còn {fq['suggested_times_per_month']} lần/tháng: tiết kiệm khoảng {_vnd(fq['monthly_saving'])}/tháng.",
-        ]
-        lines += [
-            f"• Giảm {x['reduce_percent']}%: tiết kiệm khoảng {_vnd(x['monthly_saving'])}/tháng."
-            for x in r["by_percent"]
-        ]
+        if args["query"]:
+            head = (
+                f"30 ngày qua bạn chi cho {r['query']} {r['count']} lần, tổng {_vnd(r['total_spent'])} "
+                f"(trung bình {_vnd(r['average_price'])}/lần)."
+            )
+        else:
+            head = f"30 ngày qua bạn chi tổng cộng {_vnd(r['total_spent'])}."
+        lines = [head] + [f"• {x}." for x in r["summary"]]
         lines.append("Đây là khoản tiết kiệm tiềm năng, chưa phải tiền đã để dành.")
         return "\n".join(lines), ["simulate_saving"]
     if intent == "record" and find_amount(question):
@@ -142,6 +154,8 @@ def answer(question: str, kit: FinanceToolkit) -> tuple[str, list[str]]:
 
     if intent == "forecast":
         f = kit.forecast_month()
+        if not f["spent_so_far"] and not f["next_month_estimate"]:
+            return "Chưa có khoản chi nào để dự báo. Ghi thêm vài giao dịch rồi hỏi lại nhé.", ["forecast_month"]
         lines = [
             f"Đến nay bạn đã chi {_vnd(f['spent_so_far'])}.",
             f"Dự báo cả tháng khoảng {_vnd(f['projected_month_total'])} "
@@ -212,16 +226,24 @@ def answer(question: str, kit: FinanceToolkit) -> tuple[str, list[str]]:
 
     o = kit.get_overview()
     if intent == "balance":
-        return f"Tổng số dư các ví: {_vnd(o['total_balance'])}. " + ", ".join(
-            f"{w['name']}: {_vnd(w['balance'])}" for w in o["wallets"]
-        ) + ".", ["get_overview"]
+        wallets = ", ".join(f"{w['name']}: {_vnd(w['balance'])}" for w in o["wallets"])
+        return f"Tổng số dư các ví: {_vnd(o['total_balance'])}." + (f" {wallets}." if wallets else ""), ["get_overview"]
 
     tm, lm = o["this_month"], o["last_month"]
     msg = f"Tháng này bạn thu {_vnd(tm['income'])}, chi {_vnd(tm['expense'])}."
+    f = fold(question)
+    if re.search(r"\btrung binh\b", f):
+        msg += f" Trung bình {_vnd(tm['daily_average_spent'])}/ngày trong {tm['days_passed']} ngày qua."
+    if re.search(r"\bthu nhap\b", f):
+        msg += f" Tháng trước bạn thu {_vnd(lm['income'])}."
     if lm["expense"]:
-        msg += (
-            f" So với cả tháng trước ({_vnd(lm['expense'])}) bạn đã dùng {round(tm['expense'] / lm['expense'] * 100)}%."
-        )
+        ratio = tm["expense"] / lm["expense"]
+        # tháng trước chi rất ít thì "1400%" khó hiểu, nói "gấp mấy lần" dễ đọc hơn
+        if ratio >= 2:
+            times = f"{ratio:.1f}".replace(".", ",")
+            msg += f" Đã gấp {times} lần cả tháng trước ({_vnd(lm['expense'])})."
+        else:
+            msg += f" So với cả tháng trước ({_vnd(lm['expense'])}) bạn đã dùng {round(ratio * 100)}%."
     if intent == "advice":
         c = kit.get_category_spending("this_month")
         if c["categories"]:
