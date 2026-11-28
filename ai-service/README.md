@@ -33,7 +33,7 @@ make setup          # tạo .venv và cài thư viện (Python ≥ 3.11)
 make train          # sinh dữ liệu + huấn luyện + đánh giá -> artifacts/ (≈ 1 phút)
 cp .env.example .env
 make dev            # http://localhost:8000
-make test           # 64 bài kiểm thử
+make test
 python -m ml.evaluate_receipts --n 100   # đánh giá đọc hóa đơn (cần Tesseract hoặc macOS)
 ```
 
@@ -50,33 +50,37 @@ Không bật LLM, trợ lý vẫn trả lời bằng luật và các mô hình h
 - **Claude**: `LLM_PROVIDER=anthropic`, `LLM_API_KEY`, `LLM_MODEL`.
 - **Máy chủ khác theo chuẩn OpenAI**: `LLM_PROVIDER=openai`, `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`.
 
-LLM **không thấy toàn bộ dữ liệu**: nó gọi 12 công cụ (`get_overview`, `get_category_spending`, `find_transactions`,
-`forecast_month`, `get_budget_status`, `get_debts`, `get_anomalies`, `recommend_budgets`, `simulate_saving`,
+LLM **không thấy toàn bộ dữ liệu**: nó gọi 13 công cụ (`get_overview`, `get_category_spending`, `find_transactions`,
+`forecast_month`, `get_budget_status`, `get_debts`, `get_anomalies`, `recommend_budgets`, `simulate_saving`, `spending_habits`,
 `propose_transaction`, `propose_budget`…) để lấy đúng con số cần thiết.
 
 - `simulate_saving`: tính tiền tiết kiệm **tiềm năng** khi bớt một khoản (giảm 10/20/30%, giảm số lần mua mỗi tháng)
-  từ lịch sử 30 ngày; LLM chỉ diễn giải kết quả.
+  từ lịch sử 30 ngày; LLM chỉ diễn giải kết quả. Số lần hoặc % người dùng nói trong câu hỏi được lấy thẳng từ câu hỏi,
+  mô hình nhỏ không đổi được "xuống 5 lần" thành "giảm 50%".
+- `spending_habits`: chi theo buổi trong ngày, theo thứ trong tuần, ngày thường so với cuối tuần (90 ngày).
 - **Chặn số bịa**: mọi số tiền trong câu trả lời của LLM phải có trong kết quả công cụ (cho phép làm tròn).
   Có số lạ thì bỏ câu trả lời đó và trả lời bằng luật (`fallbackReason: unverified_numbers`).
+- **Kiểm tra chéo công cụ**: câu hỏi mô phỏng, thói quen, ghi giao dịch (có số tiền) bắt buộc gọi đúng công cụ tương ứng;
+  gọi nhầm thì lùi về luật (`wrong_tool`), không tra dữ liệu thì cũng lùi về luật (`no_tool_used`).
 - Các công cụ `propose_*` chỉ tạo **đề xuất**, người dùng phải bấm *Xác nhận* trên ứng dụng.
 
 ### Đánh giá trợ lý
 
-`ml/data/assistant_eval.py` có 50 câu hỏi tiếng Việt, gán nhãn công cụ cần gọi.
+`ml/data/assistant_eval.py` có 55 câu hỏi tiếng Việt, gán nhãn công cụ cần gọi.
 
 ```bash
 python -m ml.evaluate_assistant          # trợ lý luật: tỷ lệ chọn đúng việc
 python -m ml.evaluate_assistant --llm    # mô hình đang cấu hình: chọn đúng công cụ, số lần lùi về luật, thời gian
 ```
 
-Kết quả với Qwen2.5 3B qua Ollama (máy Mac Apple Silicon, 50 câu):
+Kết quả với Qwen2.5 3B qua Ollama (máy Mac, 55 câu):
 
 | Chỉ số | Kết quả |
 |---|---|
-| Gọi đúng công cụ (kể cả lùi về luật) | 50/50 |
-| Qwen tự trả lời | 37/50, mọi lần Qwen gọi công cụ đều gọi đúng |
-| Lùi về luật | 9 câu Qwen không tra dữ liệu, 2 câu có số không khớp dữ liệu, 2 câu trả lời rỗng |
-| Thời gian trả lời (trung vị) | 1,8 giây |
+| Gọi đúng công cụ (kể cả lùi về luật) | 55/55 |
+| Qwen tự trả lời | 45/55 |
+| Lùi về luật | 6 câu Qwen không tra dữ liệu, 2 câu gọi nhầm công cụ, 2 câu có số không khớp dữ liệu |
+| Thời gian trả lời (trung vị) | 2,5 giây |
 
 Hai điều chỉnh giúp mô hình nhỏ đọc đúng số: đưa số tiền cho LLM dưới dạng chuỗi `18.000.000đ` thay vì số nguyên dài
 (số câu bị chặn vì số sai giảm từ 13 xuống 2), và mỗi kết quả mô phỏng có sẵn câu tóm tắt chỉ chứa phương án người dùng hỏi.
@@ -92,7 +96,7 @@ ai-service/
 │   ├── schemas/                # hợp đồng dữ liệu (pydantic, camelCase)
 │   ├── nlp/                    # chuẩn hóa tiếng Việt, trích xuất thực thể
 │   └── services/               # categorizer, parser, forecaster, anomaly, budget, receipt, search
-│       └── llm/                # providers (Anthropic, OpenAI-compatible), tools, rules, assistant
+│       └── llm/                # providers (Anthropic, OpenAI-compatible, Ollama), tools, rules, assistant
 ├── ml/
 │   ├── data/                   # từ vựng, bộ sinh dữ liệu, tập đánh giá viết tay
 │   ├── pipelines.py · train.py # huấn luyện + GridSearch + báo cáo

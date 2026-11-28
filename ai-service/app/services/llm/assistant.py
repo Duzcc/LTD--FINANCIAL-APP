@@ -8,6 +8,7 @@ from typing import Any
 import httpx
 
 from app.core.config import get_settings
+from app.nlp.entities import find_amount
 from app.schemas.finance import FinanceSnapshot
 
 from . import rules
@@ -98,6 +99,22 @@ def as_money_text(obj: Any) -> Any:
     return obj
 
 
+def pin_simulate_args(question: str, args: dict[str, Any] | None) -> dict[str, Any]:
+    # mô hình nhỏ hay đổi "xuống 5 lần" thành "giảm 50%", số người dùng nói thì lấy theo câu hỏi
+    args = dict(args or {})
+    asked = rules.simulate_args(question)
+    if "target_times" in asked:
+        args["target_times"] = asked["target_times"]
+        args.pop("reduce_percent", None)
+    if "reduce_percent" in asked:
+        args["reduce_percent"] = asked["reduce_percent"]
+        if "target_times" not in asked:
+            args.pop("target_times", None)
+    if not args.get("query") and asked["query"]:
+        args["query"] = asked["query"]
+    return args
+
+
 @dataclass
 class AssistantReply:
     reply: str
@@ -126,6 +143,8 @@ class Assistant:
             results: list[Any] = []
 
             def execute(name: str, args: dict[str, Any] | None) -> Any:
+                if name == "simulate_saving":
+                    args = pin_simulate_args(question, args)
                 out = kit.call(name, args)
                 results.append(out)
                 return as_money_text(out)
@@ -133,7 +152,9 @@ class Assistant:
             try:
                 text, used = await self.provider.run(system, messages, TOOL_SPECS, execute)
                 bad = unverified_money(text, results) if text else []
-                need = MUST_CALL.get(rules.detect_intent(question))
+                intent = rules.detect_intent(question)
+                # "ghi" mà không có số tiền thì chưa chắc là muốn ghi giao dịch
+                need = MUST_CALL.get(intent) if intent != "record" or find_amount(question) else None
                 wrong = bool(used) and need is not None and need not in used
                 if text and used and not bad and not wrong:
                     return AssistantReply(text, self.provider.name, used, kit.actions)

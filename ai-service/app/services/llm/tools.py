@@ -157,7 +157,7 @@ class FinanceToolkit:
         # tham số sai thì báo lại để AI tự sửa
         try:
             return handler(**(args or {}))
-        except TypeError as exc:
+        except (TypeError, ValueError) as exc:
             return {"error": f"Tham số không hợp lệ: {exc}"}
 
     def _local(self, d: datetime) -> datetime:
@@ -472,6 +472,9 @@ class FinanceToolkit:
     def simulate_saving(
         self, query: str, reduce_percent: float | None = None, target_times: int | None = None, days: int = 30
     ) -> dict:
+        # mô hình nhỏ đôi khi gửi số dạng chuỗi như "20"
+        reduce_percent = float(reduce_percent) if reduce_percent not in (None, "") else None
+        target_times = int(float(target_times)) if target_times not in (None, "") else None
         since = self.now - timedelta(days=days)
         q = fold(query).strip()
         # khớp cả từ để "phở" không dính "văn phòng"

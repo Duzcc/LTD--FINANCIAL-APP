@@ -148,3 +148,40 @@ async def test_ollama_goi_nham_cong_cu_thi_dung_luat(monkeypatch):
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
         r = await Assistant(http).chat(snap(), [{"role": "user", "content": "cuối tuần mình có tiêu nhiều hơn không"}])
     assert r.provider == "rules" and r.fallback_reason == "wrong_tool" and r.tools_used == ["spending_habits"]
+
+
+@pytest.mark.parametrize(
+    ("question", "intent"),
+    [
+        ("Thu nhập tháng này có giảm không?", "overview"),
+        ("thu nhập tháng 11 là bao nhiêu", "overview"),
+        ("Cuối tuần này mình đã chi bao nhiêu?", "overview"),
+        ("nếu ăn phở bò mỗi ngày thì sao", "overview"),
+        ("Nếu bớt phở bò thì tiết kiệm được bao nhiêu?", "simulate"),
+        ("thêm khoản đổ xăng 80k", "record"),
+        ("Tổng chi tháng này là bao nhiêu?", "overview"),
+        ("trung bình mỗi ngày mình chi bao nhiêu", "overview"),
+        ("có khoản nào lạ không", "anomaly"),
+        ("cuối tuần mình có tiêu nhiều hơn không", "habits"),
+    ],
+)
+def test_khong_khop_nham_y_dinh(question, intent):
+    assert rules.detect_intent(question) == intent
+
+
+def test_tham_so_dang_chuoi_van_tinh_duoc():
+    kit = FinanceToolkit(snap())
+    r = kit.call("simulate_saving", {"query": "cà phê", "reduce_percent": "20", "target_times": "10"})
+    assert r["by_frequency"]["suggested_times_per_month"] == 10 and r["by_percent"][0]["reduce_percent"] == 20
+    assert "error" in kit.call("spending_habits", {"days": "nhiều"})
+
+
+def test_simulate_args_follow_question():
+    from app.services.llm.assistant import pin_simulate_args
+
+    q = "Nếu bớt uống trà sữa xuống 5 lần thì tiết kiệm được bao nhiêu?"
+    got = pin_simulate_args(q, {"query": "trà sữa", "reduce_percent": 50})
+    assert got == {"query": "trà sữa", "target_times": 5}
+    got = pin_simulate_args("nếu giảm 20% cà phê thì sao", {"query": "cà phê", "target_times": 3})
+    assert got == {"query": "cà phê", "reduce_percent": 20}
+    assert pin_simulate_args("nếu bớt trà sữa", {"query": "trà sữa"}) == {"query": "trà sữa"}

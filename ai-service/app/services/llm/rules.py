@@ -16,12 +16,9 @@ def _vnd(x: float | None) -> str:
 
 
 INTENTS: list[tuple[str, str]] = [
-    (r"\b(neu|thu)\b.*\b(bot|giam|cat|it|han che|bo)\b|\btiet kiem duoc bao nhieu\b|\bmo phong\b", "simulate"),
-    (r"\b(ghi|them|nhap|luu)\b.*\d", "record"),
-    (r"\b(thoi quen|hanh vi|khung gio|buoi nao|luc nao|thu may|ngay nao trong tuan|cuoi tuan)\b", "habits"),
     (r"\b(so du|con bao nhieu tien|tong tai san)\b", "balance"),
     (r"\b(duoc chi|nen chi|chi duoc|chi toi da|goi y chi tieu|moi ngay chi)\b", "allowance"),
-    (r"\b(bat thuong|la|dot bien|kha nghi|trung)\b", "anomaly"),
+    (r"\b(bat thuong|dot bien|kha nghi)\b", "anomaly"),
     (r"\b(goi y|de xuat|nen dat|lap)\b.*\bngan sach\b|\bngan sach\b.*\b(goi y|nen)\b", "recommend"),
     (r"\b(du bao|cuoi thang|se tieu|het thang|thang sau)\b", "forecast"),
     (r"\bngan sach\b|\bvuot\b|\bhan muc\b", "budget"),
@@ -34,7 +31,25 @@ INTENTS: list[tuple[str, str]] = [
 ]
 
 
+# xét trên chữ có dấu: bỏ dấu thì "thu nhập" thành "thu nhap", "phở bò" thành "pho bo" và dễ khớp nhầm
+STRICT_INTENTS: list[tuple[str, str]] = [
+    (r"\b(nếu|thử)\b.*\b(bớt|giảm|cắt|ít|hạn chế|bỏ)\b|tiết kiệm được bao nhiêu|mô phỏng", "simulate"),
+    (r"(?<!thu )\b(ghi|thêm|nhập|lưu)\b.*\d", "record"),
+    (
+        r"thói quen|hành vi|khung giờ|buổi nào|lúc nào|thứ mấy|ngày nào trong tuần"
+        r"|cuối tuần.*(nhiều hơn|ít hơn|so với|hay)|(nhiều hơn|ít hơn).*cuối tuần",
+        "habits",
+    ),
+    # "lạ", "trùng" bỏ dấu thành "la", "trung" sẽ khớp cả "là", "trung bình"
+    (r"\b(lạ|trùng)\b", "anomaly"),
+]
+
+
 def detect_intent(question: str) -> str:
+    text = unicodedata.normalize("NFC", question).lower()
+    for pattern, intent in STRICT_INTENTS:
+        if re.search(pattern, text):
+            return intent
     f = fold(question)
     for pattern, intent in INTENTS:
         if re.search(pattern, f):
